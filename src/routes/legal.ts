@@ -1,4 +1,10 @@
 import { Hono } from 'hono';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const indexHtml = readFileSync(join(__dirname, '../../index.html'), 'utf8');
 
 const legal = new Hono();
 
@@ -205,6 +211,8 @@ const privacyContent = `
 <p>For questions, concerns, or data subject requests regarding this Privacy Policy, contact:</p>
 <p>[DJD Agent Score LLC]<br>[Insert email address]</p>
 `;
+
+legal.get('/', (c) => c.html(indexHtml));
 
 legal.get('/terms', (c) => {
   return c.html(wrapHtml('Terms of Service', tosContent));
