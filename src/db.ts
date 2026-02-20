@@ -659,6 +659,14 @@ export function countScoreOutcomes(): number {
   )
 }
 
+export function countFraudReports(): number {
+  return (
+    db
+      .prepare<[], { count: number }>('SELECT COUNT(*) as count FROM fraud_reports')
+      .get()?.count ?? 0
+  )
+}
+
 // ---------- indexer_state helpers ----------
 
 export function getIndexerState(key: string): string | null {

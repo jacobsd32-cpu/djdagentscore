@@ -13,9 +13,13 @@ import { responseHeadersMiddleware } from './middleware/responseHeaders.js'
 import { queryLoggerMiddleware } from './middleware/queryLogger.js'
 import { freeTierMiddleware } from './middleware/freeTier.js'
 import { startBlockchainIndexer, stopBlockchainIndexer } from './jobs/blockchainIndexer.js'
-import { getExpiredWallets } from './db.js'
-import { getOrCalculateScore } from './scoring/engine.js'
-import type { Address } from './types.js'
+import { runHourlyRefresh } from './jobs/scoreRefresh.js'
+import { runIntentMatcher } from './jobs/intentMatcher.js'
+import { runOutcomeMatcher } from './jobs/outcomeMatcher.js'
+import { runAnomalyDetector, runSybilMonitor } from './jobs/anomalyDetector.js'
+import { runDailyAggregator } from './jobs/dailyAggregator.js'
+import { jobStats } from './jobs/jobStats.js'
+import { db } from './db.js'
 
 // ---------- Config ----------
 
@@ -96,39 +100,13 @@ app.onError((err, c) => {
   return c.json({ error: 'Internal server error' }, 500)
 })
 
-// ---------- Background Job — hourly score refresh ----------
+// ---------- Graceful shutdown ----------
 
-const REFRESH_INTERVAL_MS = 60 * 60 * 1000 // 1 hour
-const REFRESH_BATCH_SIZE = 10 // refresh at most N wallets per tick to avoid RPC flooding
+const intervals: ReturnType<typeof setInterval>[] = []
 
-async function refreshExpiredScores(): Promise<void> {
-  const expired = getExpiredWallets()
-  if (expired.length === 0) return
-
-  console.log(`[refresh] ${expired.length} expired score(s) to refresh`)
-  const batch = expired.slice(0, REFRESH_BATCH_SIZE)
-
-  for (const wallet of batch) {
-    try {
-      await getOrCalculateScore(wallet as Address, true)
-      console.log(`[refresh] refreshed ${wallet}`)
-    } catch (err) {
-      console.error(`[refresh] failed for ${wallet}:`, err)
-    }
-    // Small delay between wallets to be polite to the RPC
-    await new Promise((res) => setTimeout(res, 500))
-  }
-}
-
-// Start background refresh job
-const refreshInterval = setInterval(() => {
-  refreshExpiredScores().catch((err) => console.error('[refresh] job error:', err))
-}, REFRESH_INTERVAL_MS)
-
-// Graceful shutdown
 function shutdown() {
   console.log('\n[server] Shutting down…')
-  clearInterval(refreshInterval)
+  for (const id of intervals) clearInterval(id)
   stopBlockchainIndexer()
   process.exit(0)
 }
@@ -142,10 +120,78 @@ serve({ fetch: app.fetch, port: PORT }, (info) => {
   console.log(`[server] payTo: ${PAY_TO}`)
   console.log(`[server] facilitator: ${FACILITATOR_URL}`)
 
-  // Start blockchain indexer as a non-blocking background process
+  console.log('[jobs] Starting background processes...')
+
+  // ── 1. Blockchain indexer (continuous) ─────────────────────────────────────
   startBlockchainIndexer().catch((err) =>
     console.error('[indexer] fatal error, stopped:', err),
   )
+
+  // ── 2. Hourly score refresh + wallet snapshots + economy metrics ───────────
+  intervals.push(
+    setInterval(
+      () => runHourlyRefresh().catch((err) => console.error('[refresh] job error:', err)),
+      60 * 60 * 1000,
+    ),
+  )
+
+  // ── 3. Intent matcher (every 6 hours, start after 60s) ────────────────────
+  setTimeout(() => {
+    runIntentMatcher(db).catch((err) => console.error('[intent] startup error:', err))
+    intervals.push(
+      setInterval(
+        () => runIntentMatcher(db).catch((err) => console.error('[intent] job error:', err)),
+        6 * 60 * 60 * 1000,
+      ),
+    )
+  }, 60_000)
+
+  // ── 4. Outcome matcher (every 6 hours, start after 90s) ───────────────────
+  setTimeout(() => {
+    runOutcomeMatcher(db).catch((err) => console.error('[outcome] startup error:', err))
+    intervals.push(
+      setInterval(
+        () => runOutcomeMatcher(db).catch((err) => console.error('[outcome] job error:', err)),
+        6 * 60 * 60 * 1000,
+      ),
+    )
+  }, 90_000)
+
+  // ── 5. Anomaly detector (every 15 min) ─────────────────────────────────────
+  intervals.push(
+    setInterval(
+      () => runAnomalyDetector(db).catch((err) => console.error('[anomaly] job error:', err)),
+      15 * 60 * 1000,
+    ),
+  )
+
+  // ── 6. Enhanced Sybil monitoring (every 5 min) ────────────────────────────
+  intervals.push(
+    setInterval(
+      () => runSybilMonitor(db).catch((err) => console.error('[sybil-monitor] job error:', err)),
+      5 * 60 * 1000,
+    ),
+  )
+
+  // ── 7. Daily aggregator (check every hour, run once per day) ─────────────
+  let lastAggDate = ''
+  intervals.push(
+    setInterval(
+      async () => {
+        const today = new Date().toISOString().split('T')[0]!
+        if (today !== lastAggDate) {
+          await runDailyAggregator(db).catch((err) => console.error('[daily] job error:', err))
+          lastAggDate = today
+        }
+      },
+      60 * 60 * 1000,
+    ),
+  )
+
+  console.log('[jobs] All background processes registered')
+
+  // Expose jobStats for health route (module-level singleton, already imported)
+  void jobStats
 })
 
 export default app

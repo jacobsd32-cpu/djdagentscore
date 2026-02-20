@@ -1,0 +1,237 @@
+/**
+ * Anomaly Detector — runs every 15 minutes
+ *
+ * Checks for:
+ *   1. Score changes > 10 points (score_decay entries in last 15 min)
+ *   2. New fraud reports
+ *   3. Balance freefall (wallet_snapshots)
+ *   4. Newly Sybil-flagged wallets
+ *
+ * For each anomaly, fires matching monitoring_subscription webhooks
+ * (fire-and-forget, never blocks the main job).
+ */
+import type { Database as DatabaseType } from 'better-sqlite3'
+import { jobStats } from './jobStats.js'
+
+interface Anomaly {
+  wallet: string
+  type: 'score_drop' | 'score_spike' | 'fraud_report' | 'balance_freefall' | 'sybil_flagged'
+  details: string
+  severity: 'low' | 'medium' | 'high'
+  detected_at: string
+}
+
+interface ScoreDecayRow {
+  wallet: string
+  composite_score: number
+  recorded_at: string
+}
+
+interface FraudReportRow {
+  target_wallet: string
+  reporter_wallet: string
+  reason: string
+  created_at: string
+}
+
+interface SnapshotRow {
+  wallet: string
+  usdc_balance: number
+  snapshot_at: string
+}
+
+interface MonitoringSubRow {
+  webhook_url: string | null
+  alert_type: string
+}
+
+function fireWebhook(url: string, payload: object): void {
+  // Fire-and-forget — errors are silently swallowed
+  ;(async () => {
+    try {
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(5_000),
+      })
+    } catch {
+      // Ignore webhook delivery failures
+    }
+  })()
+}
+
+function notifySubscribers(db: DatabaseType, anomaly: Anomaly): void {
+  const subs = db
+    .prepare<[string, string, string], MonitoringSubRow>(
+      `SELECT webhook_url, alert_type FROM monitoring_subscriptions
+       WHERE target_wallet = ?
+         AND active = 1
+         AND (alert_type = ? OR alert_type = 'all')`,
+    )
+    .all(anomaly.wallet, anomaly.type)
+
+  for (const sub of subs) {
+    if (sub.webhook_url) {
+      fireWebhook(sub.webhook_url, { anomaly, timestamp: anomaly.detected_at })
+    }
+  }
+}
+
+export async function runAnomalyDetector(db: DatabaseType): Promise<void> {
+  console.log('[anomaly] Starting anomaly detector...')
+
+  try {
+    const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString()
+    const detectedAt = new Date().toISOString()
+    const anomalies: Anomaly[] = []
+
+    // ── CHECK 1: Score changes > 10 points ─────────────────────────────────
+    // Wallets with a new score_decay entry in the last 15 min
+    const recentlyScored = db
+      .prepare<[string], { wallet: string }>(
+        `SELECT DISTINCT wallet FROM score_decay WHERE recorded_at > ?`,
+      )
+      .all(fifteenMinAgo)
+      .map((r) => r.wallet)
+
+    for (const wallet of recentlyScored) {
+      const rows = db
+        .prepare<[string], ScoreDecayRow>(
+          `SELECT wallet, composite_score, recorded_at
+           FROM score_decay WHERE wallet = ?
+           ORDER BY recorded_at DESC LIMIT 2`,
+        )
+        .all(wallet)
+
+      if (rows.length === 2) {
+        const diff = rows[0].composite_score - rows[1].composite_score
+        const absDiff = Math.abs(diff)
+
+        if (absDiff > 10) {
+          anomalies.push({
+            wallet,
+            type: diff < 0 ? 'score_drop' : 'score_spike',
+            details: `Score changed ${diff > 0 ? '+' : ''}${diff} points (${rows[1].composite_score} → ${rows[0].composite_score})`,
+            severity: absDiff > 20 ? 'high' : 'medium',
+            detected_at: detectedAt,
+          })
+        }
+      }
+    }
+
+    // ── CHECK 2: New fraud reports ──────────────────────────────────────────
+    const newFraudReports = db
+      .prepare<[string], FraudReportRow>(
+        `SELECT target_wallet, reporter_wallet, reason, created_at
+         FROM fraud_reports WHERE created_at > ?`,
+      )
+      .all(fifteenMinAgo)
+
+    for (const report of newFraudReports) {
+      anomalies.push({
+        wallet: report.target_wallet,
+        type: 'fraud_report',
+        details: `Fraud report filed: ${report.reason} by ${report.reporter_wallet}`,
+        severity: 'high',
+        detected_at: detectedAt,
+      })
+    }
+
+    // ── CHECK 3: Balance freefall ───────────────────────────────────────────
+    // Wallets with a new snapshot in last 15 min — compare to previous snapshot
+    const recentSnaps = db
+      .prepare<[string], { wallet: string }>(
+        `SELECT DISTINCT wallet FROM wallet_snapshots WHERE snapshot_at > ?`,
+      )
+      .all(fifteenMinAgo)
+      .map((r) => r.wallet)
+
+    for (const wallet of recentSnaps) {
+      const snaps = db
+        .prepare<[string], SnapshotRow>(
+          `SELECT wallet, usdc_balance, snapshot_at
+           FROM wallet_snapshots WHERE wallet = ?
+           ORDER BY snapshot_at DESC LIMIT 2`,
+        )
+        .all(wallet)
+
+      if (snaps.length === 2 && snaps[1].usdc_balance > 0) {
+        const ratio = snaps[0].usdc_balance / snaps[1].usdc_balance
+        if (ratio < 0.5) {
+          anomalies.push({
+            wallet,
+            type: 'balance_freefall',
+            details: `Balance dropped from ${snaps[1].usdc_balance.toFixed(2)} to ${snaps[0].usdc_balance.toFixed(2)} USDC`,
+            severity: 'high',
+            detected_at: detectedAt,
+          })
+        }
+      }
+    }
+
+    // ── CHECK 4: Newly Sybil-flagged wallets ───────────────────────────────
+    const newSybil = db
+      .prepare<[string], { wallet: string }>(
+        `SELECT wallet FROM scores WHERE sybil_flag = 1 AND calculated_at > ?`,
+      )
+      .all(fifteenMinAgo)
+
+    for (const row of newSybil) {
+      anomalies.push({
+        wallet: row.wallet,
+        type: 'sybil_flagged',
+        details: 'Wallet flagged as Sybil in most recent score calculation',
+        severity: 'medium',
+        detected_at: detectedAt,
+      })
+    }
+
+    // ── Notify subscribers and log ─────────────────────────────────────────
+    for (const anomaly of anomalies) {
+      notifySubscribers(db, anomaly)
+    }
+
+    jobStats.anomalyDetector.lastRun = detectedAt
+    jobStats.anomalyDetector.anomaliesFound = anomalies.length
+    console.log(
+      `[anomaly] Anomaly detector: found ${anomalies.length} anomaly(ies), notified relevant subscribers`,
+    )
+  } catch (err) {
+    console.error('[anomaly] Anomaly detector error:', err)
+  }
+}
+
+/**
+ * Enhanced monitoring for Sybil-flagged wallets.
+ * Runs every 5 minutes — lighter weight than the full anomaly check.
+ */
+export async function runSybilMonitor(db: DatabaseType): Promise<void> {
+  try {
+    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+
+    // Re-check sybil-flagged wallets for new transactions since last check
+    const flaggedWallets = db
+      .prepare<[], { wallet: string }>(
+        `SELECT wallet FROM scores WHERE sybil_flag = 1`,
+      )
+      .all()
+      .map((r) => r.wallet)
+
+    for (const wallet of flaggedWallets) {
+      const newTx = db
+        .prepare<[string, string, string], { count: number }>(
+          `SELECT COUNT(*) as count FROM raw_transactions
+           WHERE (from_wallet = ? OR to_wallet = ?) AND timestamp > ?`,
+        )
+        .get(wallet, wallet, fiveMinAgo)
+
+      if (newTx && newTx.count > 0) {
+        console.log(`[sybil-monitor] Flagged wallet ${wallet} has ${newTx.count} new tx(s) — queued for rescore`)
+        // The scoring engine will re-evaluate sybil on next refresh
+      }
+    }
+  } catch (err) {
+    console.error('[sybil-monitor] Error:', err)
+  }
+}
