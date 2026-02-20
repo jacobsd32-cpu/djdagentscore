@@ -63,7 +63,7 @@ function fireWebhook(url: string, payload: object): void {
 
 function notifySubscribers(db: DatabaseType, anomaly: Anomaly): void {
   const subs = db
-    .prepare<[string, string, string], MonitoringSubRow>(
+    .prepare<[string, string], MonitoringSubRow>(
       `SELECT webhook_url, alert_type FROM monitoring_subscriptions
        WHERE target_wallet = ?
          AND active = 1

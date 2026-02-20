@@ -213,7 +213,7 @@ function insertHourlyEconomyMetrics(hourStart: Date): void {
 export async function runHourlyRefresh(): Promise<void> {
   console.log('[refresh] Starting hourly refresh...')
   const hourStart = new Date()
-  hourStart.setMinutes(0, 0, 0, 0)
+  hourStart.setMinutes(0, 0, 0)
 
   try {
     // Expired wallets + certified wallets due for 15-min refresh
