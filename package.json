@@ -1,0 +1,28 @@
+{
+  "name": "djd-agent-score",
+  "version": "1.0.0",
+  "description": "Reputation scoring service for autonomous AI agents, paid via x402 micropayments",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "better-sqlite3": "^9.6.0",
+    "hono": "^4.6.17",
+    "uuid": "^10.0.0",
+    "viem": "^2.21.54",
+    "x402-hono": "^0.3.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.9.0",
+    "@types/uuid": "^10.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

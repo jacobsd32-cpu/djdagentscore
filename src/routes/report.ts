@@ -1,0 +1,76 @@
+import { Hono } from 'hono'
+import { v4 as uuidv4 } from 'uuid'
+import { insertReport, getScore, applyReportPenalty, scoreToTier } from '../db.js'
+import { REPORT_REASONS } from '../types.js'
+import type { Address, ReportReason, ReportBody } from '../types.js'
+
+const PENALTY_PER_REPORT = 5
+
+function isValidAddress(addr: string): addr is Address {
+  return /^0x[0-9a-fA-F]{40}$/.test(addr)
+}
+
+const report = new Hono()
+
+// POST /v1/report
+report.post('/', async (c) => {
+  let body: ReportBody
+  try {
+    body = await c.req.json<ReportBody>()
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400)
+  }
+
+  const { target, reporter, reason, details } = body
+
+  // Validate fields
+  if (!target || !isValidAddress(target)) {
+    return c.json({ error: 'Invalid or missing target address' }, 400)
+  }
+  if (!reporter || !isValidAddress(reporter)) {
+    return c.json({ error: 'Invalid or missing reporter address' }, 400)
+  }
+  if (!reason || !(REPORT_REASONS as readonly string[]).includes(reason)) {
+    return c.json(
+      {
+        error: `Invalid reason. Must be one of: ${REPORT_REASONS.join(', ')}`,
+      },
+      400,
+    )
+  }
+  if (typeof details !== 'string' || details.trim().length === 0) {
+    return c.json({ error: 'details is required' }, 400)
+  }
+  if (target.toLowerCase() === reporter.toLowerCase()) {
+    return c.json({ error: 'target and reporter must be different addresses' }, 400)
+  }
+
+  const reportId = uuidv4()
+
+  insertReport({
+    id: reportId,
+    target_wallet: target.toLowerCase(),
+    reporter_wallet: reporter.toLowerCase(),
+    reason: reason as ReportReason,
+    details: details.trim().slice(0, 1000),
+    penalty_applied: PENALTY_PER_REPORT,
+  })
+
+  // Apply penalty to cached score if present
+  applyReportPenalty(target.toLowerCase(), PENALTY_PER_REPORT)
+
+  const updatedRow = getScore(target.toLowerCase())
+  const targetCurrentScore = updatedRow?.composite_score ?? 0
+
+  return c.json(
+    {
+      reportId,
+      status: 'accepted',
+      targetCurrentScore,
+      penaltyApplied: PENALTY_PER_REPORT,
+    },
+    201,
+  )
+})
+
+export default report
