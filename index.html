@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DJD Agent Score — Trust Infrastructure for the Agent Economy</title>
+<meta name="description" content="The first reputation scoring API for autonomous AI agent wallets. On-chain behavioral data, scored in milliseconds, paid via x402 micropayment on Base.">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #090d16; --bg2: #10151f; --bg3: #171d2b;
+  --surface: #1a2030; --surface2: #1f2738;
+  --border: #1c2536; --border-hi: #2a3548;
+  --text: #e2e8f0; --text-dim: #94a3b8; --text-muted: #4b5c73;
+  --accent: #22d3ee; --accent-dim: rgba(34,211,238,0.08);
+  --green: #34d399; --green-dim: rgba(52,211,153,0.08);
+  --yellow: #fbbf24; --yellow-dim: rgba(251,191,36,0.08);
+  --red: #f87171; --red-dim: rgba(248,113,113,0.08);
+  --orange: #fb923c; --orange-dim: rgba(251,146,60,0.08);
+  --purple: #a78bfa; --purple-dim: rgba(167,139,250,0.08);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(34,211,238,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(34,211,238,0.015) 1px,transparent 1px);background-size:64px 64px;pointer-events:none;z-index:0}
+.wrap{max-width:900px;margin:0 auto;padding:0 28px;position:relative;z-index:1}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.mono{font-family:'JetBrains Mono',monospace}
+
+nav{padding:18px 0;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:17px;color:var(--accent);letter-spacing:-0.5px}
+.logo span{color:var(--text-dim);font-weight:400}
+.nav-links{display:flex;gap:18px;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:12px;font-family:'JetBrains Mono',monospace;transition:color .2s}
+.nav-links a:hover{color:var(--accent);text-decoration:none}
+
+.banner{background:rgba(251,191,36,0.05);border:1px solid rgba(251,191,36,0.13);border-radius:8px;padding:11px 18px;margin-top:18px;display:flex;align-items:flex-start;gap:9px;font-size:11.5px;color:var(--yellow);line-height:1.55}
+.banner .ico{font-size:15px;flex-shrink:0;margin-top:1px}
+.banner a{color:var(--yellow);text-decoration:underline}
+
+.hero{padding:68px 0 44px}
+.badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(34,211,238,0.18);padding:5px 13px;border-radius:100px;letter-spacing:1px;text-transform:uppercase;margin-bottom:22px}
+.hero h1{font-size:clamp(30px,4.5vw,46px);font-weight:700;line-height:1.14;margin-bottom:18px;letter-spacing:-1px}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.hero-p{font-size:16px;color:var(--text-dim);max-width:600px;line-height:1.72;margin-bottom:10px}
+
+.sec{margin:60px 0}
+.sec-label{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px}
+.sec-title{font-size:23px;font-weight:700;margin-bottom:7px;letter-spacing:-0.4px}
+.sec-desc{font-size:14.5px;color:var(--text-dim);line-height:1.72;max-width:620px}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:36px 0}
+.st{background:var(--bg2);padding:20px 14px;text-align:center}
+.st-v{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;margin-bottom:3px}
+.st-v.live{color:var(--green)}
+.st-l{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:3px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:11px;overflow:hidden;margin-top:24px}
+.card{background:var(--bg2);padding:26px 22px}
+.card h3{font-size:14.5px;font-weight:700;margin-bottom:9px}
+.card p{font-size:13px;color:var(--text-dim);line-height:1.65}
+.clbl{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:9px}
+.clbl.r{color:var(--red)}.clbl.g{color:var(--green)}.clbl.a{color:var(--accent)}.clbl.p{color:var(--purple)}.clbl.y{color:var(--yellow)}.clbl.o{color:var(--orange)}
+
+.dim-q{font-size:13.5px;color:var(--accent);margin-bottom:7px;font-style:italic}
+.dim-hdr{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+
+.pipeline{margin-top:24px;border:1px solid var(--border);border-radius:11px;overflow:hidden}
+.pipe-step{display:grid;grid-template-columns:40px 1fr;border-bottom:1px solid var(--border);transition:background .15s}
+.pipe-step:last-child{border-bottom:none}
+.pipe-step:hover{background:var(--bg3)}
+.pipe-num{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--accent);display:flex;align-items:center;justify-content:center;background:var(--bg2);border-right:1px solid var(--border)}
+.pipe-body{padding:14px 18px}
+.pipe-title{font-weight:700;font-size:13.5px;margin-bottom:3px}
+.pipe-desc{font-size:12.5px;color:var(--text-dim);line-height:1.55}
+.pipe-tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:9.5px;padding:2px 6px;border-radius:3px;margin-top:5px}
+.pipe-tag.integrity{color:var(--red);background:var(--red-dim)}
+.pipe-tag.scoring{color:var(--green);background:var(--green-dim)}
+.pipe-tag.meta{color:var(--purple);background:var(--purple-dim)}
+
+.tiers{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:24px;font-family:'JetBrains Mono',monospace;font-size:12px}
+.tier-seg{padding:15px 8px;text-align:center;flex:1}
+.tier-seg .tn{font-weight:700;margin-bottom:2px}
+.tier-seg .tr{font-size:10px;opacity:.7}
+.t-unv{background:rgba(71,85,105,0.12);color:var(--text-muted)}
+.t-emg{background:rgba(251,146,60,0.06);color:var(--orange)}
+.t-est{background:rgba(251,191,36,0.06);color:var(--yellow)}
+.t-tru{background:rgba(52,211,153,0.06);color:var(--green)}
+.t-eli{background:rgba(34,211,238,0.06);color:var(--accent)}
+
+.lookup{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:32px;margin-top:24px}
+.lu-wrap{display:flex;gap:10px}
+.lookup input{flex:1;background:var(--bg);border:1px solid var(--border-hi);border-radius:7px;padding:13px 16px;font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--text);outline:none;transition:border-color .2s}
+.lookup input::placeholder{color:var(--text-muted)}
+.lookup input:focus{border-color:var(--accent)}
+.lookup button{background:var(--accent);color:var(--bg);border:none;border-radius:7px;padding:13px 26px;font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+.lookup button:hover{background:#06b6d4;transform:translateY(-1px)}
+.lookup button:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.lu-note{font-size:10.5px;color:var(--text-muted);margin-top:9px;line-height:1.5}
+
+.result{margin-top:22px;display:none}.result.vis{display:block;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.sc{background:var(--bg);border:1px solid var(--border-hi);border-radius:9px;padding:26px}
+.sc-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.sc-big{font-family:'JetBrains Mono',monospace;font-size:52px;font-weight:700;line-height:1}
+.sc-meta{text-align:right}
+.sc-tier{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;padding:3px 9px;border-radius:4px;display:inline-block;margin-bottom:5px}
+.stt-elite{color:var(--accent);background:var(--accent-dim)}.stt-trusted{color:var(--green);background:var(--green-dim)}.stt-established{color:var(--yellow);background:var(--yellow-dim)}.stt-emerging{color:var(--orange);background:var(--orange-dim)}.stt-unverified{color:var(--text-muted);background:rgba(71,85,105,0.18)}
+.sc-conf{font-size:11.5px;color:var(--text-dim);font-family:'JetBrains Mono',monospace}
+.sc-rec{font-size:10.5px;font-family:'JetBrains Mono',monospace;padding:2px 7px;border-radius:3px;display:inline-block;margin-top:4px}
+.rc-proceed{color:var(--green);background:var(--green-dim)}.rc-caution{color:var(--yellow);background:var(--yellow-dim)}.rc-insufficient{color:var(--text-muted);background:rgba(71,85,105,0.18)}.rc-high-risk{color:var(--red);background:var(--red-dim)}.rc-flagged{color:var(--red);background:var(--red-dim)}
+.sc-bar{margin-top:14px}.sc-bar-bg{height:4px;background:var(--bg2);border-radius:2px;overflow:hidden}.sc-bar-fill{height:100%;border-radius:2px;transition:width .6s ease}
+.sc-wallet{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-muted);word-break:break-all;padding-top:12px;border-top:1px solid var(--border);margin-top:14px}
+.sc-disc{font-size:10px;color:var(--text-muted);margin-top:10px;line-height:1.5;padding-top:10px;border-top:1px solid var(--border)}.sc-disc a{color:var(--text-muted);text-decoration:underline}
+.err{color:var(--red);font-family:'JetBrains Mono',monospace;font-size:11px;margin-top:10px;display:none}.err.vis{display:block}
+
+.code{background:#0c1018;border:1px solid var(--border);border-radius:10px;padding:22px;overflow-x:auto;margin-top:24px;position:relative}
+.code pre{font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.7;color:var(--text-dim);white-space:pre}
+.code .c{color:var(--text-muted)}.code .s{color:var(--green)}.code .k{color:var(--purple)}.code .f{color:var(--accent)}
+.code-l{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;position:absolute;top:9px;right:13px}
+
+.api{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:24px}
+.api-r{display:grid;grid-template-columns:1fr 90px 70px;padding:11px 18px;border-bottom:1px solid var(--border);font-size:12.5px;align-items:center}
+.api-r:last-child{border-bottom:none}
+.api-r.hdr{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;background:var(--bg3)}
+.api-ep{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--accent)}
+.api-d{font-size:10.5px;color:var(--text-muted);margin-top:2px}
+.api-p{font-family:'JetBrains Mono',monospace;font-size:11.5px;text-align:right;color:var(--green)}
+.api-f{color:var(--text-muted)}
+.api-m{text-align:right;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-muted)}
+
+.lb{width:100%;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:24px}
+.lb-r{display:grid;grid-template-columns:40px 1fr 80px 80px;padding:11px 16px;border-bottom:1px solid var(--border);align-items:center;font-size:12.5px;transition:background .15s}
+.lb-r:last-child{border-bottom:none}.lb-r:hover{background:var(--bg3)}
+.lb-r.hdr{background:var(--bg2);font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+.lb-rk{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--text-muted)}
+.lb-w{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text-dim)}
+.lb-s{font-family:'JetBrains Mono',monospace;font-weight:700;text-align:right}
+.lb-t{text-align:right;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500}
+.lb-e{padding:32px;text-align:center;color:var(--text-muted);font-size:12.5px}
+
+.fb{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:32px;margin-top:24px}
+.fb-row{margin-bottom:14px}
+.fb-row label{display:block;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.fb-row select,.fb-row input,.fb-row textarea{width:100%;background:var(--bg);border:1px solid var(--border-hi);border-radius:7px;padding:11px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;transition:border-color .2s;resize:vertical}
+.fb-row select:focus,.fb-row input:focus,.fb-row textarea:focus{border-color:var(--accent)}
+.fb-row textarea{min-height:100px;font-size:13px;line-height:1.6}
+.fb-row select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234b5c73' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.fb-row select option{background:var(--bg2);color:var(--text)}
+.fb-submit{background:var(--accent);color:var(--bg);border:none;border-radius:7px;padding:12px 28px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.fb-submit:hover{background:#06b6d4;transform:translateY(-1px)}
+.fb-msg{font-family:'JetBrains Mono',monospace;font-size:11px;margin-top:10px;display:none;line-height:1.5}
+.fb-msg.vis{display:block}
+.fb-msg.ok{color:var(--green)}.fb-msg.bad{color:var(--red)}
+
+.info{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px;margin-top:24px;font-size:13px;color:var(--text-dim);line-height:1.7}
+.info strong{color:var(--text)}
+
+footer{border-top:1px solid var(--border);padding:28px 0 36px;margin-top:60px}
+.ft-disc{font-size:10.5px;color:var(--text-muted);line-height:1.7;margin-bottom:18px;max-width:700px}.ft-disc a{color:var(--text-muted);text-decoration:underline}
+.ft-bot{display:flex;justify-content:space-between;align-items:center}
+.ft-l{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-muted)}
+.ft-links{display:flex;gap:14px}.ft-links a{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-muted);text-decoration:none;transition:color .2s}.ft-links a:hover{color:var(--accent);text-decoration:none}
+
+@media(max-width:768px){
+  .stats{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.tiers{flex-direction:column}
+  .lu-wrap{flex-direction:column}.lb-r{grid-template-columns:34px 1fr 65px}.lb-t{display:none}
+  .api-r{grid-template-columns:1fr 75px}.api-m{display:none}.sc-hdr{flex-direction:column;align-items:flex-start;gap:10px}
+  .sc-meta{text-align:left}.ft-bot{flex-direction:column;gap:10px;text-align:center}
+  .pipe-step{grid-template-columns:34px 1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav>
+  <div class="logo">DJD<span> Agent Score</span></div>
+  <div class="nav-links">
+    <a href="#lookup">Score</a>
+    <a href="#methodology">How It Works</a>
+    <a href="#api-ref">API</a>
+    <a href="#feedback">Feedback</a>
+    <a href="/terms">Terms</a>
+    <a href="/privacy">Privacy</a>
+  </div>
+</nav>
+
+<div class="banner">
+  <span class="ico">&#9888;</span>
+  <span><strong>Experimental.</strong> DJD Agent Score is an unvalidated algorithmic model. Scores are informational only, not financial advice, credit assessments, or consumer reports under the FCRA. Use at your own risk. <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a></span>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="badge">Live on Base &middot; Paid via x402</div>
+  <h1>Should you trust<br>this <em>AI agent</em>?</h1>
+  <p class="hero-p">Autonomous agents send and receive money on-chain with no way to know if a counterparty is reliable, funded, or a scam. DJD Agent Score fixes that.</p>
+  <p class="hero-p">We index USDC transfer activity on the Base blockchain, analyze behavioral patterns across multiple dimensions, run integrity checks, and produce a 0-100 reputation score for any wallet. Query via API. Pay per lookup with USDC via <a href="https://www.x402.org/" target="_blank">x402</a>. No accounts, no API keys, no signup.</p>
+</div>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="st"><div class="st-v" id="sW">&mdash;</div><div class="st-l">Wallets Indexed</div></div>
+  <div class="st"><div class="st-v" id="sT">&mdash;</div><div class="st-l">Transactions</div></div>
+  <div class="st"><div class="st-v" id="sQ">&mdash;</div><div class="st-l">Queries Served</div></div>
+  <div class="st"><div class="st-v live"><span class="dot"></span><span id="sS">&mdash;</span></div><div class="st-l">Indexer</div></div>
+</div>
+
+<!-- PROBLEM -->
+<div class="sec">
+  <div class="sec-label">The Problem</div>
+  <div class="sec-title">Agents don't have reputations. Yet.</div>
+  <div class="sec-desc">When one AI agent pays another for a service, neither side has a trust signal. No credit score, no review history, no identity layer. Agents transact in the dark.</div>
+  <div class="grid2">
+    <div class="card"><div class="clbl r">Without a score</div><h3>Agent A sends $50 USDC to Agent B for a task.</h3><p>Agent B was created yesterday, has no meaningful history, and shares a funding source with dozens of other wallets. Agent A has no way to know this. The money is gone. The task never completes.</p></div>
+    <div class="card"><div class="clbl g">With DJD Agent Score</div><h3>Agent A queries Agent B's score first.</h3><p>Low score. Unverified tier. Zero confidence. Recommendation: insufficient history. Integrity flags raised. Agent A doesn't transact. $50 saved in milliseconds.</p></div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="sec" id="methodology">
+  <div class="sec-label">How It Works</div>
+  <div class="sec-title">What the score measures</div>
+  <div class="sec-desc">Every score request triggers a multi-stage pipeline. The system first checks for manipulation, then scores the wallet across multiple behavioral dimensions, and finally generates a confidence interval and actionable recommendation.</div>
+  <div class="pipeline">
+    <div class="pipe-step"><div class="pipe-num">1</div><div class="pipe-body"><div class="pipe-title">Integrity Screening</div><div class="pipe-desc">Before any scoring happens, the wallet's transaction graph is analyzed for Sybil patterns (fake identity clusters) and gaming behavior (attempts to artificially inflate a score). Multiple independent detection signals run in parallel. Wallets that fail integrity checks face score caps and penalties that cannot be overcome by volume alone.</div><span class="pipe-tag integrity">Integrity</span></div></div>
+    <div class="pipe-step"><div class="pipe-num">2</div><div class="pipe-body"><div class="pipe-title">Behavioral Analysis</div><div class="pipe-desc">The wallet's on-chain activity is evaluated across multiple weighted dimensions. Each dimension answers a different question about the wallet's trustworthiness. Dimension weights are proprietary and reflect our research into which behavioral signals are most predictive of agent reliability.</div><span class="pipe-tag scoring">Scoring</span></div></div>
+    <div class="pipe-step"><div class="pipe-num">3</div><div class="pipe-body"><div class="pipe-title">Integrity Adjustment</div><div class="pipe-desc">Raw dimension scores are adjusted based on integrity screening results. Flagged wallets receive caps and penalties applied to the relevant dimensions. This ensures that wallets engaged in manipulation cannot achieve high scores regardless of other activity.</div><span class="pipe-tag integrity">Integrity</span></div></div>
+    <div class="pipe-step"><div class="pipe-num">4</div><div class="pipe-body"><div class="pipe-title">Composite Score</div><div class="pipe-desc">Adjusted dimension scores are combined into a single 0-100 composite using proprietary weighting. The composite is the headline number returned in every API response.</div><span class="pipe-tag scoring">Score</span></div></div>
+    <div class="pipe-step"><div class="pipe-num">5</div><div class="pipe-body"><div class="pipe-title">Confidence &amp; Recommendation</div><div class="pipe-desc">A confidence interval (0.0 to 1.0) is calculated based on the quantity and quality of available data. A recommendation is generated using priority-ordered logic that considers integrity flags, data sufficiency, and score thresholds. This is the output your agent should use to make decisions.</div><span class="pipe-tag meta">Output</span></div></div>
+  </div>
+</div>
+
+<!-- DIMENSIONS -->
+<div class="sec" id="dimensions">
+  <div class="sec-label">Scoring Dimensions</div>
+  <div class="sec-title">Four questions about every wallet</div>
+  <div class="sec-desc">Each dimension evaluates a different facet of on-chain behavior. Dimensions are independently scored and then combined using proprietary weights.</div>
+  <div class="grid2">
+    <div class="card"><div class="dim-hdr"><h3>Reliability</h3></div><div class="dim-q">"Does this agent follow through?"</div><p>Evaluates consistency and predictability of transaction behavior over time. Wallets with regular, sustained activity patterns across diverse counterparties are considered more reliable than those with erratic or concentrated behavior.</p></div>
+    <div class="card"><div class="dim-hdr"><h3>Viability</h3></div><div class="dim-q">"Can this agent actually pay?"</div><p>Assesses financial health and sustainability. Considers the relationship between a wallet's balance, its transaction volume, and how its financial position changes over time. Wallets that maintain healthy, stable positions score higher.</p></div>
+    <div class="card"><div class="dim-hdr"><h3>Identity</h3></div><div class="dim-q">"Is this a real, unique agent?"</div><p>Measures the wallet's uniqueness and organic legitimacy within the broader transaction network. Evaluates relationship diversity, network structure, and the absence of patterns associated with manufactured identities.</p></div>
+    <div class="card"><div class="dim-hdr"><h3>Capability</h3></div><div class="dim-q">"Is this agent economically active?"</div><p>Gauges overall economic footprint and network influence. Considers transaction volume, activity breadth, and the wallet's role within the wider agent economy. Larger, more connected participants score higher.</p></div>
+  </div>
+</div>
+
+<!-- INTEGRITY -->
+<div class="sec">
+  <div class="sec-label">Integrity Systems</div>
+  <div class="sec-title">How we detect manipulation</div>
+  <div class="sec-desc">Two proprietary detection systems run before dimension scoring. If either flags a wallet, score caps and penalties apply automatically.</div>
+  <div class="grid2">
+    <div class="card">
+      <div class="clbl r">Sybil Detection</div>
+      <h3>Catches fake identity clusters</h3>
+      <p>Analyzes the wallet's transaction graph for patterns consistent with coordinated inauthentic behavior: circular fund flows, artificial relationship structures, and wallet creation patterns that suggest a single operator controlling multiple identities. Multiple independent signals are evaluated. Any confirmed pattern triggers score restrictions.</p>
+    </div>
+    <div class="card">
+      <div class="clbl o">Gaming Detection</div>
+      <h3>Catches score manipulation</h3>
+      <p>Monitors for behavioral anomalies that suggest a wallet is trying to artificially inflate its score: sudden spikes in activity inconsistent with history, strategically timed balance changes, and patterns of activity that stop abruptly once a score threshold is reached. Each detection applies targeted penalties.</p>
+    </div>
+  </div>
+</div>
+
+<!-- TIERS -->
+<div class="sec">
+  <div class="sec-label">Output Format</div>
+  <div class="sec-title">Tiers, confidence, and recommendations</div>
+  <div class="sec-desc">Every API response includes the composite score, a tier label, a confidence interval, and an actionable recommendation.</div>
+  <div class="tiers">
+    <div class="tier-seg t-unv"><div class="tn">Unverified</div><div class="tr">Low</div></div>
+    <div class="tier-seg t-emg"><div class="tn">Emerging</div><div class="tr">&darr;</div></div>
+    <div class="tier-seg t-est"><div class="tn">Established</div><div class="tr">&middot;</div></div>
+    <div class="tier-seg t-tru"><div class="tn">Trusted</div><div class="tr">&uarr;</div></div>
+    <div class="tier-seg t-eli"><div class="tn">Elite</div><div class="tr">High</div></div>
+  </div>
+  <div class="info" style="margin-top:16px">
+    <strong>Confidence (0.0 to 1.0):</strong> How much data backs the score. A high score with high confidence is meaningful. A high score with low confidence means the wallet is under-observed and the score may shift significantly as more data arrives.<br><br>
+    <strong>Recommendation:</strong> The actionable output. Possible values: <span class="mono" style="color:var(--red)">flagged_for_review</span> (integrity concern detected), <span class="mono" style="color:var(--text-muted)">insufficient_history</span> (not enough data to score meaningfully), <span class="mono" style="color:var(--red)">high_risk</span> (low score), <span class="mono" style="color:var(--green)">proceed</span> (score and confidence support transacting), <span class="mono" style="color:var(--yellow)">proceed_with_caution</span> (mixed signals). The thresholds for each recommendation are proprietary and may be adjusted across model versions.
+  </div>
+</div>
+
+<!-- MODEL -->
+<div class="sec">
+  <div class="sec-label">Transparency</div>
+  <div class="sec-title">Model versioning</div>
+  <div class="info">
+    <strong>Scores update as new data arrives.</strong> The system continuously indexes blockchain activity and periodically refreshes scored wallets. If a wallet's behavior changes, its score changes on the next refresh cycle.<br><br>
+    <strong>The model itself evolves manually.</strong> Dimension weights, scoring thresholds, and integrity parameters are adjusted based on outcome data and ecosystem feedback. Every adjustment creates a new model version. Every API response includes a <span class="mono">modelVersion</span> field so you always know which version produced the score.<br><br>
+    <strong>Outcome tracking is built in.</strong> The system monitors what happens after score lookups: did a transaction follow? Did a fraud report come in? This data informs model tuning decisions over time. Your usage makes the model better.
+  </div>
+</div>
+
+<!-- SCORE LOOKUP -->
+<div class="sec" id="lookup">
+  <div class="sec-label">Try It</div>
+  <div class="sec-title">Score any wallet</div>
+  <div class="sec-desc">Paste any Base wallet address. Free basic lookups available daily. No account needed.</div>
+  <div class="lookup">
+    <div class="lu-wrap">
+      <input type="text" id="wI" placeholder="0x... (any Base wallet address)" spellcheck="false" autocomplete="off">
+      <button id="sB" onclick="doScore()">Score</button>
+    </div>
+    <div class="lu-note">Free basic lookup. Full dimension breakdowns, integrity flags, and real-time refresh available via paid tiers.</div>
+    <div class="err" id="eM"></div>
+    <div class="result" id="res">
+      <div class="sc">
+        <div class="sc-hdr">
+          <div class="sc-big" id="rV">&mdash;</div>
+          <div class="sc-meta">
+            <div class="sc-tier" id="rT">&mdash;</div><br>
+            <div class="sc-conf" id="rC">&mdash;</div>
+            <div class="sc-rec" id="rR">&mdash;</div>
+          </div>
+        </div>
+        <div class="sc-bar"><div class="sc-bar-bg"><div class="sc-bar-fill" id="rB"></div></div></div>
+        <div class="sc-wallet" id="rW">&mdash;</div>
+        <div class="sc-disc">This score is algorithmically generated from public blockchain data and unverified third-party submissions. It is not verified, audited, or guaranteed. Do not use as the sole basis for any financial or transactional decision. Not a consumer report under the FCRA. <a href="/terms">Terms</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CODE -->
+<div class="sec" id="api-ref">
+  <div class="sec-label">Integration</div>
+  <div class="sec-title">Add trust to your agent in one call</div>
+  <div class="sec-desc">Score the recipient before every transaction. Gate payments on the recommendation field.</div>
+  <div class="code"><div class="code-l">JavaScript</div><pre><span class="c">// Before sending USDC, check the recipient's reputation</span>
+<span class="k">const</span> wallet = <span class="s">"0xRecipientAddress"</span>;
+<span class="k">const</span> { score, confidence, recommendation } = <span class="k">await</span> (
+  <span class="k">await</span> <span class="f">fetch</span>(<span class="s">`https://djdagentscore.xyz/v1/score/basic?wallet=</span><span class="k">${</span>wallet<span class="k">}</span><span class="s">`</span>)
+).<span class="f">json</span>();
+
+<span class="c">// Gate the transaction on the recommendation</span>
+<span class="k">if</span> (recommendation === <span class="s">"proceed"</span>) {
+  <span class="f">sendUSDC</span>(wallet, amount);
+} <span class="k">else if</span> (recommendation === <span class="s">"proceed_with_caution"</span>) {
+  <span class="f">sendUSDC</span>(wallet, amount * <span class="s">0.5</span>);  <span class="c">// Reduce exposure</span>
+} <span class="k">else</span> {
+  <span class="f">log</span>(<span class="s">`Blocked: ${recommendation}`</span>);
+}</pre></div>
+  <div class="code" style="margin-top:12px"><div class="code-l">cURL</div><pre><span class="c"># Free basic lookup</span>
+curl <span class="s">"https://djdagentscore.xyz/v1/score/basic?wallet=0x..."</span>
+
+<span class="c"># Sample response:</span>
+<span class="c"># {</span>
+<span class="c">#   "score": 67,</span>
+<span class="c">#   "tier": "Established",</span>
+<span class="c">#   "confidence": 0.42,</span>
+<span class="c">#   "recommendation": "proceed_with_caution",</span>
+<span class="c">#   "modelVersion": "1.0.0"</span>
+<span class="c"># }</span></pre></div>
+</div>
+
+<!-- API -->
+<div class="sec">
+  <div class="sec-label">Endpoints</div>
+  <div class="sec-title">API reference</div>
+  <div class="sec-desc">Paid endpoints use x402 micropayment on Base. No API keys, no accounts.</div>
+  <div class="api">
+    <div class="api-r hdr"><div>Endpoint</div><div style="text-align:right">Price</div><div style="text-align:right">Method</div></div>
+    <div class="api-r"><div><div class="api-ep">/v1/score/basic?wallet=</div><div class="api-d">Composite score, tier, confidence, recommendation, model version</div></div><div class="api-p api-f">Free tier</div><div class="api-m">GET</div></div>
+    <div class="api-r"><div><div class="api-ep">/v1/score/full?wallet=</div><div class="api-d">Full dimension breakdown, integrity flags, data quality assessment</div></div><div class="api-p">$0.10</div><div class="api-m">GET</div></div>
+    <div class="api-r"><div><div class="api-ep">/v1/score/refresh?wallet=</div><div class="api-d">Force re-score with latest chain data, full breakdown returned</div></div><div class="api-p">$0.25</div><div class="api-m">GET</div></div>
+    <div class="api-r"><div><div class="api-ep">POST /v1/report</div><div class="api-d">Submit fraud report with evidence (target wallet + tx hashes)</div></div><div class="api-p">$0.02</div><div class="api-m">POST</div></div>
+    <div class="api-r"><div><div class="api-ep">/v1/data/fraud/blacklist</div><div class="api-d">Check if wallet has active fraud reports filed against it</div></div><div class="api-p">$0.05</div><div class="api-m">GET</div></div>
+    <div class="api-r"><div><div class="api-ep">/v1/leaderboard</div><div class="api-d">Top-scored wallets in the ecosystem</div></div><div class="api-p api-f">Free</div><div class="api-m">GET</div></div>
+    <div class="api-r"><div><div class="api-ep">/health</div><div class="api-d">System status, database stats, indexer state, job stats</div></div><div class="api-p api-f">Free</div><div class="api-m">GET</div></div>
+  </div>
+</div>
+
+<!-- LEADERBOARD -->
+<div class="sec" id="leaderboard">
+  <div class="sec-label">Live Data</div>
+  <div class="sec-title">Leaderboard</div>
+  <div class="sec-desc">Top wallets by composite score. Refreshed periodically.</div>
+  <div class="lb" id="lbT"><div class="lb-r hdr"><div>#</div><div>Wallet</div><div style="text-align:right">Score</div><div style="text-align:right">Tier</div></div><div class="lb-e" id="lbE">Loading...</div></div>
+</div>
+
+<!-- FEEDBACK -->
+<div class="sec" id="feedback">
+  <div class="sec-label">Improve the Model</div>
+  <div class="sec-title">Submit feedback</div>
+  <div class="sec-desc">This is v1. Your feedback directly influences how we tune the model, adjust detection systems, and prioritize new features. Every submission is reviewed.</div>
+  <div class="fb">
+    <div class="fb-row">
+      <label>Feedback Type</label>
+      <select id="fbType">
+        <option value="">Select a category...</option>
+        <option value="score-accuracy">Score seems wrong (too high or too low for a wallet)</option>
+        <option value="false-flag">False integrity flag (wallet incorrectly flagged)</option>
+        <option value="missed-flag">Missed integrity issue (suspicious wallet not flagged)</option>
+        <option value="new-signal">Suggest a new data source or signal</option>
+        <option value="feature-request">Feature request</option>
+        <option value="bug">Bug report</option>
+        <option value="integration">Integration help</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="fb-row">
+      <label>Wallet Address (if applicable)</label>
+      <input type="text" id="fbWallet" placeholder="0x... (optional)" spellcheck="false" autocomplete="off">
+    </div>
+    <div class="fb-row">
+      <label>Details</label>
+      <textarea id="fbDetails" placeholder="Be specific. If reporting a score issue: what score did you see, what did you expect, and why? If suggesting a signal: what data source and what would it improve?"></textarea>
+    </div>
+    <div class="fb-row">
+      <label>Your Contact (optional)</label>
+      <input type="text" id="fbContact" placeholder="Email, wallet address, or X handle for follow-up">
+    </div>
+    <button class="fb-submit" onclick="submitFeedback()">Submit Feedback</button>
+    <div class="fb-msg" id="fbMsg"></div>
+  </div>
+  <div class="info" style="margin-top:16px">
+    <strong>What happens with feedback:</strong> Score accuracy reports are logged against the wallet and reviewed during model tuning cycles. Integrity reports are cross-referenced with our detection systems. Feature requests are prioritized by frequency and impact. You're helping build the trust standard for the agent economy.
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="ft-disc">
+    <strong>Disclaimer:</strong> DJD Agent Score is experimental. All scores are algorithmically generated from publicly available blockchain data and unverified third-party submissions. Scores are not financial advice, credit assessments, investment recommendations, or guarantees of agent behavior or creditworthiness. The scoring model is unvalidated and may produce inaccurate, incomplete, or misleading results. Do not use scores as the sole basis for financial or transactional decisions. This service is not a "consumer report" as defined by the Fair Credit Reporting Act (15 U.S.C. &sect; 1681 et seq.) and the operator is not a "consumer reporting agency." Fraud reports are unverified third-party submissions and do not constitute accusations, findings, or determinations of wrongdoing by the operator. By using this service you agree to the <a href="/terms">Terms of Service</a> and acknowledge the <a href="/privacy">Privacy Policy</a>.
+  </div>
+  <div class="ft-bot">
+    <div class="ft-l">&copy; 2026 DJD Agent Score LLC &middot; Built on Base &middot; Powered by x402</div>
+    <div class="ft-links"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/health">Status</a></div>
+  </div>
+</footer>
+
+</div>
+
+<script>
+const A=window.location.origin;
+const fmt=n=>n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':String(n);
+
+async function loadStats(){
+  try{const d=await(await fetch(A+'/health')).json();
+  document.getElementById('sW').textContent=fmt(d.database.indexedWallets);
+  document.getElementById('sT').textContent=fmt(d.database.totalTransactionsIndexed);
+  document.getElementById('sQ').textContent=fmt(d.database.totalQueryLogEntries);
+  document.getElementById('sS').textContent=d.indexer.running?'LIVE':'DOWN';
+  }catch(e){document.getElementById('sS').textContent='ERR'}}
+
+async function loadLB(){
+  try{const d=await(await fetch(A+'/v1/leaderboard')).json();
+  const t=document.getElementById('lbT'),e=document.getElementById('lbE');
+  if(!d.leaderboard||!d.leaderboard.length){e.textContent='No scored wallets yet. Indexer is accumulating data.';return}
+  e.style.display='none';
+  d.leaderboard.slice(0,10).forEach((w,i)=>{
+    const r=document.createElement('div');r.className='lb-r';
+    const tn=w.tier||'Unverified';
+    const tc={Elite:'var(--accent)',Trusted:'var(--green)',Established:'var(--yellow)',Emerging:'var(--orange)'}[tn]||'var(--text-muted)';
+    const sc=w.score>=75?'var(--green)':w.score>=50?'var(--yellow)':w.score>=25?'var(--orange)':'var(--text-muted)';
+    r.innerHTML=`<div class="lb-rk">${i+1}</div><div class="lb-w">${w.wallet.slice(0,6)}...${w.wallet.slice(-4)}</div><div class="lb-s" style="color:${sc}">${w.score}</div><div class="lb-t" style="color:${tc}">${tn}</div>`;
+    t.appendChild(r)});
+  }catch(e){document.getElementById('lbE').textContent='Could not load leaderboard.'}}
+
+const sCol=s=>s>=90?'var(--accent)':s>=75?'var(--green)':s>=50?'var(--yellow)':s>=25?'var(--orange)':'var(--text-muted)';
+const tCls=t=>'stt-'+(t||'unverified').toLowerCase();
+const rCls=r=>({proceed:'rc-proceed',proceed_with_caution:'rc-caution',insufficient_history:'rc-insufficient',high_risk:'rc-high-risk',flagged_for_review:'rc-flagged'})[r]||'rc-insufficient';
+
+async function doScore(){
+  const i=document.getElementById('wI'),b=document.getElementById('sB'),r=document.getElementById('res'),e=document.getElementById('eM');
+  const w=i.value.trim();e.classList.remove('vis');r.classList.remove('vis');
+  if(!w||!w.startsWith('0x')||w.length!==42){e.textContent='Enter a valid 42-character wallet address starting with 0x';e.classList.add('vis');return}
+  b.disabled=true;b.textContent='Scoring...';
+  try{const resp=await fetch(A+'/v1/score/basic?wallet='+w);
+  if(!resp.ok)throw new Error('API returned '+resp.status);
+  const d=await resp.json();
+  const s=d.score??0,t=d.tier||'Unverified',c=d.confidence??0,rec=d.recommendation||'insufficient_history';
+  document.getElementById('rV').textContent=s;document.getElementById('rV').style.color=sCol(s);
+  const te=document.getElementById('rT');te.textContent=t;te.className='sc-tier '+tCls(t);
+  document.getElementById('rC').textContent='Confidence: '+(c*100).toFixed(0)+'%';
+  const re=document.getElementById('rR');re.textContent=rec.replace(/_/g,' ');re.className='sc-rec '+rCls(rec);
+  const bar=document.getElementById('rB');bar.style.width=s+'%';bar.style.background=sCol(s);
+  document.getElementById('rW').textContent=w;r.classList.add('vis');
+  }catch(x){e.textContent='Error: '+x.message;e.classList.add('vis')}
+  b.disabled=false;b.textContent='Score'}
+
+function submitFeedback(){
+  const type=document.getElementById('fbType').value;
+  const wallet=document.getElementById('fbWallet').value.trim();
+  const details=document.getElementById('fbDetails').value.trim();
+  const contact=document.getElementById('fbContact').value.trim();
+  const msg=document.getElementById('fbMsg');
+  if(!type){msg.textContent='Please select a feedback category.';msg.className='fb-msg vis bad';return}
+  if(!details){msg.textContent='Please provide details.';msg.className='fb-msg vis bad';return}
+  const entry={type,wallet,details,contact,ts:new Date().toISOString()};
+  const subject=encodeURIComponent('[DJD Feedback] '+type);
+  const body=encodeURIComponent('Type: '+type+'\nWallet: '+(wallet||'N/A')+'\nContact: '+(contact||'N/A')+'\nTimestamp: '+entry.ts+'\n\nDetails:\n'+details);
+  window.open('mailto:feedback@djdagentscore.xyz?subject='+subject+'&body='+body,'_blank');
+  msg.innerHTML='Feedback recorded. A compose window should open. If not, email <strong>feedback@djdagentscore.xyz</strong> directly.';
+  msg.className='fb-msg vis ok';
+  document.getElementById('fbType').value='';document.getElementById('fbWallet').value='';
+  document.getElementById('fbDetails').value='';document.getElementById('fbContact').value='';
+}
+
+document.getElementById('wI').addEventListener('keydown',e=>{if(e.key==='Enter')doScore()});
+loadStats();loadLB();setInterval(loadStats,30000);
+</script>
+</body>
+</html>
