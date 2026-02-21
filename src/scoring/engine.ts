@@ -48,6 +48,11 @@ const MODEL_VERSION = '1.0.0'
 const PENALTY_PER_REPORT = 5
 const MAX_REPORT_PENALTY = 25
 
+// Max time to wait for RPC computation before falling back to identity-only score.
+// On-demand user requests use this timeout so they never hang for 90-150s.
+// Pass 0 to disable (used by background refresh jobs).
+const SCORE_COMPUTE_TIMEOUT_MS = 20_000
+
 // ---------- Core calculation ----------
 
 async function computeScore(wallet: Address): Promise<{
@@ -244,10 +249,14 @@ function applyPenalty(composite: number, reportCount: number): number {
 /**
  * Fetch score from cache if fresh, otherwise recalculate and cache.
  * Returns { stale: true } when falling back to an expired cache entry due to RPC failure.
+ *
+ * @param timeoutMs - max ms to wait for the RPC scan before falling back to identity-only.
+ *                    Pass 0 to disable (background refresh jobs should pass 0).
  */
 export async function getOrCalculateScore(
   wallet: Address,
   forceRefresh = false,
+  timeoutMs = SCORE_COMPUTE_TIMEOUT_MS,
 ): Promise<FullScoreResponse & { stale?: boolean }> {
   const cached = getScore(wallet)
   const now = new Date()
@@ -258,7 +267,15 @@ export async function getOrCalculateScore(
   }
 
   try {
-    const result = await computeScore(wallet)
+    const scorePromise = computeScore(wallet)
+    const result = await (timeoutMs > 0
+      ? Promise.race([
+          scorePromise,
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('rpc_timeout')), timeoutMs),
+          ),
+        ])
+      : scorePromise)
     const reports = countReportsByTarget(wallet)
     const penalised = applyPenalty(result.composite, reports)
     const tier = scoreToTier(penalised)
