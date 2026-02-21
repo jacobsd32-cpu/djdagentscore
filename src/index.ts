@@ -21,6 +21,7 @@ import { runIntentMatcher } from './jobs/intentMatcher.js'
 import { runOutcomeMatcher } from './jobs/outcomeMatcher.js'
 import { runAnomalyDetector, runSybilMonitor } from './jobs/anomalyDetector.js'
 import { runDailyAggregator } from './jobs/dailyAggregator.js'
+import { runGithubReverify } from './jobs/githubReverify.js'
 import { jobStats } from './jobs/jobStats.js'
 import { db } from './db.js'
 
@@ -178,7 +179,7 @@ serve({ fetch: app.fetch, port: PORT }, (info) => {
     ),
   )
 
-  // ── 7. Daily aggregator (check every hour, run once per day) ─────────────
+  // ── 7. Daily aggregator + GitHub re-verification (check every hour, run once per day) ──
   let lastAggDate = ''
   intervals.push(
     setInterval(
@@ -186,6 +187,7 @@ serve({ fetch: app.fetch, port: PORT }, (info) => {
         const today = new Date().toISOString().split('T')[0]!
         if (today !== lastAggDate) {
           await runDailyAggregator(db).catch((err) => console.error('[daily] job error:', err))
+          await runGithubReverify().catch((err) => console.error('[github-reverify] job error:', err))
           lastAggDate = today
         }
       },

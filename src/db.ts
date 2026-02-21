@@ -468,6 +468,10 @@ const stmtGetRegistration = db.prepare<[string], AgentRegistrationRow>(`
   SELECT * FROM agent_registrations WHERE wallet = ?
 `)
 
+const stmtAllRegistrationsWithGithub = db.prepare<[], AgentRegistrationRow>(`
+  SELECT * FROM agent_registrations WHERE github_url IS NOT NULL
+`)
+
 const stmtUpdateGithub = db.prepare(`
   UPDATE agent_registrations
   SET github_verified    = @github_verified,
@@ -622,6 +626,10 @@ export function upsertRegistration(reg: {
 
 export function getRegistration(wallet: string): AgentRegistrationRow | undefined {
   return stmtGetRegistration.get(wallet)
+}
+
+export function getAllRegistrationsWithGithub(): AgentRegistrationRow[] {
+  return stmtAllRegistrationsWithGithub.all()
 }
 
 export function updateGithubVerification(
