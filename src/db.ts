@@ -83,6 +83,11 @@ addColumnIfMissing('scores', 'sybil_flag', 'INTEGER DEFAULT 0')
 addColumnIfMissing('scores', 'sybil_indicators', "TEXT DEFAULT '[]'")
 addColumnIfMissing('scores', 'gaming_indicators', "TEXT DEFAULT '[]'")
 
+addColumnIfMissing('agent_registrations', 'github_verified', 'INTEGER NOT NULL DEFAULT 0')
+addColumnIfMissing('agent_registrations', 'github_stars', 'INTEGER')
+addColumnIfMissing('agent_registrations', 'github_pushed_at', 'TEXT')
+addColumnIfMissing('agent_registrations', 'github_verified_at', 'TEXT')
+
 // Migrate score_history to include confidence + model_version
 addColumnIfMissing('score_history', 'confidence', 'REAL DEFAULT 0.0')
 addColumnIfMissing('score_history', 'model_version', "TEXT DEFAULT '1.0.0'")
@@ -449,6 +454,15 @@ const stmtGetRegistration = db.prepare<[string], AgentRegistrationRow>(`
   SELECT * FROM agent_registrations WHERE wallet = ?
 `)
 
+const stmtUpdateGithub = db.prepare(`
+  UPDATE agent_registrations
+  SET github_verified    = @github_verified,
+      github_stars       = @github_stars,
+      github_pushed_at   = @github_pushed_at,
+      github_verified_at = datetime('now')
+  WHERE wallet = @wallet
+`)
+
 // ---------- Exported helpers ----------
 
 const TTL_MS = 60 * 60 * 1000 // 1 hour
@@ -590,6 +604,15 @@ export function upsertRegistration(reg: {
 
 export function getRegistration(wallet: string): AgentRegistrationRow | undefined {
   return stmtGetRegistration.get(wallet)
+}
+
+export function updateGithubVerification(
+  wallet: string,
+  verified: boolean,
+  stars: number | null,
+  pushedAt: string | null,
+): void {
+  stmtUpdateGithub.run({ wallet, github_verified: verified ? 1 : 0, github_stars: stars, github_pushed_at: pushedAt })
 }
 
 export function insertReport(report: {
