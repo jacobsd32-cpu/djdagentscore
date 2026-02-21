@@ -410,7 +410,7 @@ const stmtCountScores = db.prepare<[], { count: number }>(`
 `)
 
 const stmtLeaderboard = db.prepare<[], ScoreRow>(`
-  SELECT * FROM scores ORDER BY composite_score DESC LIMIT 50
+  SELECT * FROM scores WHERE composite_score > 0 ORDER BY composite_score DESC LIMIT 50
 `)
 
 const stmtInsertReport = db.prepare(`

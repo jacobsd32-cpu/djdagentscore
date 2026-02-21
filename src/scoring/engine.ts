@@ -302,6 +302,8 @@ export async function getOrCalculateScore(
       }
     }
 
+    // Cache the zero result so the seeder doesn't re-attempt the same wallet
+    try { upsertScore(wallet, 0, 0, 0, 0, 0, {}, { recommendation: 'rpc_unavailable', confidence: 0 }) } catch (_) { /* ignore */ }
     const calculatedAt = new Date().toISOString()
     return buildZeroScore(wallet, calculatedAt)
   }
