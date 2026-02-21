@@ -4,12 +4,14 @@ import type { TransferLog, WalletUSDCData } from './types.js'
 
 // ---------- Client ----------
 
+const BASE_RPC_URL = process.env.BASE_RPC_URL ?? 'https://base-mainnet.public.blastapi.io'
+
 export const publicClient = createPublicClient({
   chain: base,
-  transport: http('https://mainnet.base.org', {
+  transport: http(BASE_RPC_URL, {
     timeout: 30_000,
-    retryCount: 3,
-    retryDelay: 1_000,
+    retryCount: 2,
+    retryDelay: 1_500,
   }),
 })
 
