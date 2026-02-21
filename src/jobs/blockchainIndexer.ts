@@ -1,16 +1,22 @@
 /**
  * Blockchain Indexer — continuous background process
  *
- * Polls Base USDC Transfer events every 12 seconds (≈ 6 blocks).
- * For each transfer:
- *   1. Insert into raw_transactions
- *   2. Upsert from/to into wallet_index
- *   3. Upsert pair into relationship_graph
+ * Polls Base USDC for x402 payment settlements every 12 seconds (≈ 6 blocks).
+ *
+ * x402 uses USDC's EIP-3009 `transferWithAuthorization` for settlement.
+ * Every settlement emits TWO events:
+ *   1. Transfer(from, to, value)       — standard ERC-20 transfer
+ *   2. AuthorizationUsed(authorizer, nonce)  — only emitted by EIP-3009 calls
+ *
+ * Filter strategy:
+ *   - Fetch AuthorizationUsed events → collect their tx hashes
+ *   - Only keep Transfer events whose txHash is in that set
+ * This eliminates all regular DeFi traffic (swaps, lending, bridges).
  *
  * Tracks progress in indexer_state table so restarts resume from the
  * last indexed block rather than replaying history.
  *
- * On first run, starts from the current block (no historical backfill).
+ * On first run, backfills 30 days of history (~1,296,000 blocks).
  * On RPC error, waits 30 seconds before retrying.
  */
 import { parseAbiItem } from 'viem'
@@ -23,6 +29,15 @@ import type { IndexedTransfer } from '../db.js'
 const TRANSFER_EVENT = parseAbiItem(
   'event Transfer(address indexed from, address indexed to, uint256 value)',
 )
+
+// AuthorizationUsed is emitted exclusively by transferWithAuthorization / receiveWithAuthorization
+// (EIP-3009). Regular transfer/transferFrom do NOT emit this event.
+const AUTHORIZATION_USED_EVENT = parseAbiItem(
+  'event AuthorizationUsed(address indexed authorizer, bytes32 indexed nonce)',
+)
+
+// 30 days of Base blocks to backfill on first run (~2s per block)
+const BACKFILL_BLOCKS = 1_296_000n
 
 // Base produces ~1 block every 2 seconds.
 // Approximate timestamp using genesis anchor (block 1, Feb 23 2023 18:33:23 UTC).
@@ -48,18 +63,34 @@ async function fetchAndIndexRange(fromBlock: bigint, toBlock: bigint): Promise<n
   for (let start = fromBlock; start <= toBlock; start += LOG_CHUNK_SIZE) {
     const end = start + LOG_CHUNK_SIZE - 1n > toBlock ? toBlock : start + LOG_CHUNK_SIZE - 1n
 
-    const logs = await publicClient.getLogs({
-      address: USDC_ADDRESS,
-      event: TRANSFER_EVENT,
-      fromBlock: start,
-      toBlock: end,
-    })
+    // Fetch both event types in parallel
+    const [transferLogs, authUsedLogs] = await Promise.all([
+      publicClient.getLogs({
+        address: USDC_ADDRESS,
+        event: TRANSFER_EVENT,
+        fromBlock: start,
+        toBlock: end,
+      }),
+      publicClient.getLogs({
+        address: USDC_ADDRESS,
+        event: AUTHORIZATION_USED_EVENT,
+        fromBlock: start,
+        toBlock: end,
+      }),
+    ])
 
-    if (logs.length === 0) continue
+    // No x402 settlements in this range
+    if (authUsedLogs.length === 0) continue
+
+    // Build set of tx hashes that contain an AuthorizationUsed event (= x402 settlements)
+    const x402TxHashes = new Set<string>()
+    for (const log of authUsedLogs) {
+      if (log.transactionHash !== null) x402TxHashes.add(log.transactionHash)
+    }
 
     const transfers: IndexedTransfer[] = []
 
-    for (const log of logs) {
+    for (const log of transferLogs) {
       if (
         log.args.from === undefined ||
         log.args.to === undefined ||
@@ -69,6 +100,9 @@ async function fetchAndIndexRange(fromBlock: bigint, toBlock: bigint): Promise<n
       ) {
         continue
       }
+
+      // Only index transfers that are x402 settlements
+      if (!x402TxHashes.has(log.transactionHash)) continue
 
       transfers.push({
         txHash: log.transactionHash,
@@ -111,10 +145,11 @@ export async function startBlockchainIndexer(): Promise<void> {
     lastBlockIndexed = BigInt(stored)
     console.log(`[indexer] Resuming from block ${lastBlockIndexed}`)
   } else {
-    // First run — start from current block, no historical backfill
-    lastBlockIndexed = currentBlock
-    setIndexerState(STATE_KEY, currentBlock.toString())
-    console.log(`[indexer] First run — starting from block ${currentBlock}`)
+    // First run — backfill 30 days of x402 history
+    const startBlock = currentBlock > BACKFILL_BLOCKS ? currentBlock - BACKFILL_BLOCKS : 0n
+    lastBlockIndexed = startBlock
+    setIndexerState(STATE_KEY, startBlock.toString())
+    console.log(`[indexer] First run — backfilling from block ${startBlock} (30d history)`)
   }
 
   while (running) {
