@@ -8,10 +8,18 @@
  *   1. Transfer(from, to, value)       — standard ERC-20 transfer
  *   2. AuthorizationUsed(authorizer, nonce)  — only emitted by EIP-3009 calls
  *
- * Filter strategy:
- *   - Fetch AuthorizationUsed events → collect their tx hashes
- *   - Only keep Transfer events whose txHash is in that set
- * This eliminates all regular DeFi traffic (swaps, lending, bridges).
+ * Filter strategy (two-layer):
+ *   1. AuthorizationUsed filter — fetch these events, collect tx hashes, keep
+ *      only Transfer events in that set. Eliminates regular transfer/transferFrom.
+ *   2. Amount cap ($1 USDC) — x402 is a micro-payment protocol; all realistic
+ *      API prices are $0.01–$0.50. Transfers above $1 are almost certainly
+ *      DeFi activity (Morpho, Aave, etc.) that also happens to use EIP-3009.
+ *
+ * For a stricter filter, set FACILITATOR_ADDRESS env var to the EOA that
+ * submits transferWithAuthorization transactions on behalf of the facilitator.
+ * This requires fetching tx.from via eth_getTransactionByHash (one RPC call
+ * per unique txHash) and is optional — the two-layer filter above catches
+ * the vast majority of noise without the extra RPC cost.
  *
  * Tracks progress in indexer_state table so restarts resume from the
  * last indexed block rather than replaying history.
@@ -38,6 +46,11 @@ const AUTHORIZATION_USED_EVENT = parseAbiItem(
 
 // 30 days of Base blocks to backfill on first run (~2s per block)
 const BACKFILL_BLOCKS = 1_296_000n
+
+// x402 is a micro-payment protocol — realistic API prices are $0.01–$0.50.
+// Transfers above this threshold are almost certainly DeFi (Morpho, Aave, etc.)
+// that also emits AuthorizationUsed but at much larger amounts.
+const MAX_X402_AMOUNT_USDC = 1.0
 
 // Base produces ~1 block every 2 seconds.
 // Approximate timestamp using genesis anchor (block 1, Feb 23 2023 18:33:23 UTC).
@@ -101,15 +114,19 @@ async function fetchAndIndexRange(fromBlock: bigint, toBlock: bigint): Promise<n
         continue
       }
 
-      // Only index transfers that are x402 settlements
+      // Only index transfers that are x402 settlements (EIP-3009 filter)
       if (!x402TxHashes.has(log.transactionHash)) continue
+
+      // Amount cap: skip large DeFi transfers that also emit AuthorizationUsed
+      const amountUsdc = Number(log.args.value) / 1_000_000
+      if (amountUsdc > MAX_X402_AMOUNT_USDC) continue
 
       transfers.push({
         txHash: log.transactionHash,
         blockNumber: Number(log.blockNumber),
         fromWallet: log.args.from,
         toWallet: log.args.to,
-        amountUsdc: Number(log.args.value) / 1_000_000,
+        amountUsdc,
         timestamp: blockToIsoTimestamp(log.blockNumber),
       })
     }
