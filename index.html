@@ -140,6 +140,8 @@ nav{padding:18px 0;display:flex;align-items:center;justify-content:space-between
 .lb-s{font-family:'JetBrains Mono',monospace;font-weight:700;text-align:right}
 .lb-t{text-align:right;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500}
 .lb-e{padding:32px;text-align:center;color:var(--text-muted);font-size:12.5px}
+.lb-badge{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;margin-left:5px;vertical-align:middle}
+.lb-badge.reg{color:var(--accent);background:var(--accent-dim)}.lb-badge.gh{color:var(--green);background:var(--green-dim)}
 
 .fb{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:32px;margin-top:24px}
 .fb-row{margin-bottom:14px}
@@ -457,7 +459,8 @@ async function loadLB(){
     const tn=w.tier||'Unverified';
     const tc={Elite:'var(--accent)',Trusted:'var(--green)',Established:'var(--yellow)',Emerging:'var(--orange)'}[tn]||'var(--text-muted)';
     const sc=w.score>=75?'var(--green)':w.score>=50?'var(--yellow)':w.score>=25?'var(--orange)':'var(--text-muted)';
-    r.innerHTML=`<div class="lb-rk">${i+1}</div><div class="lb-w">${w.wallet.slice(0,6)}...${w.wallet.slice(-4)}</div><div class="lb-s" style="color:${sc}">${w.score}</div><div class="lb-t" style="color:${tc}">${tn}</div>`;
+    const badges=(w.isRegistered?'<span class="lb-badge reg">REG</span>':'')+(w.githubVerified?'<span class="lb-badge gh">GH</span>':'');
+    r.innerHTML=`<div class="lb-rk">${i+1}</div><div class="lb-w">${w.wallet.slice(0,6)}...${w.wallet.slice(-4)}${badges}</div><div class="lb-s" style="color:${sc}">${w.score}</div><div class="lb-t" style="color:${tc}">${tn}</div>`;
     t.appendChild(r)});
   }catch(e){document.getElementById('lbE').textContent='Could not load leaderboard.'}}
 

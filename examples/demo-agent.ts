@@ -55,7 +55,7 @@ const registerRes = await fetch(`${BASE_URL}/v1/agent/register`, {
     wallet: account.address,
     name: 'DJD Demo Agent',
     description: 'Reference x402 client demo — see examples/demo-agent.ts',
-    github_url: 'https://github.com/drewjacobs32/djd-agent-score',
+    github_url: 'https://github.com/jacobsd32-cpu/djdagentscore',
   }),
 })
 

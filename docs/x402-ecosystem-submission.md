@@ -79,7 +79,7 @@ GET https://djdagentscore.xyz/v1/score/full?wallet=0x...
 - Indexes x402 payment settlements on Base via EIP-3009 `AuthorizationUsed`
   events (distinguishes x402 from regular USDC transfers)
 - SQLite for score caching; scores refresh hourly in the background
-- Open source: https://github.com/drewjacobs32/djd-agent-score
+- Open source: https://github.com/jacobsd32-cpu/djdagentscore
 ```
 
 ---

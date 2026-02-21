@@ -194,17 +194,25 @@ export interface ReportResponse {
 
 // ---------- Leaderboard ----------
 
+export interface LeaderboardRow extends ScoreRow {
+  is_registered: number        // 0 | 1
+  github_verified_badge: number // 0 | 1
+}
+
 export interface LeaderboardEntry {
   rank: number
   wallet: string
   score: number
   tier: Tier
   daysAlive: number
+  isRegistered: boolean
+  githubVerified: boolean
 }
 
 export interface LeaderboardResponse {
   leaderboard: LeaderboardEntry[]
   totalAgentsScored: number
+  totalAgentsRegistered: number
   lastUpdated: string
 }
 
