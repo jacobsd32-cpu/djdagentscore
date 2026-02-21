@@ -321,6 +321,14 @@ footer{border-top:1px solid var(--border);padding:28px 0 36px;margin-top:60px}
         </div>
         <div class="sc-bar"><div class="sc-bar-bg"><div class="sc-bar-fill" id="rB"></div></div></div>
         <div class="sc-wallet" id="rW">&mdash;</div>
+        <div class="sc-badge-row" id="rBadge" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Embed Badge</div>
+          <div style="margin-bottom:8px"><img id="rBadgeImg" src="" alt="DJD Agent Score badge" style="height:20px;display:block"></div>
+          <div style="position:relative">
+            <input id="rBadgeCode" type="text" readonly style="width:100%;background:var(--bg);border:1px solid var(--border-hi);border-radius:5px;padding:7px 60px 7px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);outline:none;cursor:text" value="">
+            <button onclick="copyBadge()" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:var(--bg3);color:var(--text-dim);border:none;border-radius:4px;padding:3px 9px;font-family:'JetBrains Mono',monospace;font-size:9.5px;cursor:pointer" id="copyBtn">copy</button>
+          </div>
+        </div>
         <div class="sc-disc">This score is algorithmically generated from public blockchain data and unverified third-party submissions. It is not verified, audited, or guaranteed. Do not use as the sole basis for any financial or transactional decision. Not a consumer report under the FCRA. <a href="/terms">Terms</a></div>
       </div>
     </div>
@@ -371,7 +379,9 @@ curl <span class="s">"https://djdagentscore.xyz/v1/score/basic?wallet=0x..."</sp
     <div class="api-r"><div><div class="api-ep">/v1/score/refresh?wallet=</div><div class="api-d">Force re-score with latest chain data, full breakdown returned</div></div><div class="api-p">$0.25</div><div class="api-m">GET</div></div>
     <div class="api-r"><div><div class="api-ep">POST /v1/report</div><div class="api-d">Submit fraud report with evidence (target wallet + tx hashes)</div></div><div class="api-p">$0.02</div><div class="api-m">POST</div></div>
     <div class="api-r"><div><div class="api-ep">/v1/data/fraud/blacklist</div><div class="api-d">Check if wallet has active fraud reports filed against it</div></div><div class="api-p">$0.05</div><div class="api-m">GET</div></div>
+    <div class="api-r"><div><div class="api-ep">/v1/badge/{wallet}.svg</div><div class="api-d">Embeddable SVG score badge for READMEs and websites</div></div><div class="api-p api-f">Free</div><div class="api-m">GET</div></div>
     <div class="api-r"><div><div class="api-ep">/v1/leaderboard</div><div class="api-d">Top-scored wallets in the ecosystem</div></div><div class="api-p api-f">Free</div><div class="api-m">GET</div></div>
+    <div class="api-r"><div><div class="api-ep">POST /v1/agent/register</div><div class="api-d">Register a wallet with name, description, and GitHub URL for a score boost</div></div><div class="api-p api-f">Free</div><div class="api-m">POST</div></div>
     <div class="api-r"><div><div class="api-ep">/health</div><div class="api-d">System status, database stats, indexer state, job stats</div></div><div class="api-p api-f">Free</div><div class="api-m">GET</div></div>
   </div>
 </div>
@@ -468,11 +478,12 @@ const sCol=s=>s>=90?'var(--accent)':s>=75?'var(--green)':s>=50?'var(--yellow)':s
 const tCls=t=>'stt-'+(t||'unverified').toLowerCase();
 const rCls=r=>({proceed:'rc-proceed',proceed_with_caution:'rc-caution',insufficient_history:'rc-insufficient',high_risk:'rc-high-risk',flagged_for_review:'rc-flagged'})[r]||'rc-insufficient';
 
-async function doScore(){
+async function doScore(pushState=true){
   const i=document.getElementById('wI'),b=document.getElementById('sB'),r=document.getElementById('res'),e=document.getElementById('eM');
   const w=i.value.trim();e.classList.remove('vis');r.classList.remove('vis');
   if(!w||!w.startsWith('0x')||w.length!==42){e.textContent='Enter a valid 42-character wallet address starting with 0x';e.classList.add('vis');return}
   b.disabled=true;b.textContent='Scoring...';
+  if(pushState)history.pushState({},'',location.pathname+'?wallet='+w+'#lookup');
   try{const resp=await fetch(A+'/v1/score/basic?wallet='+w);
   if(!resp.ok)throw new Error('API returned '+resp.status);
   const d=await resp.json();
@@ -483,8 +494,22 @@ async function doScore(){
   const re=document.getElementById('rR');re.textContent=rec.replace(/_/g,' ');re.className='sc-rec '+rCls(rec);
   const bar=document.getElementById('rB');bar.style.width=s+'%';bar.style.background=sCol(s);
   document.getElementById('rW').textContent=w;r.classList.add('vis');
+  // Badge embed
+  const badgeUrl=A+'/v1/badge/'+w+'.svg';
+  const mdEmbed='![DJD Score]('+badgeUrl+')';
+  document.getElementById('rBadgeImg').src=badgeUrl;
+  document.getElementById('rBadgeCode').value=mdEmbed;
+  document.getElementById('rBadge').style.display='block';
   }catch(x){e.textContent='Error: '+x.message;e.classList.add('vis')}
   b.disabled=false;b.textContent='Score'}
+
+function copyBadge(){
+  const inp=document.getElementById('rBadgeCode');
+  navigator.clipboard.writeText(inp.value).then(()=>{
+    const btn=document.getElementById('copyBtn');btn.textContent='copied!';
+    setTimeout(()=>btn.textContent='copy',1800);
+  }).catch(()=>{inp.select();document.execCommand('copy')});
+}
 
 function submitFeedback(){
   const type=document.getElementById('fbType').value;
@@ -506,6 +531,10 @@ function submitFeedback(){
 
 document.getElementById('wI').addEventListener('keydown',e=>{if(e.key==='Enter')doScore()});
 loadStats();loadLB();setInterval(loadStats,30000);
+
+// Auto-score if ?wallet= param is present (enables shareable score links)
+const qw=new URLSearchParams(location.search).get('wallet');
+if(qw){document.getElementById('wI').value=qw;doScore(false);}
 
 // Replace hardcoded domain in code examples with actual current origin
 if(window.location.hostname!=='djdagentscore.xyz'){
