@@ -181,8 +181,14 @@ export async function calcIdentity(
   wallet: `0x${string}`,
   walletAgeDays: number | null,
   creatorScore: number | null = null,
+  isRegistered = false,
 ): Promise<IdentityData & { score: number }> {
   let pts = 0
+
+  // --- Agent self-registration (up to 15 pts) ---
+  // Operators register their wallet + metadata via POST /v1/agent/register.
+  // Combined with ERC-8004 this is 45 pts max, still clamped to 100.
+  if (isRegistered) pts += 15
 
   // --- ERC-8004 registry (up to 30 pts) ---
   const erc8004Registered = await checkERC8004Registration(wallet)
