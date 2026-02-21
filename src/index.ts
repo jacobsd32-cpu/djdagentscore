@@ -13,6 +13,7 @@ import legal from './routes/legal.js'
 import registerRoute from './routes/register.js'
 import badgeRoute from './routes/badge.js'
 import agentRoute from './routes/agent.js'
+import openapiRoute from './routes/openapi.js'
 import { responseHeadersMiddleware } from './middleware/responseHeaders.js'
 import { queryLoggerMiddleware } from './middleware/queryLogger.js'
 import { freeTierMiddleware } from './middleware/freeTier.js'
@@ -58,6 +59,7 @@ app.route('/', legal)
 app.route('/v1/agent/register', registerRoute)
 app.route('/v1/badge', badgeRoute)          // free — must be before paymentMiddleware
 app.route('/agent', agentRoute)             // free — agent profile pages
+app.route('/openapi.json', openapiRoute)    // free — API spec
 
 // ---------- x402 Payment Middleware ----------
 // Protects paid endpoints. Free endpoints (leaderboard, health) are not listed so they pass through.
