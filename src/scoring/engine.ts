@@ -310,8 +310,27 @@ export async function getOrCalculateScore(
       }
     }
 
-    // Cache the zero result so the seeder doesn't re-attempt the same wallet
-    try { upsertScore(wallet, 0, 0, 0, 0, 0, {}, { recommendation: 'rpc_unavailable', confidence: 0 }) } catch (_) { /* ignore */ }
+    // RPC unavailable — still compute identity from DB (no RPC required)
+    let idnScore = 0
+    try {
+      const reg = getRegistration(wallet.toLowerCase())
+      const idn = await calcIdentity(
+        wallet, 0, null,
+        !!reg,
+        reg?.github_verified === 1,
+        reg?.github_stars ?? null,
+        reg?.github_pushed_at ?? null,
+      )
+      idnScore = idn.score
+    } catch (_) { /* ignore — best effort */ }
+
+    // Composite is identity-only; other dimensions require RPC
+    const partial = Math.round(idnScore * 0.20)
+
+    try {
+      upsertScore(wallet, partial, 0, 0, idnScore, 0, {}, { recommendation: 'rpc_unavailable', confidence: 0 })
+    } catch (_) { /* ignore */ }
+
     const calculatedAt = new Date().toISOString()
     return buildZeroScore(wallet, calculatedAt)
   }

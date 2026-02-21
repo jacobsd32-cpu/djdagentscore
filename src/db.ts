@@ -6,6 +6,7 @@ import type {
   ScoreHistoryRow,
   FraudReportRow,
   AgentRegistrationRow,
+  LeaderboardRow,
   FullScoreResponse,
   Tier,
 } from './types.js'
@@ -414,8 +415,21 @@ const stmtCountScores = db.prepare<[], { count: number }>(`
   SELECT COUNT(*) as count FROM scores
 `)
 
-const stmtLeaderboard = db.prepare<[], ScoreRow>(`
-  SELECT * FROM scores WHERE composite_score > 0 ORDER BY composite_score DESC LIMIT 50
+const stmtLeaderboard = db.prepare<[], LeaderboardRow>(`
+  SELECT s.*,
+         CASE WHEN r.wallet IS NOT NULL THEN 1 ELSE 0 END AS is_registered,
+         COALESCE(r.github_verified, 0)                   AS github_verified_badge
+  FROM scores s
+  LEFT JOIN agent_registrations r ON s.wallet = r.wallet
+  WHERE s.composite_score > 0
+  ORDER BY
+    CASE WHEN r.wallet IS NOT NULL THEN 0 ELSE 1 END,
+    s.composite_score DESC
+  LIMIT 50
+`)
+
+const stmtCountRegistered = db.prepare<[], { count: number }>(`
+  SELECT COUNT(*) as count FROM agent_registrations
 `)
 
 const stmtInsertReport = db.prepare(`
@@ -588,8 +602,12 @@ export function countCachedScores(): number {
   return stmtCountScores.get()!.count
 }
 
-export function getLeaderboard(): ScoreRow[] {
+export function getLeaderboard(): LeaderboardRow[] {
   return stmtLeaderboard.all()
+}
+
+export function countRegisteredAgents(): number {
+  return stmtCountRegistered.get()!.count
 }
 
 export function upsertRegistration(reg: {

@@ -1,8 +1,6 @@
 import { Hono } from 'hono'
-import { getLeaderboard, countCachedScores } from '../db.js'
+import { getLeaderboard, countCachedScores, countRegisteredAgents } from '../db.js'
 import type { LeaderboardEntry, LeaderboardResponse, Tier } from '../types.js'
-
-const BLOCKS_PER_DAY = 43_200
 
 const leaderboard = new Hono()
 
@@ -10,10 +8,10 @@ const leaderboard = new Hono()
 leaderboard.get('/', (c) => {
   const rows = getLeaderboard()
   const total = countCachedScores()
+  const totalRegistered = countRegisteredAgents()
   const now = Date.now()
 
   const entries: LeaderboardEntry[] = rows.map((row, idx) => {
-    // Estimate daysAlive from raw_data if available
     let daysAlive = 0
     try {
       const raw = JSON.parse(row.raw_data) as { walletAgeDays?: number }
@@ -28,12 +26,15 @@ leaderboard.get('/', (c) => {
       score: row.composite_score,
       tier: row.tier as Tier,
       daysAlive,
+      isRegistered: row.is_registered === 1,
+      githubVerified: row.github_verified_badge === 1,
     }
   })
 
   const response: LeaderboardResponse = {
     leaderboard: entries,
     totalAgentsScored: total,
+    totalAgentsRegistered: totalRegistered,
     lastUpdated: new Date(now).toISOString(),
   }
 
