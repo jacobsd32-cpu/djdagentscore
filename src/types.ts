@@ -156,6 +156,11 @@ export interface AgentRegistrationRow {
   website_url: string | null
   registered_at: string
   updated_at: string
+  // GitHub verification (populated async after registration)
+  github_verified: number        // 0 | 1
+  github_stars: number | null
+  github_pushed_at: string | null
+  github_verified_at: string | null
 }
 
 export interface AgentRegistrationResponse {
@@ -166,6 +171,9 @@ export interface AgentRegistrationResponse {
   description: string | null
   github_url: string | null
   website_url: string | null
+  github_verified: boolean
+  github_stars: number | null
+  github_pushed_at: string | null
 }
 
 // ---------- Report ----------

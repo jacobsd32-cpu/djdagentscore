@@ -182,44 +182,52 @@ export async function calcIdentity(
   walletAgeDays: number | null,
   creatorScore: number | null = null,
   isRegistered = false,
+  githubVerified = false,
+  githubStars: number | null = null,
+  githubPushedAt: string | null = null,
 ): Promise<IdentityData & { score: number }> {
   let pts = 0
 
-  // --- Agent self-registration (up to 15 pts) ---
-  // Operators register their wallet + metadata via POST /v1/agent/register.
-  // Combined with ERC-8004 this is 45 pts max, still clamped to 100.
-  if (isRegistered) pts += 15
+  // --- Agent self-registration (10 pts) ---
+  // Baseline: the operator has intentionally claimed this wallet.
+  if (isRegistered) pts += 10
 
-  // --- ERC-8004 registry (up to 30 pts) ---
+  // --- Verified GitHub repo (20 pts) ---
+  // Operator linked a real, public GitHub repo — strongest available identity
+  // signal while ERC-8004 is not yet deployed.
+  if (githubVerified) pts += 20
+
+  // --- GitHub activity bonuses (up to 15 pts) ---
+  if (githubVerified) {
+    // Stars: independent developers found it worth bookmarking
+    if ((githubStars ?? 0) >= 5) pts += 5
+    else if ((githubStars ?? 0) >= 1) pts += 3
+
+    // Active development: pushed within the last 90 days
+    if (githubPushedAt) {
+      const daysSincePush = (Date.now() - new Date(githubPushedAt).getTime()) / 86_400_000
+      if (daysSincePush <= 30) pts += 10
+      else if (daysSincePush <= 90) pts += 5
+    }
+  }
+
+  // --- ERC-8004 registry (20 pts) ---
+  // Stub contract (zero address) — always false until the registry is deployed.
   const erc8004Registered = await checkERC8004Registration(wallet)
-  if (erc8004Registered) pts += 30
+  if (erc8004Registered) pts += 20
 
   // --- Wallet age (up to 25 pts) ---
-  let agePts = 0
+  // Older wallets are harder to spin up cheaply for Sybil attacks.
   const ageDays = walletAgeDays ?? 0
-  if (ageDays > 90) agePts = 25
-  else if (ageDays > 30) agePts = 20
-  else if (ageDays > 7) agePts = 10
-  else agePts = 5
-  pts += agePts
+  if (ageDays > 180) pts += 25
+  else if (ageDays > 90) pts += 20
+  else if (ageDays > 30) pts += 15
+  else if (ageDays > 7) pts += 8
+  else pts += 2
 
-  // --- Creator wallet score — inherit 20% (up to 20 pts) ---
-  let creatorPts = 0
-  if (creatorScore !== null) {
-    creatorPts = Math.round(creatorScore * 0.2)
-  }
-  pts += creatorPts
-
-  // --- Generation depth (up to 15 pts) ---
-  // Without registry data we assume gen0 (native wallet, not spawned by another agent)
+  // Fields kept for API compatibility (not actively scored until ERC-8004 deploys)
   const generationDepth = 0
-  const genPts = [15, 12, 8, 5][Math.min(generationDepth, 3)]
-  pts += genPts
-
-  // --- Constitution hash verified (10 pts) ---
-  // Without registry data this is unknown — default to false
   const constitutionHashVerified = false
-  if (constitutionHashVerified) pts += 10
 
   return {
     score: clampScore(pts),
