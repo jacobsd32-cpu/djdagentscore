@@ -240,7 +240,7 @@ export async function runHourlyRefresh(): Promise<void> {
       for (const wallet of toRefresh) {
         try {
           await snapshotAndUpdateMetrics(wallet)
-          await getOrCalculateScore(wallet as Address, true)
+          await getOrCalculateScore(wallet as Address, true, 0) // no timeout for background
           refreshed++
           console.log(`[refresh] Refreshed ${wallet}`)
         } catch (err) {
