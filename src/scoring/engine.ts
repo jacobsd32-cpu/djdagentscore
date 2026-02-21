@@ -227,7 +227,21 @@ async function computeScore(wallet: Address): Promise<{
     identity: idnScore,
     capability: capScore,
     dimensions,
-    rawData: { usdcData: { ...usdcData, balance: String(usdcData.balance) }, walletAgeDays },
+    rawData: {
+      usdcData: {
+        balance:       String(usdcData.balance),
+        inflows30d:    String(usdcData.inflows30d),
+        outflows30d:   String(usdcData.outflows30d),
+        inflows7d:     String(usdcData.inflows7d),
+        outflows7d:    String(usdcData.outflows7d),
+        totalInflows:  String(usdcData.totalInflows),
+        totalOutflows: String(usdcData.totalOutflows),
+        transferCount: usdcData.transferCount,
+        firstBlockSeen: usdcData.firstBlockSeen !== null ? String(usdcData.firstBlockSeen) : null,
+        lastBlockSeen:  usdcData.lastBlockSeen  !== null ? String(usdcData.lastBlockSeen)  : null,
+      },
+      walletAgeDays,
+    },
     confidence,
     recommendation,
     sybilFlag: sybil.sybilFlag,
@@ -343,12 +357,44 @@ export async function getOrCalculateScore(
 
     // Composite is identity-only; other dimensions require RPC
     const partial = Math.round(idnScore * 0.20)
+    const calculatedAt = new Date().toISOString()
 
     try {
       upsertScore(wallet, partial, 0, 0, idnScore, 0, {}, { recommendation: 'rpc_unavailable', confidence: 0 })
     } catch (_) { /* ignore */ }
 
-    const calculatedAt = new Date().toISOString()
+    // Return the identity-only partial score rather than a hard zero so the
+    // caller sees a meaningful (if incomplete) score when the RPC is down.
+    if (partial > 0) {
+      const tier = scoreToTier(partial)
+      return {
+        wallet,
+        score: partial,
+        tier: tier as FullScoreResponse['tier'],
+        confidence: 0,
+        recommendation: 'rpc_unavailable',
+        modelVersion: MODEL_VERSION,
+        sybilFlag: false,
+        gamingIndicators: [],
+        lastUpdated: calculatedAt,
+        dimensions: {
+          reliability: { score: 0, data: { txCount: 0, successRate: 0, lastTxTimestamp: null, failedTxCount: 0, uptimeEstimate: 0 } },
+          viability:   { score: 0, data: { usdcBalance: '0', inflows30d: '0', outflows30d: '0', inflows7d: '0', outflows7d: '0', totalInflows: '0', walletAgedays: 0, everZeroBalance: false } },
+          identity:    { score: idnScore, data: { erc8004Registered: false, walletAgeDays: 0, creatorScore: null, generationDepth: 0, constitutionHashVerified: false } },
+          capability:  { score: 0, data: { activeX402Services: 0, totalRevenue: '0', domainsOwned: 0, successfulReplications: 0 } },
+        },
+        dataAvailability: {
+          transactionHistory: 'none (rpc unavailable)',
+          walletAge: 'unknown',
+          economicData: 'none',
+          identityData: 'partial',
+          communityData: 'none',
+        },
+        improvementPath: ['Retry later — blockchain data scan timed out; identity signals computed successfully'],
+        scoreHistory: [],
+      }
+    }
+
     return buildZeroScore(wallet, calculatedAt)
   }
 }
@@ -397,31 +443,48 @@ function buildFullResponseFromCache(
   cached: ScoreRow,
   history: ScoreHistoryRow[],
 ): FullScoreResponse {
+  // Re-hydrate raw_data so dimension detail fields contain real values instead of zeros.
+  interface StoredUsdcData {
+    balance?: string; inflows30d?: string; outflows30d?: string
+    inflows7d?: string; outflows7d?: string; totalInflows?: string
+    transferCount?: number; walletAgedays?: number
+  }
+  interface StoredRaw { usdcData?: StoredUsdcData; walletAgeDays?: number }
+  let raw: StoredRaw = {}
+  try { raw = JSON.parse(cached.raw_data ?? '{}') as StoredRaw } catch { /* ignore */ }
+  const ud = raw.usdcData ?? {}
+  const walletAgeDays = raw.walletAgeDays ?? 0
+  const txCount = ud.transferCount ?? 0
+  const bal = ud.balance ?? '0'
+  const balUsd = Number(bal) / 1_000_000
+  const everZeroBalance = balUsd === 0 && Number(ud.totalInflows ?? '0') > 0
+  const fmt = (v?: string) => ((Number(v ?? '0') / 1_000_000).toFixed(6))
+
   const zeroDimensions: ScoreDimensions = {
     reliability: {
       score: cached.reliability_score,
-      data: { txCount: 0, successRate: 0, lastTxTimestamp: null, failedTxCount: 0, uptimeEstimate: 0 },
+      data: { txCount, successRate: txCount > 0 ? 1 : 0, lastTxTimestamp: null, failedTxCount: 0, uptimeEstimate: 0 },
     },
     viability: {
       score: cached.viability_score,
       data: {
-        usdcBalance: '0',
-        inflows30d: '0',
-        outflows30d: '0',
-        inflows7d: '0',
-        outflows7d: '0',
-        totalInflows: '0',
-        walletAgedays: 0,
-        everZeroBalance: false,
+        usdcBalance: fmt(bal),
+        inflows30d:  fmt(ud.inflows30d),
+        outflows30d: fmt(ud.outflows30d),
+        inflows7d:   fmt(ud.inflows7d),
+        outflows7d:  fmt(ud.outflows7d),
+        totalInflows: fmt(ud.totalInflows),
+        walletAgedays: walletAgeDays,
+        everZeroBalance,
       },
     },
     identity: {
       score: cached.identity_score,
-      data: { erc8004Registered: false, walletAgeDays: 0, creatorScore: null, generationDepth: 0, constitutionHashVerified: false },
+      data: { erc8004Registered: false, walletAgeDays, creatorScore: null, generationDepth: 0, constitutionHashVerified: false },
     },
     capability: {
       score: cached.capability_score,
-      data: { activeX402Services: 0, totalRevenue: '0', domainsOwned: 0, successfulReplications: 0 },
+      data: { activeX402Services: 0, totalRevenue: fmt(ud.totalInflows), domainsOwned: 0, successfulReplications: 0 },
     },
   }
 
