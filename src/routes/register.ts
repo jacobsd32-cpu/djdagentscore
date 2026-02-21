@@ -92,6 +92,34 @@ async function verifyAndStoreGithub(wallet: string, githubUrl: string): Promise<
 
 const register = new Hono()
 
+// GET /v1/agent/register?wallet=0x...
+register.get('/', (c) => {
+  const wallet = c.req.query('wallet')
+  if (!wallet || !isValidAddress(wallet)) {
+    return c.json({ error: 'Invalid or missing wallet address' }, 400)
+  }
+
+  const row = getRegistration(wallet.toLowerCase())
+  if (!row) {
+    return c.json({ error: 'Wallet not registered' }, 404)
+  }
+
+  const response: AgentRegistrationResponse = {
+    wallet: row.wallet as Address,
+    status: 'registered',
+    registeredAt: row.registered_at,
+    name: row.name,
+    description: row.description,
+    github_url: row.github_url,
+    website_url: row.website_url,
+    github_verified: row.github_verified === 1,
+    github_stars: row.github_stars ?? null,
+    github_pushed_at: row.github_pushed_at ?? null,
+  }
+
+  return c.json(response)
+})
+
 // POST /v1/agent/register
 register.post('/', async (c) => {
   let body: AgentRegistrationBody
