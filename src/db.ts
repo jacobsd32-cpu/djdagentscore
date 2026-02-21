@@ -5,6 +5,7 @@ import type {
   ScoreRow,
   ScoreHistoryRow,
   FraudReportRow,
+  AgentRegistrationRow,
   FullScoreResponse,
   Tier,
 } from './types.js'
@@ -345,6 +346,17 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_cluster_wallet ON cluster_assignments(wallet);
   CREATE INDEX IF NOT EXISTS idx_cluster_id     ON cluster_assignments(cluster_id);
+
+  -- Agent self-registration (bootstraps identity scoring before x402 volume exists)
+  CREATE TABLE IF NOT EXISTS agent_registrations (
+    wallet        TEXT PRIMARY KEY,
+    name          TEXT,
+    description   TEXT,
+    github_url    TEXT,
+    website_url   TEXT,
+    registered_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `)
 
 // ---------- Prepared statements ----------
@@ -420,6 +432,21 @@ const stmtApplyPenalty = db.prepare(`
       tier = ?,
       calculated_at = datetime('now')
   WHERE wallet = ?
+`)
+
+const stmtUpsertRegistration = db.prepare(`
+  INSERT INTO agent_registrations (wallet, name, description, github_url, website_url, registered_at, updated_at)
+  VALUES (@wallet, @name, @description, @github_url, @website_url, datetime('now'), datetime('now'))
+  ON CONFLICT(wallet) DO UPDATE SET
+    name          = excluded.name,
+    description   = excluded.description,
+    github_url    = excluded.github_url,
+    website_url   = excluded.website_url,
+    updated_at    = datetime('now')
+`)
+
+const stmtGetRegistration = db.prepare<[string], AgentRegistrationRow>(`
+  SELECT * FROM agent_registrations WHERE wallet = ?
 `)
 
 // ---------- Exported helpers ----------
@@ -549,6 +576,20 @@ export function countCachedScores(): number {
 
 export function getLeaderboard(): ScoreRow[] {
   return stmtLeaderboard.all()
+}
+
+export function upsertRegistration(reg: {
+  wallet: string
+  name: string | null
+  description: string | null
+  github_url: string | null
+  website_url: string | null
+}): void {
+  stmtUpsertRegistration.run(reg)
+}
+
+export function getRegistration(wallet: string): AgentRegistrationRow | undefined {
+  return stmtGetRegistration.get(wallet)
 }
 
 export function insertReport(report: {

@@ -138,6 +138,36 @@ export interface FraudReportRow {
   penalty_applied: number
 }
 
+// ---------- Agent Registration ----------
+
+export interface AgentRegistrationBody {
+  wallet: string
+  name?: string
+  description?: string
+  github_url?: string
+  website_url?: string
+}
+
+export interface AgentRegistrationRow {
+  wallet: string
+  name: string | null
+  description: string | null
+  github_url: string | null
+  website_url: string | null
+  registered_at: string
+  updated_at: string
+}
+
+export interface AgentRegistrationResponse {
+  wallet: Address
+  status: 'registered' | 'updated'
+  registeredAt: string
+  name: string | null
+  description: string | null
+  github_url: string | null
+  website_url: string | null
+}
+
 // ---------- Report ----------
 
 export interface ReportBody {

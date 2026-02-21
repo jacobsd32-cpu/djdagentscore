@@ -10,6 +10,7 @@ import reportRoute from './routes/report.js'
 import leaderboardRoute from './routes/leaderboard.js'
 import blacklistRoute from './routes/blacklist.js'
 import legal from './routes/legal.js'
+import registerRoute from './routes/register.js'
 import { responseHeadersMiddleware } from './middleware/responseHeaders.js'
 import { queryLoggerMiddleware } from './middleware/queryLogger.js'
 import { freeTierMiddleware } from './middleware/freeTier.js'
@@ -51,6 +52,7 @@ app.use('/v1/score/basic', freeTierMiddleware)
 // Must be mounted before paymentMiddleware.
 
 app.route('/', legal)
+app.route('/v1/agent/register', registerRoute)
 
 // ---------- x402 Payment Middleware ----------
 // Protects paid endpoints. Free endpoints (leaderboard, health) are not listed so they pass through.

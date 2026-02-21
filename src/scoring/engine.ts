@@ -30,6 +30,7 @@ import {
   countUniquePartners,
   countRatingsReceived,
   countPriorQueries,
+  getRegistration,
 } from '../db.js'
 import type {
   Address,
@@ -82,12 +83,14 @@ async function computeScore(wallet: Address): Promise<{
   const gaming = detectGaming(wallet, currentBalanceUsdc, db)
 
   // ── STEP 4: Calculate 4 dimensions ────────────────────────────────────────
+  const isRegistered = !!getRegistration(wallet.toLowerCase())
+
   const [rel, via, cap] = await Promise.all([
     Promise.resolve(calcReliability(usdcData, blockNow)),
     Promise.resolve(calcViability(usdcData, walletAgeDays)),
     Promise.resolve(calcCapability(usdcData)),
   ])
-  const idn = await calcIdentity(wallet, walletAgeDays)
+  const idn = await calcIdentity(wallet, walletAgeDays, null, isRegistered)
 
   // Effective balance for viability: use 24hr avg if window-dressing detected
   const effectiveBalance = gaming.overrides.useAvgBalance
