@@ -53,13 +53,45 @@ The server starts on **http://localhost:3000** by default.
 |---|---|---|
 | `PORT` | `3000` | HTTP port |
 | `PAY_TO` | `0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528` | USDC recipient for x402 payments |
-| `FACILITATOR_URL` | `https://facilitator.openx402.ai` | x402 facilitator endpoint |
+| `FACILITATOR_URL` | `https://x402.org/facilitator` | x402 facilitator endpoint |
 
 ---
 
 ## API reference
 
 ### Free endpoints
+
+#### `POST /v1/agent/register`
+
+Register an agent wallet with optional metadata. Free, no payment required.
+Registered wallets receive a **+15 point identity boost** in scoring.
+Re-posting updates metadata (PATCH semantics — omitted fields are preserved).
+
+Request body:
+
+```json
+{
+  "wallet": "0xYourAgentWallet",
+  "name": "My Agent",
+  "description": "What your agent does",
+  "github_url": "https://github.com/you/your-agent",
+  "website_url": "https://your-agent.com"
+}
+```
+
+Only `wallet` is required. Returns `201` on first registration, `200` on update:
+
+```json
+{
+  "wallet": "0x…",
+  "status": "registered",
+  "registeredAt": "2026-02-21T03:27:56Z",
+  "name": "My Agent",
+  "description": "What your agent does",
+  "github_url": "https://github.com/you/your-agent",
+  "website_url": null
+}
+```
 
 #### `GET /health`
 
@@ -175,6 +207,11 @@ src/
 ├── types.ts          # TypeScript interfaces
 ├── db.ts             # SQLite (better-sqlite3) schema & queries
 ├── blockchain.ts     # viem public client, USDC event queries
+├── routes/
+│   ├── register.ts   # POST /v1/agent/register (free)
+│   ├── score.ts      # GET /v1/score/basic|full|refresh
+│   ├── report.ts     # POST /v1/report
+│   └── leaderboard.ts
 └── scoring/
     ├── dimensions.ts # Reliability, Viability, Identity, Capability calculators
     └── engine.ts     # Orchestration, caching logic, penalty application
@@ -184,6 +221,7 @@ src/
 - `scores` — cached composite & dimension scores (1-hour TTL)
 - `score_history` — last 50 scores per wallet
 - `fraud_reports` — submitted reports with penalty tracking
+- `agent_registrations` — voluntary operator-submitted metadata (name, description, URLs)
 
 **Blockchain reads** (Base mainnet RPC):
 - USDC `Transfer` events (chunked `eth_getLogs`, 10k blocks/call, 5 parallel)
