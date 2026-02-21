@@ -12,6 +12,7 @@ import blacklistRoute from './routes/blacklist.js'
 import legal from './routes/legal.js'
 import registerRoute from './routes/register.js'
 import badgeRoute from './routes/badge.js'
+import agentRoute from './routes/agent.js'
 import { responseHeadersMiddleware } from './middleware/responseHeaders.js'
 import { queryLoggerMiddleware } from './middleware/queryLogger.js'
 import { freeTierMiddleware } from './middleware/freeTier.js'
@@ -56,6 +57,7 @@ app.use('/v1/score/basic', freeTierMiddleware)
 app.route('/', legal)
 app.route('/v1/agent/register', registerRoute)
 app.route('/v1/badge', badgeRoute)          // free — must be before paymentMiddleware
+app.route('/agent', agentRoute)             // free — agent profile pages
 
 // ---------- x402 Payment Middleware ----------
 // Protects paid endpoints. Free endpoints (leaderboard, health) are not listed so they pass through.
