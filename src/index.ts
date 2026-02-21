@@ -27,7 +27,7 @@ import { db } from './db.js'
 const PORT = Number(process.env.PORT ?? 3000)
 const PAY_TO = (process.env.PAY_TO ?? '0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528') as `0x${string}`
 const FACILITATOR_URL = (
-  process.env.FACILITATOR_URL ?? 'https://facilitator.openx402.ai'
+  process.env.FACILITATOR_URL ?? 'https://x402.org/facilitator'
 ) as `${string}://${string}`
 const NETWORK: Network = 'base'
 
@@ -59,11 +59,6 @@ app.use(
   paymentMiddleware(
     PAY_TO,
     {
-      '/v1/score/basic': {
-        price: '$0.03',
-        network: NETWORK,
-        config: { description: 'Basic agent score lookup ($0.03 USDC)' },
-      },
       '/v1/score/full': {
         price: '$0.10',
         network: NETWORK,
