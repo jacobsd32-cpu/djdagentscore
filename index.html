@@ -503,6 +503,13 @@ function submitFeedback(){
 
 document.getElementById('wI').addEventListener('keydown',e=>{if(e.key==='Enter')doScore()});
 loadStats();loadLB();setInterval(loadStats,30000);
+
+// Replace hardcoded domain in code examples with actual current origin
+if(window.location.hostname!=='djdagentscore.xyz'){
+  document.querySelectorAll('pre .s').forEach(el=>{
+    el.textContent=el.textContent.replace(/https:\/\/djdagentscore\.xyz/g,A);
+  });
+}
 </script>
 </body>
 </html>
