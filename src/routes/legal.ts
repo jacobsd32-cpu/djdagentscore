@@ -212,7 +212,152 @@ const privacyContent = `
 <p>[DJD Agent Score LLC]<br>[Insert email address]</p>
 `;
 
+const leaderboardHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaderboard - DJD Agent Score</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #0f1117; color: #e1e4e8; min-height: 100vh; }
+    header { background: #161b22; border-bottom: 1px solid #21262d; padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+    .logo { font-size: 18px; font-weight: 700; color: #fff; text-decoration: none; }
+    .logo span { color: #58a6ff; }
+    nav { margin-left: auto; display: flex; gap: 20px; }
+    nav a { color: #8b949e; font-size: 14px; text-decoration: none; }
+    nav a:hover { color: #e1e4e8; }
+    main { max-width: 960px; margin: 0 auto; padding: 40px 24px; }
+    h1 { font-size: 28px; font-weight: 700; margin-bottom: 6px; }
+    .subtitle { color: #8b949e; font-size: 15px; margin-bottom: 32px; }
+    .stats { display: flex; gap: 16px; margin-bottom: 32px; flex-wrap: wrap; }
+    .stat { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 16px 20px; min-width: 140px; }
+    .stat-value { font-size: 28px; font-weight: 700; color: #58a6ff; }
+    .stat-label { font-size: 13px; color: #8b949e; margin-top: 2px; }
+    table { width: 100%; border-collapse: collapse; background: #161b22; border: 1px solid #21262d; border-radius: 8px; overflow: hidden; }
+    thead th { background: #1c2128; color: #8b949e; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 12px 16px; text-align: left; border-bottom: 1px solid #21262d; }
+    tbody tr { border-top: 1px solid #21262d; transition: background 0.1s; }
+    tbody tr:hover { background: #1c2128; }
+    td { padding: 12px 16px; font-size: 14px; vertical-align: middle; }
+    .rank { color: #8b949e; font-weight: 600; width: 48px; }
+    .rank-1 { color: #ffd700; }
+    .rank-2 { color: #c0c0c0; }
+    .rank-3 { color: #cd7f32; }
+    .wallet { font-family: 'SF Mono', 'Consolas', monospace; font-size: 13px; color: #58a6ff; cursor: pointer; user-select: none; }
+    .wallet:hover { text-decoration: underline; }
+    .copy-msg { color: #3fb950; font-size: 11px; margin-left: 6px; opacity: 0; transition: opacity 0.2s; }
+    .copy-msg.show { opacity: 1; }
+    .score-cell { display: flex; align-items: center; gap: 10px; }
+    .score-num { font-weight: 700; font-size: 16px; min-width: 28px; }
+    .score-bar-bg { flex: 1; height: 6px; background: #21262d; border-radius: 3px; max-width: 80px; }
+    .score-bar { height: 100%; border-radius: 3px; }
+    .tier { font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 12px; white-space: nowrap; display: inline-block; }
+    .tier-Elite    { background: rgba(255,215,0,0.12);   color: #ffd700; border: 1px solid rgba(255,215,0,0.25); }
+    .tier-Trusted  { background: rgba(31,111,235,0.12);  color: #58a6ff; border: 1px solid rgba(31,111,235,0.25); }
+    .tier-Emerging { background: rgba(35,134,54,0.12);   color: #3fb950; border: 1px solid rgba(35,134,54,0.25); }
+    .tier-Unverified { background: rgba(139,148,158,0.08); color: #8b949e; border: 1px solid rgba(139,148,158,0.15); }
+    .badges { display: flex; gap: 4px; flex-wrap: wrap; }
+    .badge { font-size: 11px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
+    .badge-reg { background: rgba(86,211,100,0.1); color: #56d364; border: 1px solid rgba(86,211,100,0.2); }
+    .badge-gh  { background: rgba(139,148,158,0.1); color: #8b949e; border: 1px solid rgba(139,148,158,0.2); }
+    .age { color: #8b949e; font-size: 13px; }
+    .loading, .error-msg { text-align: center; padding: 60px 24px; color: #8b949e; font-size: 15px; }
+    .error-msg { color: #f85149; }
+    .updated { font-size: 12px; color: #484f58; margin-top: 14px; text-align: right; }
+    footer { text-align: center; padding: 40px 24px; color: #484f58; font-size: 13px; border-top: 1px solid #21262d; margin-top: 48px; }
+    footer a { color: #484f58; text-decoration: none; }
+    footer a:hover { color: #8b949e; }
+    @media (max-width: 640px) {
+      .score-bar-bg, .age, .badges { display: none; }
+      td, th { padding: 10px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="logo" href="/">DJD <span>Agent Score</span></a>
+    <nav>
+      <a href="/v1/leaderboard">JSON</a>
+      <a href="/terms">Terms</a>
+      <a href="/privacy">Privacy</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Agent Leaderboard</h1>
+    <p class="subtitle">Top AI agent wallets ranked by reputation score on Base</p>
+    <div class="stats" id="stats"></div>
+    <div id="table-wrap"><div class="loading">Loading…</div></div>
+    <p class="updated" id="updated"></p>
+  </main>
+  <footer>
+    DJD Agent Score &middot; Trust infrastructure for the agent economy &middot;
+    <a href="/v1/leaderboard">API</a> &middot; <a href="/terms">Terms</a>
+  </footer>
+  <script>
+    function scoreColor(s) {
+      if (s >= 70) return '#1f6feb';
+      if (s >= 40) return '#9e6a03';
+      return '#238636';
+    }
+    async function load() {
+      try {
+        const res = await fetch('/v1/leaderboard');
+        if (!res.ok) throw new Error(res.status);
+        const data = await res.json();
+        const { leaderboard, totalAgentsScored, totalAgentsRegistered, lastUpdated } = data;
+        document.getElementById('stats').innerHTML =
+          stat(leaderboard.length, 'Ranked agents') +
+          stat(totalAgentsScored, 'Total scored') +
+          stat(totalAgentsRegistered, 'Registered');
+        const rows = leaderboard.map(e => {
+          const short = e.wallet.slice(0,6) + '&hellip;' + e.wallet.slice(-4);
+          const rc = e.rank <= 3 ? 'rank-' + e.rank : '';
+          const age = e.daysAlive >= 30 ? '30d+' : e.daysAlive + 'd';
+          const color = scoreColor(e.score);
+          const bdgs = [
+            e.isRegistered ? '<span class="badge badge-reg">&#10003; registered</span>' : '',
+            e.githubVerified ? '<span class="badge badge-gh">&#9864; github</span>' : '',
+          ].filter(Boolean).join('');
+          return '<tr>' +
+            '<td class="rank ' + rc + '">' + e.rank + '</td>' +
+            '<td><span class="wallet" data-addr="' + e.wallet + '" onclick="cp(this)">' + short + '</span>' +
+            '<span class="copy-msg" id="cm' + e.rank + '">copied</span></td>' +
+            '<td><div class="score-cell"><span class="score-num">' + e.score + '</span>' +
+            '<div class="score-bar-bg"><div class="score-bar" style="width:' + e.score + '%;background:' + color + '"></div></div></div></td>' +
+            '<td><span class="tier tier-' + e.tier + '">' + e.tier + '</span></td>' +
+            '<td class="age">' + age + '</td>' +
+            '<td><div class="badges">' + bdgs + '</div></td>' +
+            '</tr>';
+        }).join('');
+        document.getElementById('table-wrap').innerHTML =
+          '<table><thead><tr>' +
+          '<th>#</th><th>Wallet</th><th>Score</th><th>Tier</th><th>Age</th><th>Signals</th>' +
+          '</tr></thead><tbody>' + rows + '</tbody></table>';
+        const d = new Date(lastUpdated);
+        document.getElementById('updated').textContent = 'Last updated: ' + d.toLocaleString();
+      } catch(e) {
+        document.getElementById('table-wrap').innerHTML = '<div class="error-msg">Failed to load leaderboard.</div>';
+      }
+    }
+    function stat(val, label) {
+      return '<div class="stat"><div class="stat-value">' + val + '</div><div class="stat-label">' + label + '</div></div>';
+    }
+    function cp(el) {
+      const addr = el.dataset.addr;
+      navigator.clipboard.writeText(addr).then(() => {
+        const msg = el.nextElementSibling;
+        msg.classList.add('show');
+        setTimeout(() => msg.classList.remove('show'), 1500);
+      });
+    }
+    load();
+  </script>
+</body>
+</html>`;
+
 legal.get('/', (c) => c.html(indexHtml));
+
+legal.get('/leaderboard', (c) => c.html(leaderboardHtml));
 
 legal.get('/terms', (c) => {
   return c.html(wrapHtml('Terms of Service', tosContent));
