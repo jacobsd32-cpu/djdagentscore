@@ -84,11 +84,6 @@ addColumnIfMissing('scores', 'sybil_flag', 'INTEGER DEFAULT 0')
 addColumnIfMissing('scores', 'sybil_indicators', "TEXT DEFAULT '[]'")
 addColumnIfMissing('scores', 'gaming_indicators', "TEXT DEFAULT '[]'")
 
-addColumnIfMissing('agent_registrations', 'github_verified', 'INTEGER NOT NULL DEFAULT 0')
-addColumnIfMissing('agent_registrations', 'github_stars', 'INTEGER')
-addColumnIfMissing('agent_registrations', 'github_pushed_at', 'TEXT')
-addColumnIfMissing('agent_registrations', 'github_verified_at', 'TEXT')
-
 // Migrate score_history to include confidence + model_version
 addColumnIfMissing('score_history', 'confidence', 'REAL DEFAULT 0.0')
 addColumnIfMissing('score_history', 'model_version', "TEXT DEFAULT '1.0.0'")
@@ -364,6 +359,12 @@ db.exec(`
     updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `)
+
+// Migrate agent_registrations to add GitHub verification columns (must run after table is created)
+addColumnIfMissing('agent_registrations', 'github_verified', 'INTEGER NOT NULL DEFAULT 0')
+addColumnIfMissing('agent_registrations', 'github_stars', 'INTEGER')
+addColumnIfMissing('agent_registrations', 'github_pushed_at', 'TEXT')
+addColumnIfMissing('agent_registrations', 'github_verified_at', 'TEXT')
 
 // ---------- Prepared statements ----------
 
