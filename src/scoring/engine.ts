@@ -55,6 +55,11 @@ const MAX_REPORT_PENALTY = 25
 // Pass 0 to disable (used by background refresh jobs).
 const SCORE_COMPUTE_TIMEOUT_MS = 75_000
 
+// Prevent simultaneous background stale-serve refreshes from OOMing the machine.
+// If a refresh is already in flight, the stale score is still returned but no new
+// background scan is started. The hourly refresh job catches anything that was skipped.
+let _bgRefreshActive = false
+
 // ---------- Core calculation ----------
 
 async function computeScore(wallet: Address): Promise<{
@@ -301,17 +306,24 @@ export async function getOrCalculateScore(
   if (!forceRefresh && cached) {
     const history = getScoreHistory(wallet)
     const staleResult = buildFullResponseFromCache(wallet, cached, history)
-    // Fire-and-forget background refresh — don't await
-    computeScore(wallet).then(result => {
-      const reports = countReportsByTarget(wallet)
-      const penalised = applyPenalty(result.composite, reports)
-      upsertScore(wallet, penalised, result.reliability, result.viability, result.identity, result.capability, result.rawData, {
-        confidence: result.confidence,
-        recommendation: result.recommendation,
-        modelVersion: MODEL_VERSION,
-        sybilFlag: result.sybilFlag,
+    // Fire-and-forget background refresh — at most 1 running at a time.
+    // Without this guard, 25 simultaneous requests for stale wallets would fire 25
+    // concurrent computeScore calls (each doing 120+ getLogs), OOM-ing the machine.
+    if (!_bgRefreshActive) {
+      _bgRefreshActive = true
+      computeScore(wallet).then(result => {
+        const reports = countReportsByTarget(wallet)
+        const penalised = applyPenalty(result.composite, reports)
+        upsertScore(wallet, penalised, result.reliability, result.viability, result.identity, result.capability, result.rawData, {
+          confidence: result.confidence,
+          recommendation: result.recommendation,
+          modelVersion: MODEL_VERSION,
+          sybilFlag: result.sybilFlag,
+        })
+      }).catch(() => { /* ignore background refresh errors */ }).finally(() => {
+        _bgRefreshActive = false
       })
-    }).catch(() => { /* ignore background refresh errors */ })
+    }
     return { ...staleResult, stale: true }
   }
 
