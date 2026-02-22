@@ -53,7 +53,7 @@ const MAX_REPORT_PENALTY = 25
 // Max time to wait for RPC computation before falling back to identity-only score.
 // On-demand user requests use this timeout so they never hang for 90-150s.
 // Pass 0 to disable (used by background refresh jobs).
-const SCORE_COMPUTE_TIMEOUT_MS = 40_000
+const SCORE_COMPUTE_TIMEOUT_MS = 75_000
 
 // ---------- Core calculation ----------
 
@@ -375,9 +375,13 @@ export async function getOrCalculateScore(
     const partial = Math.round(idnScore * 0.20)
     const calculatedAt = new Date().toISOString()
 
-    try {
-      upsertScore(wallet, partial, 0, 0, idnScore, 0, {}, { recommendation: 'rpc_unavailable', confidence: 0 })
-    } catch (_) { /* ignore */ }
+    // Only cache if there's a meaningful partial score — don't cache hard zeros,
+    // so the next request retries the full RPC scan rather than serving 0.
+    if (partial > 0) {
+      try {
+        upsertScore(wallet, partial, 0, 0, idnScore, 0, {}, { recommendation: 'rpc_unavailable', confidence: 0 })
+      } catch (_) { /* ignore */ }
+    }
 
     // Return the identity-only partial score rather than a hard zero so the
     // caller sees a meaningful (if incomplete) score when the RPC is down.
