@@ -241,31 +241,43 @@ export async function calcIdentity(
 
 // ---------- Dimension 4: Capability Signal (15%) ----------
 
-export function calcCapability(data: WalletUSDCData): CapabilityData & { score: number } {
+export function calcCapability(
+  data: WalletUSDCData,
+  x402Stats?: { x402TxCount: number; x402InflowsUsd: number; x402OutflowsUsd: number }
+): CapabilityData & { score: number } {
   let pts = 0
 
+  // If we have x402-specific data from the indexer, use it; else fall back to heuristic
+  const hasX402Data = x402Stats !== undefined && x402Stats.x402TxCount > 0
+  const x402TxCount = x402Stats?.x402TxCount ?? 0
+  const x402Revenue = x402Stats?.x402InflowsUsd ?? 0
+
   // --- Active x402 services (up to 30 pts) ---
-  // Not directly detectable on-chain; proxy: if wallet is consistently receiving small
-  // payments it's likely running x402 services.
-  const avgInflow = data.transferCount > 0
-    ? usdcToFloat(data.totalInflows) / data.transferCount
-    : 0
   let x402ServicesPts = 0
   let activeX402Services = 0
-  if (avgInflow < 5 && data.transferCount > 10) {
-    // Many small inflows → likely a multi-service agent
-    activeX402Services = Math.min(4, Math.floor(data.transferCount / 20))
-  } else if (data.transferCount > 0) {
-    activeX402Services = 1
+  if (hasX402Data) {
+    // Real x402 data: count services by transaction pattern
+    activeX402Services = x402TxCount >= 50 ? 4 : x402TxCount >= 20 ? 3 : x402TxCount >= 5 ? 2 : 1
+    x402ServicesPts = activeX402Services >= 4 ? 30 : activeX402Services === 3 ? 25 : activeX402Services === 2 ? 15 : 8
+  } else {
+    // Heuristic fallback using general USDC data (existing logic)
+    const avgInflow = data.transferCount > 0
+      ? usdcToFloat(data.totalInflows) / data.transferCount
+      : 0
+    if (avgInflow < 5 && data.transferCount > 10) {
+      activeX402Services = Math.min(4, Math.floor(data.transferCount / 20))
+    } else if (data.transferCount > 0) {
+      activeX402Services = 1
+    }
+    if (activeX402Services === 0) x402ServicesPts = 0
+    else if (activeX402Services === 1) x402ServicesPts = 15
+    else if (activeX402Services <= 3) x402ServicesPts = 25
+    else x402ServicesPts = 30
   }
-  if (activeX402Services === 0) x402ServicesPts = 0
-  else if (activeX402Services === 1) x402ServicesPts = 15
-  else if (activeX402Services <= 3) x402ServicesPts = 25
-  else x402ServicesPts = 30
   pts += x402ServicesPts
 
-  // --- Total revenue earned (up to 30 pts) ---
-  const totalRevenue = usdcToFloat(data.totalInflows)
+  // --- Total revenue earned (up to 30 pts) — prefer x402-specific revenue if available ---
+  const totalRevenue = hasX402Data ? x402Revenue : usdcToFloat(data.totalInflows)
   let revPts = 0
   if (totalRevenue > 500) revPts = 30
   else if (totalRevenue > 50) revPts = 20

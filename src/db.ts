@@ -733,6 +733,58 @@ export function countIndexedWallets(): number {
 
 // ---------- raw_transactions helpers ----------
 
+export function getWalletX402Stats(wallet: string): {
+  x402TxCount: number
+  x402InflowsUsd: number
+  x402OutflowsUsd: number
+  x402FirstSeen: string | null
+  x402LastSeen: string | null
+} {
+  const w = wallet.toLowerCase()
+  const row = db.prepare<[string, string, string, string], {
+    tx_count: number
+    inflows: number
+    outflows: number
+    first_seen: string | null
+    last_seen: string | null
+  }>(`
+    SELECT
+      COUNT(*) as tx_count,
+      COALESCE(SUM(CASE WHEN to_wallet = ? THEN amount_usdc ELSE 0 END), 0) as inflows,
+      COALESCE(SUM(CASE WHEN from_wallet = ? THEN amount_usdc ELSE 0 END), 0) as outflows,
+      MIN(timestamp) as first_seen,
+      MAX(timestamp) as last_seen
+    FROM raw_transactions
+    WHERE from_wallet = ? OR to_wallet = ?
+  `).get(w, w, w, w)
+
+  return {
+    x402TxCount: row?.tx_count ?? 0,
+    x402InflowsUsd: row?.inflows ?? 0,
+    x402OutflowsUsd: row?.outflows ?? 0,
+    x402FirstSeen: row?.first_seen ?? null,
+    x402LastSeen: row?.last_seen ?? null,
+  }
+}
+
+export function getWalletFirstX402Seen(wallet: string): string | null {
+  const w = wallet.toLowerCase()
+  const row = db.prepare<[string, string], { first_seen: string | null }>(
+    `SELECT MIN(timestamp) as first_seen FROM raw_transactions WHERE from_wallet = ? OR to_wallet = ?`
+  ).get(w, w)
+  return row?.first_seen ?? null
+}
+
+export function getWalletIndexFirstSeen(wallet: string): string | null {
+  const w = wallet.toLowerCase()
+  try {
+    const row = db.prepare<[string], { first_seen: string | null }>(
+      `SELECT first_seen FROM wallet_index WHERE wallet = ?`
+    ).get(w)
+    return row?.first_seen ?? null
+  } catch { return null }
+}
+
 export function countIndexedTransactions(): number {
   return (
     db
