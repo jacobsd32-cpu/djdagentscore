@@ -9,6 +9,7 @@ primary_region = 'ewr'
   PAY_TO = "0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528"
   FACILITATOR_URL = "https://facilitator.openx402.ai"
   BASE_RPC_URL = "https://base-mainnet.public.blastapi.io"
+  FACILITATOR_ADDRESS = "0x97316FA4730BC7d3B295234F8e4D04a0a4C093e8"
 
 [mounts]
   source = "djd_agent_score_data"
