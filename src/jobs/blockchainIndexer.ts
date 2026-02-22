@@ -227,15 +227,26 @@ export async function startBlockchainIndexer(): Promise<void> {
   const stored = getIndexerState(STATE_KEY)
   const currentBlock = await publicClient.getBlockNumber()
 
+  // Max gap we're willing to index on startup: 1 day of blocks.
+  // If the stored state is further behind than this, skip to current block
+  // to avoid fetching months of ALL Base USDC transfers (OOM risk).
+  const MAX_CATCHUP_BLOCKS = 43_200n  // 1 day
+
   if (stored) {
-    lastBlockIndexed = BigInt(stored)
-    console.log(`[indexer] Resuming from block ${lastBlockIndexed}`)
+    const storedBlock = BigInt(stored)
+    const minBlock = currentBlock > MAX_CATCHUP_BLOCKS ? currentBlock - MAX_CATCHUP_BLOCKS : 0n
+    if (storedBlock < minBlock) {
+      lastBlockIndexed = currentBlock
+      setIndexerState(STATE_KEY, currentBlock.toString())
+      console.log(`[indexer] Stored state too old (${storedBlock}) — skipping to current block ${currentBlock}`)
+    } else {
+      lastBlockIndexed = storedBlock
+      console.log(`[indexer] Resuming from block ${lastBlockIndexed}`)
+    }
   } else {
-    // First run — backfill 30 days of x402 history
-    const startBlock = currentBlock > BACKFILL_BLOCKS ? currentBlock - BACKFILL_BLOCKS : 0n
-    lastBlockIndexed = startBlock
-    setIndexerState(STATE_KEY, startBlock.toString())
-    console.log(`[indexer] First run — starting from current block ${startBlock}`)
+    lastBlockIndexed = currentBlock
+    setIndexerState(STATE_KEY, currentBlock.toString())
+    console.log(`[indexer] First run — starting from current block ${currentBlock}`)
   }
 
   while (running) {
