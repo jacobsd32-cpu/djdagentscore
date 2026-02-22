@@ -1,0 +1,35 @@
+# fly.toml — DJD Agent Score API
+app = 'djd-agent-score'
+primary_region = 'ewr'
+
+[build]
+
+[env]
+  PORT = "3000"
+  PAY_TO = "0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528"
+  FACILITATOR_URL = "https://facilitator.openx402.ai"
+  BASE_RPC_URL = "https://base-mainnet.public.blastapi.io"
+
+[mounts]
+  source = "djd_agent_score_data"
+  destination = "/app/data"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [[http_service.checks]]
+    interval = "60s"
+    timeout = "25s"
+    grace_period = "30s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1
