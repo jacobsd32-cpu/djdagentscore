@@ -83,81 +83,125 @@ function blockToIsoTimestamp(
   return new Date(Number(ms)).toISOString()
 }
 
+/**
+ * Fetch and index a single chunk [start, end].
+ * Returns the number of x402 transfers indexed.
+ */
+async function fetchAndIndexChunk(start: bigint, end: bigint): Promise<number> {
+  // Fetch both event types AND the chunk's real start-block timestamp in parallel.
+  const [transferLogs, authUsedLogs, anchorBlockData] = await Promise.all([
+    publicClient.getLogs({
+      address: USDC_ADDRESS,
+      event: TRANSFER_EVENT,
+      fromBlock: start,
+      toBlock: end,
+    }),
+    publicClient.getLogs({
+      address: USDC_ADDRESS,
+      event: AUTHORIZATION_USED_EVENT,
+      fromBlock: start,
+      toBlock: end,
+    }),
+    // Graceful fallback: if the block fetch fails we still index with the
+    // genesis-based approximation (less accurate but non-fatal).
+    publicClient.getBlock({ blockNumber: start }).catch(() => null),
+  ])
+
+  // No x402 settlements in this range
+  if (authUsedLogs.length === 0) return 0
+
+  // Resolve anchor: use real block timestamp if available, else genesis formula
+  const chunkAnchorBlock = anchorBlockData?.number ?? start
+  const chunkAnchorTsMs = anchorBlockData
+    ? anchorBlockData.timestamp * 1000n
+    : BASE_GENESIS_TS_MS + (start - BASE_GENESIS_BLOCK) * 2000n
+
+  // Build set of tx hashes that contain an AuthorizationUsed event (= x402 settlements)
+  const x402TxHashes = new Set<string>()
+  for (const log of authUsedLogs) {
+    if (log.transactionHash !== null) x402TxHashes.add(log.transactionHash)
+  }
+
+  const transfers: IndexedTransfer[] = []
+
+  for (const log of transferLogs) {
+    if (
+      log.args.from === undefined ||
+      log.args.to === undefined ||
+      log.args.value === undefined ||
+      log.blockNumber === null ||
+      log.transactionHash === null
+    ) {
+      continue
+    }
+
+    // Only index transfers that are x402 settlements (EIP-3009 filter)
+    if (!x402TxHashes.has(log.transactionHash)) continue
+
+    // Amount cap: skip large DeFi transfers that also emit AuthorizationUsed
+    const amountUsdc = Number(log.args.value) / 1_000_000
+    if (amountUsdc > MAX_X402_AMOUNT_USDC) continue
+
+    transfers.push({
+      txHash: log.transactionHash,
+      blockNumber: Number(log.blockNumber),
+      fromWallet: log.args.from,
+      toWallet: log.args.to,
+      amountUsdc,
+      timestamp: blockToIsoTimestamp(log.blockNumber, chunkAnchorBlock, chunkAnchorTsMs),
+    })
+  }
+
+  if (transfers.length > 0) {
+    indexTransferBatch(transfers)
+  }
+  return transfers.length
+}
+
+/**
+ * Extract the suggested safe end-block from a BlastAPI "too many results" error.
+ * Error message format: "query exceeds max results 20000, retry with the range START-END"
+ */
+function parseSuggestedEnd(err: unknown): bigint | null {
+  const msg = (err as { details?: string; message?: string })?.details
+    ?? (err as { message?: string })?.message
+    ?? String(err)
+  const m = msg.match(/retry with the range \d+-(\d+)/)
+  return m ? BigInt(m[1]) : null
+}
+
 async function fetchAndIndexRange(fromBlock: bigint, toBlock: bigint): Promise<number> {
   let total = 0
+  let chunkSize = LOG_CHUNK_SIZE
 
-  for (let start = fromBlock; start <= toBlock; start += LOG_CHUNK_SIZE) {
-    const end = start + LOG_CHUNK_SIZE - 1n > toBlock ? toBlock : start + LOG_CHUNK_SIZE - 1n
+  let start = fromBlock
+  while (start <= toBlock) {
+    const end = start + chunkSize - 1n > toBlock ? toBlock : start + chunkSize - 1n
 
-    // Fetch both event types AND the chunk's real start-block timestamp in parallel.
-    // Fetching the anchor block alongside getLogs adds zero latency overhead and
-    // eliminates the ~3-month drift from the genesis-based approximation.
-    const [transferLogs, authUsedLogs, anchorBlockData] = await Promise.all([
-      publicClient.getLogs({
-        address: USDC_ADDRESS,
-        event: TRANSFER_EVENT,
-        fromBlock: start,
-        toBlock: end,
-      }),
-      publicClient.getLogs({
-        address: USDC_ADDRESS,
-        event: AUTHORIZATION_USED_EVENT,
-        fromBlock: start,
-        toBlock: end,
-      }),
-      // Graceful fallback: if the block fetch fails we still index with the
-      // genesis-based approximation (less accurate but non-fatal).
-      publicClient.getBlock({ blockNumber: start }).catch(() => null),
-    ])
-
-    // Resolve anchor: use real block timestamp if available, else genesis formula
-    const chunkAnchorBlock = anchorBlockData?.number ?? start
-    const chunkAnchorTsMs = anchorBlockData
-      ? anchorBlockData.timestamp * 1000n
-      : BASE_GENESIS_TS_MS + (start - BASE_GENESIS_BLOCK) * 2000n
-
-    // No x402 settlements in this range
-    if (authUsedLogs.length === 0) continue
-
-    // Build set of tx hashes that contain an AuthorizationUsed event (= x402 settlements)
-    const x402TxHashes = new Set<string>()
-    for (const log of authUsedLogs) {
-      if (log.transactionHash !== null) x402TxHashes.add(log.transactionHash)
-    }
-
-    const transfers: IndexedTransfer[] = []
-
-    for (const log of transferLogs) {
-      if (
-        log.args.from === undefined ||
-        log.args.to === undefined ||
-        log.args.value === undefined ||
-        log.blockNumber === null ||
-        log.transactionHash === null
-      ) {
-        continue
+    try {
+      const count = await fetchAndIndexChunk(start, end)
+      total += count
+      start = end + 1n
+      // After a successful chunk, gradually restore the chunk size
+      if (chunkSize < LOG_CHUNK_SIZE) {
+        chunkSize = chunkSize * 2n > LOG_CHUNK_SIZE ? LOG_CHUNK_SIZE : chunkSize * 2n
       }
-
-      // Only index transfers that are x402 settlements (EIP-3009 filter)
-      if (!x402TxHashes.has(log.transactionHash)) continue
-
-      // Amount cap: skip large DeFi transfers that also emit AuthorizationUsed
-      const amountUsdc = Number(log.args.value) / 1_000_000
-      if (amountUsdc > MAX_X402_AMOUNT_USDC) continue
-
-      transfers.push({
-        txHash: log.transactionHash,
-        blockNumber: Number(log.blockNumber),
-        fromWallet: log.args.from,
-        toWallet: log.args.to,
-        amountUsdc,
-        timestamp: blockToIsoTimestamp(log.blockNumber, chunkAnchorBlock, chunkAnchorTsMs),
-      })
-    }
-
-    if (transfers.length > 0) {
-      indexTransferBatch(transfers)
-      total += transfers.length
+    } catch (err) {
+      // BlastAPI tells us the max safe range — use it directly
+      const suggestedEnd = parseSuggestedEnd(err)
+      if (suggestedEnd !== null && suggestedEnd > start) {
+        const newSize = suggestedEnd - start + 1n
+        if (newSize < chunkSize) {
+          chunkSize = newSize
+          continue // retry same start with smaller chunk
+        }
+      }
+      // Generic fallback: halve the chunk size
+      if (chunkSize > 50n) {
+        chunkSize = chunkSize / 2n
+        continue // retry same start with smaller chunk
+      }
+      throw err // chunk is already tiny, give up
     }
   }
 

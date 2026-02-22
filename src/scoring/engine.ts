@@ -53,7 +53,7 @@ const MAX_REPORT_PENALTY = 25
 // Max time to wait for RPC computation before falling back to identity-only score.
 // On-demand user requests use this timeout so they never hang for 90-150s.
 // Pass 0 to disable (used by background refresh jobs).
-const SCORE_COMPUTE_TIMEOUT_MS = 20_000
+const SCORE_COMPUTE_TIMEOUT_MS = 40_000
 
 // ---------- Core calculation ----------
 
