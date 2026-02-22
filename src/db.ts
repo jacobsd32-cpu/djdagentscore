@@ -421,7 +421,7 @@ const stmtLeaderboard = db.prepare<[], LeaderboardRow>(`
          CASE WHEN r.wallet IS NOT NULL THEN 1 ELSE 0 END AS is_registered,
          COALESCE(r.github_verified, 0)                   AS github_verified_badge
   FROM scores s
-  LEFT JOIN agent_registrations r ON s.wallet = r.wallet
+  LEFT JOIN agent_registrations r ON LOWER(s.wallet) = r.wallet
   WHERE s.composite_score > 0
   ORDER BY
     CASE WHEN r.wallet IS NOT NULL THEN 0 ELSE 1 END,
