@@ -124,7 +124,7 @@ export async function getUSDCBalance(wallet: `0x${string}`): Promise<bigint> {
  */
 export async function getWalletUSDCData(
   wallet: `0x${string}`,
-  windowDays = 90,
+  windowDays = 30,
 ): Promise<WalletUSDCData> {
   const currentBlock = await publicClient.getBlockNumber()
   const fromBlock = clamp(
