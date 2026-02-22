@@ -8,6 +8,9 @@ import {
   getWalletUSDCData,
   getCurrentBlock,
   estimateWalletAgeDays,
+  getTransactionCount,
+  getETHBalance,
+  hasBasename,
 } from '../blockchain.js'
 import {
   calcReliability,
@@ -82,9 +85,12 @@ async function computeScore(wallet: Address): Promise<{
   const sybil = detectSybil(wallet, db)
 
   // ── STEP 2: Fetch blockchain data (RPC) ───────────────────────────────────
-  const [usdcData, blockNow] = await Promise.all([
+  const [usdcData, blockNow, nonce, ethBalanceWei, basename] = await Promise.all([
     getWalletUSDCData(wallet),
     getCurrentBlock(),
+    getTransactionCount(wallet),
+    getETHBalance(wallet),
+    hasBasename(wallet),
   ])
 
   const walletAgeDaysRaw = await estimateWalletAgeDays(wallet, blockNow, usdcData.firstBlockSeen)
@@ -112,8 +118,8 @@ async function computeScore(wallet: Address): Promise<{
   }
 
   const [rel, via, cap] = await Promise.all([
-    Promise.resolve(calcReliability(usdcData, blockNow)),
-    Promise.resolve(calcViability(usdcData, walletAgeDays)),
+    Promise.resolve(calcReliability(usdcData, blockNow, nonce)),
+    Promise.resolve(calcViability(usdcData, walletAgeDays, ethBalanceWei)),
     Promise.resolve(calcCapability(usdcData, x402Stats)),
   ])
   const idn = await calcIdentity(
@@ -124,6 +130,7 @@ async function computeScore(wallet: Address): Promise<{
     reg?.github_verified === 1,
     reg?.github_stars ?? null,
     reg?.github_pushed_at ?? null,
+    basename,
   )
 
   // Effective balance for viability: use 24hr avg if window-dressing detected
@@ -201,6 +208,7 @@ async function computeScore(wallet: Address): Promise<{
       score: relScore,
       data: {
         txCount: rel.txCount,
+        nonce: rel.nonce,
         successRate: rel.successRate,
         lastTxTimestamp: rel.lastTxTimestamp,
         failedTxCount: rel.failedTxCount,
@@ -211,6 +219,7 @@ async function computeScore(wallet: Address): Promise<{
       score: viaScore,
       data: {
         usdcBalance: via.usdcBalance,
+        ethBalance: via.ethBalance,
         inflows30d: via.inflows30d,
         outflows30d: via.outflows30d,
         inflows7d: via.inflows7d,
@@ -224,6 +233,7 @@ async function computeScore(wallet: Address): Promise<{
       score: idnScore,
       data: {
         erc8004Registered: idn.erc8004Registered,
+        hasBasename: idn.hasBasename,
         walletAgeDays: idn.walletAgeDays,
         creatorScore: idn.creatorScore,
         generationDepth: idn.generationDepth,
@@ -262,6 +272,9 @@ async function computeScore(wallet: Address): Promise<{
         lastBlockSeen:  usdcData.lastBlockSeen  !== null ? String(usdcData.lastBlockSeen)  : null,
       },
       walletAgeDays,
+      nonce,
+      ethBalanceWei: String(ethBalanceWei),
+      basename,
     },
     confidence,
     recommendation,
@@ -429,9 +442,9 @@ export async function getOrCalculateScore(
         gamingIndicators: [],
         lastUpdated: calculatedAt,
         dimensions: {
-          reliability: { score: 0, data: { txCount: 0, successRate: 0, lastTxTimestamp: null, failedTxCount: 0, uptimeEstimate: 0 } },
-          viability:   { score: 0, data: { usdcBalance: '0', inflows30d: '0', outflows30d: '0', inflows7d: '0', outflows7d: '0', totalInflows: '0', walletAgedays: 0, everZeroBalance: false } },
-          identity:    { score: idnScore, data: { erc8004Registered: false, walletAgeDays: 0, creatorScore: null, generationDepth: 0, constitutionHashVerified: false } },
+          reliability: { score: 0, data: { txCount: 0, nonce: 0, successRate: 0, lastTxTimestamp: null, failedTxCount: 0, uptimeEstimate: 0 } },
+          viability:   { score: 0, data: { usdcBalance: '0', ethBalance: '0', inflows30d: '0', outflows30d: '0', inflows7d: '0', outflows7d: '0', totalInflows: '0', walletAgedays: 0, everZeroBalance: false } },
+          identity:    { score: idnScore, data: { erc8004Registered: false, hasBasename: false, walletAgeDays: 0, creatorScore: null, generationDepth: 0, constitutionHashVerified: false } },
           capability:  { score: 0, data: { activeX402Services: 0, totalRevenue: '0', domainsOwned: 0, successfulReplications: 0 } },
         },
         dataAvailability: {
@@ -511,15 +524,19 @@ function buildFullResponseFromCache(
   const everZeroBalance = balUsd === 0 && Number(ud.totalInflows ?? '0') > 0
   const fmt = (v?: string) => ((Number(v ?? '0') / 1_000_000).toFixed(6))
 
+  interface StoredRawExt extends StoredRaw { nonce?: number; ethBalanceWei?: string; basename?: boolean }
+  const rawExt = raw as StoredRawExt
+
   const zeroDimensions: ScoreDimensions = {
     reliability: {
       score: cached.reliability_score,
-      data: { txCount, successRate: txCount > 0 ? 1 : 0, lastTxTimestamp: null, failedTxCount: 0, uptimeEstimate: 0 },
+      data: { txCount, nonce: rawExt.nonce ?? 0, successRate: txCount > 0 ? 1 : 0, lastTxTimestamp: null, failedTxCount: 0, uptimeEstimate: 0 },
     },
     viability: {
       score: cached.viability_score,
       data: {
         usdcBalance: fmt(bal),
+        ethBalance: rawExt.ethBalanceWei ? (Number(rawExt.ethBalanceWei) / 1e18).toFixed(6) : '0.000000',
         inflows30d:  fmt(ud.inflows30d),
         outflows30d: fmt(ud.outflows30d),
         inflows7d:   fmt(ud.inflows7d),
@@ -531,7 +548,7 @@ function buildFullResponseFromCache(
     },
     identity: {
       score: cached.identity_score,
-      data: { erc8004Registered: false, walletAgeDays, creatorScore: null, generationDepth: 0, constitutionHashVerified: false },
+      data: { erc8004Registered: false, hasBasename: rawExt.basename ?? false, walletAgeDays, creatorScore: null, generationDepth: 0, constitutionHashVerified: false },
     },
     capability: {
       score: cached.capability_score,
@@ -571,12 +588,13 @@ function buildZeroScore(wallet: Address, calculatedAt: string): FullScoreRespons
   const zeroDimensions: ScoreDimensions = {
     reliability: {
       score: 0,
-      data: { txCount: 0, successRate: 0, lastTxTimestamp: null, failedTxCount: 0, uptimeEstimate: 0 },
+      data: { txCount: 0, nonce: 0, successRate: 0, lastTxTimestamp: null, failedTxCount: 0, uptimeEstimate: 0 },
     },
     viability: {
       score: 0,
       data: {
         usdcBalance: '0',
+        ethBalance: '0',
         inflows30d: '0',
         outflows30d: '0',
         inflows7d: '0',
@@ -588,7 +606,7 @@ function buildZeroScore(wallet: Address, calculatedAt: string): FullScoreRespons
     },
     identity: {
       score: 0,
-      data: { erc8004Registered: false, walletAgeDays: 0, creatorScore: null, generationDepth: 0, constitutionHashVerified: false },
+      data: { erc8004Registered: false, hasBasename: false, walletAgeDays: 0, creatorScore: null, generationDepth: 0, constitutionHashVerified: false },
     },
     capability: {
       score: 0,

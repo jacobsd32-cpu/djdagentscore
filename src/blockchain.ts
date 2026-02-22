@@ -1,4 +1,4 @@
-import { createPublicClient, http, parseAbiItem } from 'viem'
+import { createPublicClient, http, parseAbiItem, namehash } from 'viem'
 import { base } from 'viem/chains'
 import type { WalletUSDCData } from './types.js'
 
@@ -21,6 +21,17 @@ export const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as cons
 
 // ERC-8004 is a hypothetical agent registry — update this when/if deployed
 const ERC8004_REGISTRY = '0x0000000000000000000000000000000000000000' as const
+
+// Basenames — ENS infrastructure deployed on Base mainnet
+const BASE_ENS_REGISTRY = '0xb94704422c2a1e396835a571837aa5ae53285a95' as const
+
+const ENS_REGISTRY_ABI = [
+  parseAbiItem('function resolver(bytes32 node) view returns (address)'),
+] as const
+
+const ENS_RESOLVER_NAME_ABI = [
+  parseAbiItem('function name(bytes32 node) view returns (string)'),
+] as const
 
 const TRANSFER_EVENT = parseAbiItem(
   'event Transfer(address indexed from, address indexed to, uint256 value)',
@@ -226,4 +237,51 @@ export function usdcToUsd(raw: bigint): string {
 /** Convert raw USDC units to a float */
 export function usdcToFloat(raw: bigint): number {
   return Number(raw) / 1_000_000
+}
+
+/**
+ * Returns the total number of transactions sent FROM a wallet (the nonce).
+ * A high nonce indicates a well-used, long-running wallet.
+ */
+export async function getTransactionCount(wallet: `0x${string}`): Promise<number> {
+  return publicClient.getTransactionCount({ address: wallet })
+}
+
+/**
+ * Returns the ETH balance of a wallet in wei.
+ * Holding ETH for gas indicates an actively operated wallet.
+ */
+export async function getETHBalance(wallet: `0x${string}`): Promise<bigint> {
+  return publicClient.getBalance({ address: wallet })
+}
+
+/**
+ * Returns true if the wallet has a Basename (*.base.eth) via reverse resolution.
+ * Uses the ENS registry deployed on Base mainnet.
+ */
+export async function hasBasename(wallet: `0x${string}`): Promise<boolean> {
+  try {
+    const addrHex = wallet.slice(2).toLowerCase()
+    const node = namehash(`${addrHex}.addr.reverse`)
+
+    const resolverAddr = await publicClient.readContract({
+      address: BASE_ENS_REGISTRY,
+      abi: ENS_REGISTRY_ABI,
+      functionName: 'resolver',
+      args: [node],
+    }) as `0x${string}`
+
+    if (resolverAddr === '0x0000000000000000000000000000000000000000') return false
+
+    const name = await publicClient.readContract({
+      address: resolverAddr,
+      abi: ENS_RESOLVER_NAME_ABI,
+      functionName: 'name',
+      args: [node],
+    }) as string
+
+    return typeof name === 'string' && name.length > 0
+  } catch {
+    return false
+  }
 }

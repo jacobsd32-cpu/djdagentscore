@@ -21,6 +21,7 @@ export const REPORT_REASONS: ReportReason[] = [
 
 export interface ReliabilityData {
   txCount: number
+  nonce: number
   successRate: number
   lastTxTimestamp: number | null
   failedTxCount: number
@@ -29,6 +30,7 @@ export interface ReliabilityData {
 
 export interface ViabilityData {
   usdcBalance: string
+  ethBalance: string
   inflows30d: string
   outflows30d: string
   inflows7d: string
@@ -40,6 +42,7 @@ export interface ViabilityData {
 
 export interface IdentityData {
   erc8004Registered: boolean
+  hasBasename: boolean
   walletAgeDays: number
   creatorScore: number | null
   generationDepth: number
