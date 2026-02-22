@@ -46,7 +46,7 @@ function piecewiseLog(
 
 // ---------- Dimension 1: Transaction Reliability (35%) ----------
 
-export function calcReliability(data: WalletUSDCData, blockNow: bigint): ReliabilityData & { score: number } {
+export function calcReliability(data: WalletUSDCData, blockNow: bigint, nonce: number): ReliabilityData & { score: number } {
   let pts = 0
 
   // --- Payment success rate (up to 30 pts) ---
@@ -62,6 +62,16 @@ export function calcReliability(data: WalletUSDCData, blockNow: bigint): Reliabi
     ? 0
     : piecewiseLog(txCount, [[0, 0], [10, 5], [100, 15], [1000, 25]])
   pts += txPts
+
+  // --- Nonce (total txs ever sent): up to 20 pts ---
+  // The nonce is the authoritative count of all transactions originating from this wallet,
+  // not just USDC transfers. A high nonce = actively operated over a long period.
+  let noncePts = 0
+  if (nonce >= 1000) noncePts = 20
+  else if (nonce >= 100) noncePts = 15
+  else if (nonce >= 10) noncePts = 8
+  else if (nonce >= 1) noncePts = 3
+  pts += noncePts
 
   // --- Service uptime proxy (up to 25 pts) ---
   // Estimate by how consistently transactions appear over the window.
@@ -99,6 +109,7 @@ export function calcReliability(data: WalletUSDCData, blockNow: bigint): Reliabi
   return {
     score: clampScore(pts),
     txCount,
+    nonce,
     successRate: txCount === 0 ? 0 : successRatePts / 30,
     lastTxTimestamp,
     failedTxCount,
@@ -108,7 +119,7 @@ export function calcReliability(data: WalletUSDCData, blockNow: bigint): Reliabi
 
 // ---------- Dimension 2: Economic Viability (30%) ----------
 
-export function calcViability(data: WalletUSDCData, walletAgeDays: number | null): ViabilityData & { score: number } {
+export function calcViability(data: WalletUSDCData, walletAgeDays: number | null, ethBalanceWei: bigint): ViabilityData & { score: number } {
   let pts = 0
 
   const balanceUsd = usdcToFloat(data.balance)
@@ -117,6 +128,16 @@ export function calcViability(data: WalletUSDCData, walletAgeDays: number | null
   const inflows7 = usdcToFloat(data.inflows7d)
   const outflows7 = usdcToFloat(data.outflows7d)
   const totalInflowsUsd = usdcToFloat(data.totalInflows)
+
+  // --- ETH balance (up to 15 pts) ---
+  // Having ETH for gas means the wallet is actively operated and can transact.
+  const ethBalanceEth = Number(ethBalanceWei) / 1e18
+  let ethBalPts = 0
+  if (ethBalanceEth >= 0.1) ethBalPts = 15
+  else if (ethBalanceEth >= 0.01) ethBalPts = 10
+  else if (ethBalanceEth >= 0.001) ethBalPts = 5
+  else if (ethBalanceEth > 0) ethBalPts = 2
+  pts += ethBalPts
 
   // --- USDC balance (up to 25 pts) ---
   let balPts = 0
@@ -165,6 +186,7 @@ export function calcViability(data: WalletUSDCData, walletAgeDays: number | null
   return {
     score: clampScore(pts),
     usdcBalance: usdcToFloat(data.balance).toFixed(6),
+    ethBalance: ethBalanceEth.toFixed(6),
     inflows30d: inflows30.toFixed(6),
     outflows30d: outflows30.toFixed(6),
     inflows7d: inflows7.toFixed(6),
@@ -185,12 +207,17 @@ export async function calcIdentity(
   githubVerified = false,
   githubStars: number | null = null,
   githubPushedAt: string | null = null,
+  basename = false,
 ): Promise<IdentityData & { score: number }> {
   let pts = 0
 
   // --- Agent self-registration (10 pts) ---
   // Baseline: the operator has intentionally claimed this wallet.
   if (isRegistered) pts += 10
+
+  // --- Basename (15 pts) ---
+  // Owning a *.base.eth name is a deliberate, paid, on-chain identity commitment.
+  if (basename) pts += 15
 
   // --- Verified GitHub repo (20 pts) ---
   // Operator linked a real, public GitHub repo — strongest available identity
@@ -232,6 +259,7 @@ export async function calcIdentity(
   return {
     score: clampScore(pts),
     erc8004Registered,
+    hasBasename: basename,
     walletAgeDays: ageDays,
     creatorScore,
     generationDepth,
