@@ -44,8 +44,9 @@ const AUTHORIZATION_USED_EVENT = parseAbiItem(
   'event AuthorizationUsed(address indexed authorizer, bytes32 indexed nonce)',
 )
 
-// 30 days of Base blocks to backfill on first run (~2s per block)
-const BACKFILL_BLOCKS = 302_400n  // 7 days (~43,200 blocks/day)
+// No backfill on first run — start from current block to avoid OOM on 1GB machine.
+// Historical data is not needed; per-wallet scoring uses direct RPC queries.
+const BACKFILL_BLOCKS = 0n
 
 // x402 is a micro-payment protocol — realistic API prices are $0.01–$0.50.
 // Transfers above this threshold are almost certainly DeFi (Morpho, Aave, etc.)
@@ -234,7 +235,7 @@ export async function startBlockchainIndexer(): Promise<void> {
     const startBlock = currentBlock > BACKFILL_BLOCKS ? currentBlock - BACKFILL_BLOCKS : 0n
     lastBlockIndexed = startBlock
     setIndexerState(STATE_KEY, startBlock.toString())
-    console.log(`[indexer] First run — backfilling from block ${startBlock} (30d history)`)
+    console.log(`[indexer] First run — starting from current block ${startBlock}`)
   }
 
   while (running) {
