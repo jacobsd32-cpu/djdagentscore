@@ -53,6 +53,13 @@ const BACKFILL_BLOCKS = 0n
 // that also emits AuthorizationUsed but at much larger amounts.
 const MAX_X402_AMOUNT_USDC = 1.0
 
+// EOA that submits transferWithAuthorization on behalf of the OpenX402 facilitator.
+// Source: https://facilitator.openx402.ai/discovery/resources → signers["eip155:*"]
+// Set FACILITATOR_ADDRESS env var to override; set to empty string to disable filter.
+const FACILITATOR_ADDRESS = (
+  process.env.FACILITATOR_ADDRESS ?? '0x97316FA4730BC7d3B295234F8e4D04a0a4C093e8'
+).toLowerCase()
+
 // Base produces ~1 block every 2 seconds.
 // Fallback genesis anchor (block 1, Feb 23 2023 18:33:23 UTC) is used only
 // when the RPC block fetch fails. Normally we fetch the real chunk start block
@@ -117,10 +124,32 @@ async function fetchAndIndexChunk(start: bigint, end: bigint): Promise<number> {
     ? anchorBlockData.timestamp * 1000n
     : BASE_GENESIS_TS_MS + (start - BASE_GENESIS_BLOCK) * 2000n
 
-  // Build set of tx hashes that contain an AuthorizationUsed event (= x402 settlements)
-  const x402TxHashes = new Set<string>()
+  // Build set of candidate tx hashes (contain AuthorizationUsed = EIP-3009 call)
+  const authTxHashes = new Set<string>()
   for (const log of authUsedLogs) {
-    if (log.transactionHash !== null) x402TxHashes.add(log.transactionHash)
+    if (log.transactionHash !== null) authTxHashes.add(log.transactionHash)
+  }
+
+  // Filter to only transactions submitted by the known OpenX402 facilitator EOA.
+  // One eth_getTransactionByHash per unique txHash — low cost given x402 volume.
+  // Skip this filter if FACILITATOR_ADDRESS is set to empty string.
+  let x402TxHashes: Set<string>
+  if (FACILITATOR_ADDRESS) {
+    const hashes = Array.from(authTxHashes)
+    const txs = await Promise.all(
+      hashes.map((h) =>
+        publicClient.getTransaction({ hash: h as `0x${string}` }).catch(() => null),
+      ),
+    )
+    x402TxHashes = new Set<string>()
+    for (let i = 0; i < hashes.length; i++) {
+      const tx = txs[i]
+      if (tx && tx.from.toLowerCase() === FACILITATOR_ADDRESS) {
+        x402TxHashes.add(hashes[i])
+      }
+    }
+  } else {
+    x402TxHashes = authTxHashes
   }
 
   const transfers: IndexedTransfer[] = []
