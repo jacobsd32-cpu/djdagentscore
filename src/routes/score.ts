@@ -16,7 +16,7 @@ score.get('/basic', async (c) => {
     return c.json({ error: 'Invalid or missing wallet address' }, 400)
   }
 
-  const result = await getOrCalculateScore(wallet as Address)
+  const result = await getOrCalculateScore(wallet.toLowerCase() as Address)
 
   const response: BasicScoreResponse & { stale?: boolean } = {
     wallet: result.wallet,
@@ -39,7 +39,7 @@ score.get('/full', async (c) => {
     return c.json({ error: 'Invalid or missing wallet address' }, 400)
   }
 
-  const result = await getOrCalculateScore(wallet as Address)
+  const result = await getOrCalculateScore(wallet.toLowerCase() as Address)
   return c.json(result)
 })
 
@@ -50,7 +50,7 @@ score.get('/refresh', async (c) => {
     return c.json({ error: 'Invalid or missing wallet address' }, 400)
   }
 
-  const result = await getOrCalculateScore(wallet as Address, true)
+  const result = await getOrCalculateScore(wallet.toLowerCase() as Address, true)
   return c.json(result)
 })
 
@@ -63,7 +63,7 @@ score.post('/compute', (c) => {
     return c.json({ error: 'Invalid or missing wallet address' }, 400)
   }
 
-  const jobId = submitJob(wallet as Address)
+  const jobId = submitJob(wallet.toLowerCase() as Address)
   return c.json(
     { jobId, status: 'pending', wallet, pollUrl: `/v1/score/job/${jobId}` },
     202,
