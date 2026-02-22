@@ -423,9 +423,7 @@ const stmtLeaderboard = db.prepare<[], LeaderboardRow>(`
   FROM scores s
   LEFT JOIN agent_registrations r ON LOWER(s.wallet) = r.wallet
   WHERE s.composite_score > 0
-  ORDER BY
-    CASE WHEN r.wallet IS NOT NULL THEN 0 ELSE 1 END,
-    s.composite_score DESC
+  ORDER BY s.composite_score DESC
   LIMIT 50
 `)
 
