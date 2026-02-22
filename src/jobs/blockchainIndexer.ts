@@ -45,7 +45,7 @@ const AUTHORIZATION_USED_EVENT = parseAbiItem(
 )
 
 // 30 days of Base blocks to backfill on first run (~2s per block)
-const BACKFILL_BLOCKS = 1_296_000n
+const BACKFILL_BLOCKS = 302_400n  // 7 days (~43,200 blocks/day)
 
 // x402 is a micro-payment protocol — realistic API prices are $0.01–$0.50.
 // Transfers above this threshold are almost certainly DeFi (Morpho, Aave, etc.)
