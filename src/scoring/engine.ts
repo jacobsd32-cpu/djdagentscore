@@ -31,6 +31,8 @@ import {
   countRatingsReceived,
   countPriorQueries,
   getRegistration,
+  getWalletX402Stats,
+  getWalletIndexFirstSeen,
 } from '../db.js'
 import type {
   Address,
@@ -81,7 +83,6 @@ async function computeScore(wallet: Address): Promise<{
   ])
 
   const walletAgeDaysRaw = await estimateWalletAgeDays(wallet, blockNow, usdcData.firstBlockSeen)
-  const walletAgeDays = walletAgeDaysRaw ?? 0
   const currentBalanceUsdc = Number(usdcData.balance) / 1_000_000
 
   // ── STEP 3: Gaming checks (DB + current balance) ──────────────────────────
@@ -89,11 +90,26 @@ async function computeScore(wallet: Address): Promise<{
 
   // ── STEP 4: Calculate 4 dimensions ────────────────────────────────────────
   const reg = getRegistration(wallet.toLowerCase())
+  const x402Stats = getWalletX402Stats(wallet)
+
+  // Use the earliest known date across: RPC scan + x402 indexer + wallet_index
+  // This extends age beyond the 90-day RPC window if the indexer has older data.
+  const x402FirstSeen = x402Stats.x402FirstSeen
+  const walletIndexFirstSeen = getWalletIndexFirstSeen(wallet)
+
+  // Pick the earliest date among all sources
+  const candidates = [x402FirstSeen, walletIndexFirstSeen].filter(Boolean) as string[]
+  let walletAgeDays = walletAgeDaysRaw ?? 0
+  if (candidates.length > 0) {
+    const earliestMs = Math.min(...candidates.map(d => new Date(d).getTime()))
+    const fromIndexDays = (Date.now() - earliestMs) / 86_400_000
+    walletAgeDays = Math.max(walletAgeDays, Math.round(fromIndexDays))
+  }
 
   const [rel, via, cap] = await Promise.all([
     Promise.resolve(calcReliability(usdcData, blockNow)),
     Promise.resolve(calcViability(usdcData, walletAgeDays)),
-    Promise.resolve(calcCapability(usdcData)),
+    Promise.resolve(calcCapability(usdcData, x402Stats)),
   ])
   const idn = await calcIdentity(
     wallet,
