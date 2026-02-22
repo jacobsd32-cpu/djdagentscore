@@ -1,6 +1,6 @@
 import { createPublicClient, http, parseAbiItem } from 'viem'
 import { base } from 'viem/chains'
-import type { TransferLog, WalletUSDCData } from './types.js'
+import type { WalletUSDCData } from './types.js'
 
 // ---------- Client ----------
 
@@ -54,12 +54,27 @@ function buildChunks(fromBlock: bigint, toBlock: bigint): Array<[bigint, bigint]
   return chunks
 }
 
+interface TransferStats {
+  total: bigint
+  last7d: bigint
+  last30d: bigint
+  count: number
+  firstBlock: bigint | null
+  lastBlock: bigint | null
+}
+
+/**
+ * Stream-aggregate USDC transfer stats for a wallet over `chunks`.
+ * Never stores raw log entries in memory — O(1) memory regardless of transfer count.
+ */
 async function processLogBatch(
   chunks: Array<[bigint, bigint]>,
   direction: 'in' | 'out',
   wallet: `0x${string}`,
-): Promise<TransferLog[]> {
-  const results: TransferLog[] = []
+  block7dAgo: bigint,
+  block30dAgo: bigint,
+): Promise<TransferStats> {
+  const stats: TransferStats = { total: 0n, last7d: 0n, last30d: 0n, count: 0, firstBlock: null, lastBlock: null }
 
   for (let i = 0; i < chunks.length; i += LOG_PARALLEL_BATCH) {
     const batch = chunks.slice(i, i + LOG_PARALLEL_BATCH)
@@ -86,24 +101,20 @@ async function processLogBatch(
     )
     for (const logs of batchLogs) {
       for (const log of logs) {
-        if (
-          log.args.from !== undefined &&
-          log.args.to !== undefined &&
-          log.args.value !== undefined &&
-          log.blockNumber !== null
-        ) {
-          results.push({
-            from: log.args.from,
-            to: log.args.to,
-            value: log.args.value,
-            blockNumber: log.blockNumber,
-          })
-        }
+        if (log.args.value === undefined || log.blockNumber === null) continue
+        const v = log.args.value
+        const b = log.blockNumber
+        stats.total += v
+        stats.count++
+        if (b >= block7dAgo) stats.last7d += v
+        if (b >= block30dAgo) stats.last30d += v
+        if (stats.firstBlock === null || b < stats.firstBlock) stats.firstBlock = b
+        if (stats.lastBlock === null || b > stats.lastBlock) stats.lastBlock = b
       }
     }
   }
 
-  return results
+  return stats
 }
 
 // ---------- Public API ----------
@@ -133,41 +144,33 @@ export async function getWalletUSDCData(
     currentBlock,
   )
 
-  const chunks = buildChunks(fromBlock, currentBlock)
-  const [balance, inLogs, outLogs] = await Promise.all([
-    getUSDCBalance(wallet),
-    processLogBatch(chunks, 'in', wallet),
-    processLogBatch(chunks, 'out', wallet),
-  ])
-
   const block7dAgo = currentBlock - BLOCKS_PER_DAY * 7n
   const block30dAgo = currentBlock - BLOCKS_PER_DAY * 30n
 
-  const sum = (logs: TransferLog[], minBlock: bigint) =>
-    logs.filter((l) => l.blockNumber >= minBlock).reduce((acc, l) => acc + l.value, 0n)
+  const chunks = buildChunks(fromBlock, currentBlock)
+  const [balance, inStats, outStats] = await Promise.all([
+    getUSDCBalance(wallet),
+    processLogBatch(chunks, 'in', wallet, block7dAgo, block30dAgo),
+    processLogBatch(chunks, 'out', wallet, block7dAgo, block30dAgo),
+  ])
 
-  const inflows30d = sum(inLogs, block30dAgo)
-  const outflows30d = sum(outLogs, block30dAgo)
-  const inflows7d = sum(inLogs, block7dAgo)
-  const outflows7d = sum(outLogs, block7dAgo)
-  const totalInflows = inLogs.reduce((acc, l) => acc + l.value, 0n)
-  const totalOutflows = outLogs.reduce((acc, l) => acc + l.value, 0n)
-
-  const allBlocks = [...inLogs, ...outLogs]
-    .map((l) => l.blockNumber)
-    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+  // firstBlockSeen / lastBlockSeen across both directions
+  const allFirstBlocks = [inStats.firstBlock, outStats.firstBlock].filter((b): b is bigint => b !== null)
+  const allLastBlocks = [inStats.lastBlock, outStats.lastBlock].filter((b): b is bigint => b !== null)
+  const firstBlockSeen = allFirstBlocks.length ? allFirstBlocks.reduce((a, b) => (a < b ? a : b)) : null
+  const lastBlockSeen = allLastBlocks.length ? allLastBlocks.reduce((a, b) => (a > b ? a : b)) : null
 
   return {
     balance,
-    inflows30d,
-    outflows30d,
-    inflows7d,
-    outflows7d,
-    totalInflows,
-    totalOutflows,
-    transferCount: inLogs.length + outLogs.length,
-    firstBlockSeen: allBlocks[0] ?? null,
-    lastBlockSeen: allBlocks[allBlocks.length - 1] ?? null,
+    inflows30d: inStats.last30d,
+    outflows30d: outStats.last30d,
+    inflows7d: inStats.last7d,
+    outflows7d: outStats.last7d,
+    totalInflows: inStats.total,
+    totalOutflows: outStats.total,
+    transferCount: inStats.count + outStats.count,
+    firstBlockSeen,
+    lastBlockSeen,
   }
 }
 
