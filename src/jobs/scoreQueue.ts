@@ -30,25 +30,53 @@ const _cleanup = setInterval(() => {
 
 void _cleanup
 
+// ----- Concurrency limiter: max 1 job running at a time -----
+// Each full RPC scan does 60+ getLogs calls; running many in parallel OOMs
+// the 1GB fly.io machine. Jobs are queued and run serially.
+let activeJobs = 0
+const MAX_CONCURRENT_JOBS = 1
+const pendingQueue: Array<() => void> = []
+
+function withConcurrencyLimit(fn: () => Promise<void>): void {
+  if (activeJobs < MAX_CONCURRENT_JOBS) {
+    activeJobs++
+    fn().finally(() => {
+      activeJobs--
+      const next = pendingQueue.shift()
+      if (next) next()
+    })
+  } else {
+    pendingQueue.push(() => {
+      activeJobs++
+      fn().finally(() => {
+        activeJobs--
+        const next = pendingQueue.shift()
+        if (next) next()
+      })
+    })
+  }
+}
+
 /**
  * Submit a background scoring job. Returns the jobId immediately.
- * Runs getOrCalculateScore with no timeout (full 90-day RPC scan allowed).
+ * Runs getOrCalculateScore with no timeout (full RPC scan allowed).
+ * At most MAX_CONCURRENT_JOBS run simultaneously to avoid OOM.
  */
 export function submitJob(wallet: Address): string {
   const jobId = crypto.randomUUID()
   const job: ScoringJob = { jobId, wallet, status: 'pending', createdAt: Date.now() }
   jobs.set(jobId, job)
 
-  // Fire-and-forget — no timeout so the full RPC scan can complete
-  getOrCalculateScore(wallet, true, 0)
-    .then((result) => {
+  withConcurrencyLimit(async () => {
+    try {
+      const result = await getOrCalculateScore(wallet, true, 0)
       job.status = 'complete'
       job.result = result
-    })
-    .catch((err: unknown) => {
+    } catch (err: unknown) {
       job.status = 'error'
       job.error = (err instanceof Error ? err.message : String(err)).slice(0, 200)
-    })
+    }
+  })
 
   return jobId
 }
