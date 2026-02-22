@@ -131,24 +131,34 @@ async function fetchAndIndexChunk(start: bigint, end: bigint): Promise<number> {
   }
 
   // Filter to only transactions submitted by the known OpenX402 facilitator EOA.
-  // One eth_getTransactionByHash per unique txHash — low cost given x402 volume.
-  // Skip this filter if FACILITATOR_ADDRESS is set to empty string.
+  // One eth_getTransactionByHash per unique txHash — batched to avoid OOM.
+  //
+  // Safety valve: if a chunk has >100 unique AuthorizationUsed tx hashes it is
+  // almost certainly DeFi (Morpho, Aave, Permit2) rather than x402 micro-payments.
+  // Skip the getTransaction filter in that case — the amount cap ($1) is sufficient.
+  const TX_FILTER_LIMIT = 100
+  const BATCH_SIZE = 25
   let x402TxHashes: Set<string>
-  if (FACILITATOR_ADDRESS) {
+  if (FACILITATOR_ADDRESS && authTxHashes.size <= TX_FILTER_LIMIT) {
     const hashes = Array.from(authTxHashes)
-    const txs = await Promise.all(
-      hashes.map((h) =>
-        publicClient.getTransaction({ hash: h as `0x${string}` }).catch(() => null),
-      ),
-    )
     x402TxHashes = new Set<string>()
-    for (let i = 0; i < hashes.length; i++) {
-      const tx = txs[i]
-      if (tx && tx.from.toLowerCase() === FACILITATOR_ADDRESS) {
-        x402TxHashes.add(hashes[i])
+    for (let i = 0; i < hashes.length; i += BATCH_SIZE) {
+      const batch = hashes.slice(i, i + BATCH_SIZE)
+      const txs = await Promise.all(
+        batch.map((h) =>
+          publicClient.getTransaction({ hash: h as `0x${string}` }).catch(() => null),
+        ),
+      )
+      for (let j = 0; j < batch.length; j++) {
+        const tx = txs[j]
+        if (tx && tx.from.toLowerCase() === FACILITATOR_ADDRESS) {
+          x402TxHashes.add(batch[j])
+        }
       }
     }
   } else {
+    // Too many events for EOA filter (DeFi chunk) or filter disabled — fall back
+    // to amount cap only ($1 USDC ceiling set in the transfer loop below).
     x402TxHashes = authTxHashes
   }
 
