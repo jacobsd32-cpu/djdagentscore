@@ -296,6 +296,25 @@ export async function getOrCalculateScore(
     return buildFullResponseFromCache(wallet, cached, history)
   }
 
+  // If there's a stale cached score, return it immediately and refresh in background.
+  // This prevents fly.io's 30s proxy timeout from firing on first-time-seen wallets.
+  if (!forceRefresh && cached) {
+    const history = getScoreHistory(wallet)
+    const staleResult = buildFullResponseFromCache(wallet, cached, history)
+    // Fire-and-forget background refresh — don't await
+    computeScore(wallet).then(result => {
+      const reports = countReportsByTarget(wallet)
+      const penalised = applyPenalty(result.composite, reports)
+      upsertScore(wallet, penalised, result.reliability, result.viability, result.identity, result.capability, result.rawData, {
+        confidence: result.confidence,
+        recommendation: result.recommendation,
+        modelVersion: MODEL_VERSION,
+        sybilFlag: result.sybilFlag,
+      })
+    }).catch(() => { /* ignore background refresh errors */ })
+    return { ...staleResult, stale: true }
+  }
+
   try {
     const scorePromise = computeScore(wallet)
     const result = await (timeoutMs > 0
