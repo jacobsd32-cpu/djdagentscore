@@ -27,4 +27,4 @@ COPY index.html ./
 
 EXPOSE 3000
 
-CMD ["node", "--max-old-space-size=512", "dist/index.js"]
+CMD ["node", "--max-old-space-size=1536", "dist/index.js"]
