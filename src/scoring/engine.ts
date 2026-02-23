@@ -327,6 +327,34 @@ async function computeScore(wallet: Address): Promise<{
     },
   }
 
+  // ── P5: Explainability breakdown ──────────────────────────────────────
+  const breakdown: Record<string, Record<string, number>> = {
+    reliability: rel.signals,
+    viability: via.signals,
+    identity: idn.signals,
+    capability: cap.signals,
+    behavior: behaviorResult.signals,
+  }
+
+  const halfWidth = Math.round((1 - confidence) * 15)
+  const scoreRange = {
+    low: Math.max(0, composite - halfWidth),
+    high: Math.min(100, composite + halfWidth),
+  }
+
+  const allSignals: { name: string; points: number }[] = []
+  for (const [dim, signals] of Object.entries(breakdown)) {
+    for (const [signal, points] of Object.entries(signals)) {
+      allSignals.push({ name: `${dim}.${signal}`, points })
+    }
+  }
+  const sorted = allSignals.sort((a, b) => b.points - a.points)
+  const topContributors = sorted.slice(0, 5).map((s) => `${s.name} (${s.points} pts)`)
+  const topDetractors = sorted
+    .filter((s) => s.points === 0)
+    .slice(0, 5)
+    .map((s) => `${s.name} (0 pts)`)
+
   return {
     composite,
     reliability: relScore,
@@ -335,6 +363,10 @@ async function computeScore(wallet: Address): Promise<{
     capability: capScore,
     behavior: behScore,
     dimensions,
+    breakdown,
+    scoreRange,
+    topContributors,
+    topDetractors,
     rawData: {
       usdcData: {
         balance:       String(usdcData.balance),
@@ -478,6 +510,11 @@ export async function getOrCalculateScore(
         gamingIndicators: result.gamingIndicators,
         dataAvailability: result.dataAvailability,
         improvementPath: result.improvementPath,
+        integrityMultiplier: result.integrityMultiplier,
+        breakdown: result.breakdown,
+        scoreRange: result.scoreRange,
+        topContributors: result.topContributors,
+        topDetractors: result.topDetractors,
       },
     )
   } catch (err) {
@@ -571,6 +608,11 @@ function buildFullResponseFromDimensions(
     gamingIndicators: string[]
     dataAvailability: DataAvailability
     improvementPath: string[]
+    integrityMultiplier?: number
+    breakdown?: Record<string, Record<string, number>>
+    scoreRange?: { low: number; high: number }
+    topContributors?: string[]
+    topDetractors?: string[]
   },
 ): FullScoreResponse {
   return {
@@ -588,6 +630,11 @@ function buildFullResponseFromDimensions(
     dimensions,
     dataAvailability: opts.dataAvailability,
     improvementPath: opts.improvementPath.length > 0 ? opts.improvementPath : undefined,
+    integrityMultiplier: opts.integrityMultiplier,
+    breakdown: opts.breakdown,
+    scoreRange: opts.scoreRange,
+    topContributors: opts.topContributors,
+    topDetractors: opts.topDetractors,
     scoreHistory: history.map((h) => ({
       score: h.score,
       calculatedAt: h.calculated_at,
