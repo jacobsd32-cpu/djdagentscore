@@ -9,6 +9,7 @@ vi.mock('../src/db.js', () => ({
   getScoreHistory: vi.fn(() => []),
   scoreToTier: (s: number) => s >= 90 ? 'Elite' : s >= 75 ? 'Trusted' : s >= 50 ? 'Established' : s >= 25 ? 'Emerging' : 'Unverified',
   countReportsByTarget: vi.fn(() => 0),
+  countReportsAfterDate: vi.fn(() => 0),
   countUniquePartners: vi.fn(() => 0),
   countRatingsReceived: vi.fn(() => 0),
   countPriorQueries: vi.fn(() => 0),
