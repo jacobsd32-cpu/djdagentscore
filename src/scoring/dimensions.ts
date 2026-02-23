@@ -68,7 +68,7 @@ function piecewiseLog(
 
 // ---------- Dimension 1: Transaction Reliability (35%) ----------
 
-export function calcReliability(data: WalletUSDCData, blockNow: bigint, nonce: number): ReliabilityData & { score: number } {
+export function calcReliability(data: WalletUSDCData, blockNow: bigint, nonce: number): ReliabilityData & { score: number; signals: Record<string, number> } {
   let pts = 0
 
   // --- Payment success rate (up to 30 pts) ---
@@ -162,7 +162,7 @@ export function calcReliability(data: WalletUSDCData, blockNow: bigint, nonce: n
 
 // ---------- Dimension 2: Economic Viability (30%) ----------
 
-export function calcViability(data: WalletUSDCData, walletAgeDays: number | null, ethBalanceWei: bigint): ViabilityData & { score: number } {
+export function calcViability(data: WalletUSDCData, walletAgeDays: number | null, ethBalanceWei: bigint): ViabilityData & { score: number; signals: Record<string, number> } {
   let pts = 0
 
   const balanceUsd = usdcToFloat(data.balance)
@@ -280,7 +280,7 @@ export async function calcIdentity(
   githubStars: number | null = null,
   githubPushedAt: string | null = null,
   basename = false,
-): Promise<IdentityData & { score: number }> {
+): Promise<IdentityData & { score: number; signals: Record<string, number> }> {
   let pts = 0
 
   // --- Agent self-registration (10 pts) ---
@@ -388,7 +388,7 @@ export async function calcIdentity(
 export function calcCapability(
   data: WalletUSDCData,
   x402Stats?: { x402TxCount: number; x402InflowsUsd: number; x402OutflowsUsd: number }
-): CapabilityData & { score: number } {
+): CapabilityData & { score: number; signals: Record<string, number> } {
   let pts = 0
 
   // If we have x402-specific data from the indexer, use it; else fall back to heuristic
