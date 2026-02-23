@@ -14,6 +14,7 @@ import registerRoute from './routes/register.js'
 import badgeRoute from './routes/badge.js'
 import agentRoute from './routes/agent.js'
 import openapiRoute from './routes/openapi.js'
+import admin from './routes/admin.js'
 import { responseHeadersMiddleware } from './middleware/responseHeaders.js'
 import { queryLoggerMiddleware } from './middleware/queryLogger.js'
 import { freeTierMiddleware } from './middleware/freeTier.js'
@@ -102,6 +103,7 @@ app.route('/v1/score', scoreRoute)
 app.route('/v1/report', reportRoute)
 app.route('/v1/leaderboard', leaderboardRoute)
 app.route('/v1/data/fraud/blacklist', blacklistRoute)
+app.route('/admin', admin)
 
 // 404 handler
 app.notFound((c) => c.json({ error: 'Not found' }, 404))
