@@ -20,9 +20,15 @@ fs.mkdirSync(path.dirname(DB_PATH), { recursive: true })
 
 export const db: DatabaseType = new Database(DB_PATH)
 
-// Performance settings
-db.pragma('journal_mode = WAL')
-db.pragma('synchronous = NORMAL')
+// Performance & safety settings
+// NOTE: We use DELETE journal mode instead of WAL because Fly.io volumes are
+// network-attached storage (not local disk). WAL relies on shared-memory
+// (mmap) semantics that are not guaranteed on network-attached volumes and
+// can silently corrupt the database on crash or volume hiccup. DELETE mode
+// is slower for concurrent reads but safe on any filesystem.
+// Switch to WAL only if running on local SSD / persistent disk.
+db.pragma('journal_mode = DELETE')
+db.pragma('synchronous = FULL')
 db.pragma('foreign_keys = ON')
 
 // ---------- Schema ----------
@@ -83,6 +89,7 @@ addColumnIfMissing('scores', 'model_version', "TEXT DEFAULT '1.0.0'")
 addColumnIfMissing('scores', 'sybil_flag', 'INTEGER DEFAULT 0')
 addColumnIfMissing('scores', 'sybil_indicators', "TEXT DEFAULT '[]'")
 addColumnIfMissing('scores', 'gaming_indicators', "TEXT DEFAULT '[]'")
+addColumnIfMissing('scores', 'behavior_score', 'INTEGER')
 
 // Migrate score_history to include confidence + model_version
 addColumnIfMissing('score_history', 'confidence', 'REAL DEFAULT 0.0')
@@ -118,6 +125,12 @@ db.exec(`
     '{"reliability":0.35,"viability":0.30,"identity":0.20,"capability":0.15}',
     '["sybil_detection","velocity_checks","confidence_interval"]',
     'Initial launch model'
+  );
+  INSERT OR IGNORE INTO model_versions (version, weights_json, features_json, notes) VALUES (
+    '2.0.0',
+    '{"reliability":0.30,"viability":0.25,"identity":0.20,"behavior":0.15,"capability":0.10}',
+    '["sybil_detection","gaming_detection","behavior_analysis","integrity_multiplier","confidence_interval","data_availability","improvement_path"]',
+    'Scoring overhaul v2 — 5 dimensions, multiplicative integrity, behavior analysis'
   );
 
   -- Blockchain Indexing
@@ -360,6 +373,46 @@ db.exec(`
   );
 `)
 
+// ── P1: USDC Transfer Index ───────────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS usdc_transfers (
+    tx_hash TEXT UNIQUE,
+    block_number INTEGER,
+    from_wallet TEXT,
+    to_wallet TEXT,
+    amount_usdc REAL,
+    timestamp TEXT
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_usdc_transfers_from ON usdc_transfers(from_wallet);
+  CREATE INDEX IF NOT EXISTS idx_usdc_transfers_to ON usdc_transfers(to_wallet);
+  CREATE INDEX IF NOT EXISTS idx_usdc_transfers_block ON usdc_transfers(block_number);
+
+  -- P3: Calibration Reports
+  CREATE TABLE IF NOT EXISTS calibration_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    generated_at TEXT,
+    period_start TEXT,
+    period_end TEXT,
+    total_scored INTEGER,
+    avg_score_by_outcome TEXT,
+    tier_accuracy TEXT,
+    recommendations TEXT,
+    model_version TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS wallet_transfer_stats (
+    wallet TEXT PRIMARY KEY,
+    total_tx_count INTEGER DEFAULT 0,
+    total_volume_in REAL DEFAULT 0,
+    total_volume_out REAL DEFAULT 0,
+    unique_partners INTEGER DEFAULT 0,
+    first_seen TEXT,
+    last_seen TEXT,
+    updated_at TEXT
+  );
+`)
+
 // Migrate agent_registrations to add GitHub verification columns (must run after table is created)
 addColumnIfMissing('agent_registrations', 'github_verified', 'INTEGER NOT NULL DEFAULT 0')
 addColumnIfMissing('agent_registrations', 'github_stars', 'INTEGER')
@@ -372,11 +425,11 @@ const stmtUpsertScore = db.prepare(`
   INSERT INTO scores
     (wallet, composite_score, reliability_score, viability_score, identity_score, capability_score,
      tier, raw_data, calculated_at, expires_at,
-     confidence, recommendation, model_version, sybil_flag, sybil_indicators, gaming_indicators)
+     confidence, recommendation, model_version, sybil_flag, sybil_indicators, gaming_indicators, behavior_score)
   VALUES
     (@wallet, @composite_score, @reliability_score, @viability_score, @identity_score, @capability_score,
      @tier, @raw_data, @calculated_at, @expires_at,
-     @confidence, @recommendation, @model_version, @sybil_flag, @sybil_indicators, @gaming_indicators)
+     @confidence, @recommendation, @model_version, @sybil_flag, @sybil_indicators, @gaming_indicators, @behavior_score)
   ON CONFLICT(wallet) DO UPDATE SET
     composite_score   = excluded.composite_score,
     reliability_score = excluded.reliability_score,
@@ -392,7 +445,8 @@ const stmtUpsertScore = db.prepare(`
     model_version     = excluded.model_version,
     sybil_flag        = excluded.sybil_flag,
     sybil_indicators  = excluded.sybil_indicators,
-    gaming_indicators = excluded.gaming_indicators
+    gaming_indicators = excluded.gaming_indicators,
+    behavior_score    = excluded.behavior_score
 `)
 
 const stmtGetScore = db.prepare<[string], ScoreRow>(`
@@ -438,6 +492,10 @@ const stmtInsertReport = db.prepare(`
 
 const stmtCountReports = db.prepare<[string], { count: number }>(`
   SELECT COUNT(*) as count FROM fraud_reports WHERE target_wallet = ?
+`)
+
+const stmtCountReportsAfter = db.prepare<[string, string], { count: number }>(`
+  SELECT COUNT(*) as count FROM fraud_reports WHERE target_wallet = ? AND created_at > ?
 `)
 
 const stmtGetReportsByTarget = db.prepare<[string], FraudReportRow>(`
@@ -508,6 +566,7 @@ export function upsertScore(
   viabilityScore: number,
   identityScore: number,
   capabilityScore: number,
+  behaviorScore: number | null,
   rawData: object,
   meta: ScoreMetadata = {},
 ): void {
@@ -522,6 +581,7 @@ export function upsertScore(
     viabilityScore,
     identityScore,
     capabilityScore,
+    behaviorScore,
     tier,
     rawData,
     now,
@@ -538,6 +598,7 @@ const upsertScoreTxn = db.transaction(
     viabilityScore: number,
     identityScore: number,
     capabilityScore: number,
+    behaviorScore: number | null,
     tier: string,
     rawData: object,
     now: Date,
@@ -551,6 +612,7 @@ const upsertScoreTxn = db.transaction(
       viability_score: viabilityScore,
       identity_score: identityScore,
       capability_score: capabilityScore,
+      behavior_score: behaviorScore,
       tier,
       raw_data: JSON.stringify(rawData),
       calculated_at: now.toISOString(),
@@ -656,6 +718,10 @@ export function insertReport(report: {
 
 export function countReportsByTarget(wallet: string): number {
   return stmtCountReports.get(wallet)!.count
+}
+
+export function countReportsAfterDate(wallet: string, afterDate: string): number {
+  return stmtCountReportsAfter.get(wallet, afterDate)!.count
 }
 
 export function applyReportPenalty(wallet: string, penalty: number): void {
@@ -901,6 +967,27 @@ export function countPriorQueries(wallet: string): number {
     )
     .get(wallet.toLowerCase())
   return row?.count ?? 0
+}
+
+// ---------- behavior dimension helpers ----------
+
+/** Return ISO-8601 timestamps for a wallet, preferring usdc_transfers then raw_transactions. */
+export function getTransferTimestamps(wallet: string): string[] {
+  const w = wallet.toLowerCase()
+  // Try usdc_transfers first (P1 indexed data)
+  let rows = db
+    .prepare<[string, string], { timestamp: string }>(
+      `SELECT timestamp FROM usdc_transfers WHERE from_wallet = ? OR to_wallet = ? ORDER BY timestamp`,
+    )
+    .all(w, w)
+  if (rows.length >= 10) return rows.map(r => r.timestamp)
+  // Fallback to raw_transactions (x402 indexer data)
+  rows = db
+    .prepare<[string, string], { timestamp: string }>(
+      `SELECT timestamp FROM raw_transactions WHERE from_wallet = ? OR to_wallet = ? ORDER BY timestamp`,
+    )
+    .all(w, w)
+  return rows.map(r => r.timestamp)
 }
 
 export const indexTransferBatch: Transaction<(transfers: IndexedTransfer[]) => void> = db.transaction((transfers: IndexedTransfer[]) => {

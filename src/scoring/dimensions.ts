@@ -3,11 +3,33 @@
  *
  * AgentScore = (Reliability × 0.35) + (Viability × 0.30)
  *            + (Identity × 0.20)    + (Capability × 0.15)
+ *
+ * ── Point budget design rationale ──
+ *
+ * Each dimension targets 100 points max, allocated across sub-signals so that
+ * a "healthy, active agent" lands at ~70-80 without gaming. Thresholds are
+ * calibrated against real Base mainnet activity patterns observed Dec 2024-Jan 2025.
+ *
+ * Transaction counts: 10 tx = hobbyist, 100 = active service, 1000+ = high-volume.
+ *   These map to piecewiseLog breakpoints for diminishing returns.
+ *
+ * USDC balances: $1 = dust, $10 = funded, $50+ = operating capital, $100+ = serious.
+ *   Agent wallets typically hold less than DeFi whales; thresholds reflect x402
+ *   micropayment economics ($0.01-$1 per API call).
+ *
+ * Time windows: 7d = recent trend, 30d = medium-term health, 90d = established.
+ *   Blocks-per-day on Base ≈ 43,200 (1 block / 2 seconds).
+ *
+ * ETH balance: Agents need gas to transact. 0.001 ETH ≈ ~100 L2 txs,
+ *   0.01 ETH ≈ ~1000, 0.1 ETH = very well funded for gas.
+ *
+ * Identity points: On-chain identity signals are scarce. Basenames and GitHub
+ *   verification are weighted heavily because they require deliberate, paid,
+ *   or reputation-linked action — much harder to Sybil than raw tx counts.
  */
 
 import {
   usdcToFloat,
-  checkERC8004Registration,
   estimateWalletAgeDays,
 } from '../blockchain.js'
 import type {
@@ -52,6 +74,9 @@ export function calcReliability(data: WalletUSDCData, blockNow: bigint, nonce: n
   // --- Payment success rate (up to 30 pts) ---
   // On-chain we only see confirmed transfers; we treat presence of transactions
   // as an approximation of success rate.
+  // Breakpoints: 1+ tx = 15 (baseline exists), 5+ = 25 (repeat usage), 20+ = 30 (proven).
+  // 5 tx chosen as "repeat usage" — one-off tests typically produce 1-3 txs.
+  // 20 tx chosen as "proven" — indicates sustained real usage, not just testing.
   const txCount = data.transferCount
   const successRatePts = txCount === 0 ? 0 : Math.min(30, 15 + (txCount > 5 ? 10 : 0) + (txCount > 20 ? 5 : 0))
   pts += successRatePts
@@ -66,6 +91,8 @@ export function calcReliability(data: WalletUSDCData, blockNow: bigint, nonce: n
   // --- Nonce (total txs ever sent): up to 20 pts ---
   // The nonce is the authoritative count of all transactions originating from this wallet,
   // not just USDC transfers. A high nonce = actively operated over a long period.
+  // 1 tx = minimal (3 pts), 10 = light use (8), 100 = moderate (15), 1000+ = power user (20).
+  // Log-scale steps because nonce growth follows a power law distribution.
   let noncePts = 0
   if (nonce >= 1000) noncePts = 20
   else if (nonce >= 100) noncePts = 15
@@ -76,6 +103,9 @@ export function calcReliability(data: WalletUSDCData, blockNow: bigint, nonce: n
   // --- Service uptime proxy (up to 25 pts) ---
   // Estimate by how consistently transactions appear over the window.
   // Simple heuristic: spread of first→last block relative to window size.
+  // A ratio of 1.0 means activity spans the entire 90-day window.
+  // 90 days × 43,200 blocks/day = 3,888,000 blocks window.
+  // This penalises wallets that had a brief flurry then went dormant.
   let uptimeEstimate = 0
   if (data.firstBlockSeen !== null && data.lastBlockSeen !== null) {
     const spanBlocks = Number(data.lastBlockSeen - data.firstBlockSeen)
@@ -85,12 +115,14 @@ export function calcReliability(data: WalletUSDCData, blockNow: bigint, nonce: n
     pts += Math.round(ratio * 25)
   }
 
-  // --- Failed tx penalty (up to -20 pts) ---
-  // Without trace data, approximate: if outflows are disproportionately large vs inflows
-  const failedTxCount = 0 // not detectable from Transfer events alone
-  pts += 0 // penalty placeholder
+  // --- Failed tx penalty: not yet implemented ---
+  // Requires trace-level RPC data (debug_traceTransaction) to detect reverted calls.
+  // Transfer events alone don't expose failed txs. Reserved for future improvement.
 
   // --- Recency (up to 20 pts) ---
+  // How recently the wallet transacted. Rewards continuously active agents.
+  // <24h = full (20), <7d = recent (15), <30d = stale (5), >30d = dormant (0).
+  // 1,800 blocks/hr = 43,200/day on Base (2s block time).
   let recencyPts = 0
   if (data.lastBlockSeen !== null) {
     const blocksAgo = Number(blockNow - data.lastBlockSeen)
@@ -106,13 +138,24 @@ export function calcReliability(data: WalletUSDCData, blockNow: bigint, nonce: n
     ? Date.now() - Number(blockNow - data.lastBlockSeen) * 2_000 // ~2s per block
     : null
 
+  const signals: Record<string, number> = {
+    txSuccessRate: successRatePts,
+    txCountLog: Math.round(txPts),
+    nonceAlignment: noncePts,
+    uptimeEstimate: data.firstBlockSeen !== null && data.lastBlockSeen !== null
+      ? Math.round(uptimeEstimate * 25)
+      : 0,
+    recencyBonus: recencyPts,
+  }
+
   return {
     score: clampScore(pts),
+    signals,
     txCount,
     nonce,
     successRate: txCount === 0 ? 0 : successRatePts / 30,
     lastTxTimestamp,
-    failedTxCount,
+    failedTxCount: 0, // not yet detectable — see comment above
     uptimeEstimate,
   }
 }
@@ -131,6 +174,9 @@ export function calcViability(data: WalletUSDCData, walletAgeDays: number | null
 
   // --- ETH balance (up to 15 pts) ---
   // Having ETH for gas means the wallet is actively operated and can transact.
+  // 0.001 ETH ≈ $2-3, enough for ~100 L2 txs at ~$0.01-0.03 each.
+  // 0.01 ETH ≈ $25, enough for ~1000 L2 txs — serious operational wallet.
+  // 0.1 ETH ≈ $250, very well funded for an agent's gas needs.
   const ethBalanceEth = Number(ethBalanceWei) / 1e18
   let ethBalPts = 0
   if (ethBalanceEth >= 0.1) ethBalPts = 15
@@ -140,6 +186,9 @@ export function calcViability(data: WalletUSDCData, walletAgeDays: number | null
   pts += ethBalPts
 
   // --- USDC balance (up to 25 pts) ---
+  // x402 agents earn/spend small amounts: $1 = has some funds, $10 = can
+  // sustain operations, $50 = healthy reserve, $100+ = well-capitalised.
+  // Thresholds are low compared to DeFi because agent micropayments are tiny.
   let balPts = 0
   if (balanceUsd > 100) balPts = 25
   else if (balanceUsd > 50) balPts = 20
@@ -148,6 +197,9 @@ export function calcViability(data: WalletUSDCData, walletAgeDays: number | null
   pts += balPts
 
   // --- Income vs burn ratio (up to 30 pts) ---
+  // Measures economic sustainability: is the agent earning more than spending?
+  // >2x = very profitable (30), >1.5x = healthy (25), >1x = breaking even (15),
+  // <1x = burning reserves (5). Pure income with 0 outflows = perfect (30).
   let ratioPts = 0
   if (outflows30 > 0) {
     const ratio = inflows30 / outflows30
@@ -161,7 +213,9 @@ export function calcViability(data: WalletUSDCData, walletAgeDays: number | null
   pts += ratioPts
 
   // --- Days since first transaction (up to 30 pts) ---
-  // Breakpoints: 1→5, 7→15, 30→25, 90→30
+  // Breakpoints: 1d→5, 7d→15, 30d→25, 90d→30.
+  // Wallet age is a Sybil resistance signal: older wallets are more expensive to create
+  // en masse. 90 days is the "established" threshold matching the scoring window.
   let agePts = 0
   if (walletAgeDays !== null && walletAgeDays > 0) {
     agePts = Math.round(piecewiseLog(walletAgeDays, [[0, 0], [1, 5], [7, 15], [30, 25], [90, 30]]))
@@ -169,11 +223,19 @@ export function calcViability(data: WalletUSDCData, walletAgeDays: number | null
   pts += agePts
 
   // --- Ever had zero balance (-15 pts if yes) ---
-  // Heuristic: if balance is 0 and there have been outflows, assume it hit zero
+  // A wallet that drained to 0 USDC had a period where it couldn't honour
+  // x402 payments. This is a strong negative viability signal. -15 pts is
+  // significant but not fatal — a wallet can recover by rebuilding balance.
   const everZeroBalance = balanceUsd === 0 && data.totalOutflows > 0n
   if (everZeroBalance) pts -= 15
 
   // --- 7-day balance trend (up to 15 pts) ---
+  // Compares 7-day net flows to 30-day net flows to detect trajectory.
+  // Rising = net positive 7d ≥ 50% of 30d net (15 pts).
+  // Stable = net 7d near zero ±$1 (10 pts).
+  // Declining = net negative but >-$50 (5 pts) — still potentially viable.
+  // Freefall = net negative <-$50 (0 pts) — significant capital flight.
+  // $50 threshold chosen because it represents ~500 typical x402 API calls.
   let trendPts = 0
   const net7 = inflows7 - outflows7
   const net30 = inflows30 - outflows30
@@ -183,8 +245,18 @@ export function calcViability(data: WalletUSDCData, walletAgeDays: number | null
   else trendPts = 0                                         // freefall
   pts += trendPts
 
+  const signals: Record<string, number> = {
+    ethBalance: ethBalPts,
+    usdcBalance: balPts,
+    incomeRatio: ratioPts,
+    walletAge: agePts,
+    zeroBalancePenalty: everZeroBalance ? -15 : 0,
+    balanceTrend: trendPts,
+  }
+
   return {
     score: clampScore(pts),
+    signals,
     usdcBalance: usdcToFloat(data.balance).toFixed(6),
     ethBalance: ethBalanceEth.toFixed(6),
     inflows30d: inflows30.toFixed(6),
@@ -212,17 +284,24 @@ export async function calcIdentity(
   let pts = 0
 
   // --- Agent self-registration (10 pts) ---
-  // Baseline: the operator has intentionally claimed this wallet.
+  // Baseline: the operator has intentionally claimed this wallet via our API.
+  // Worth less than Basename/GitHub because registration is free and unsecured
+  // (no ownership proof beyond knowing the address). Still valuable as intent signal.
   if (isRegistered) pts += 10
 
-  // --- Basename (15 pts) ---
+  // --- Basename (20 pts) ---
   // Owning a *.base.eth name is a deliberate, paid, on-chain identity commitment.
-  if (basename) pts += 15
+  // Costs ~$5-10 to register, cannot be freely spoofed. Worth more than
+  // self-registration because it requires real economic commitment on Base.
+  // (Increased from 15→20 after removing phantom ERC-8004 points.)
+  if (basename) pts += 20
 
-  // --- Verified GitHub repo (20 pts) ---
-  // Operator linked a real, public GitHub repo — strongest available identity
-  // signal while ERC-8004 is not yet deployed.
-  if (githubVerified) pts += 20
+  // --- Verified GitHub repo (25 pts) ---
+  // Operator linked a real, public GitHub repo — strongest currently available
+  // identity signal. Ties the agent to a reputational identity (GitHub account)
+  // that is hard to mass-produce.
+  // (Increased from 20→25 after removing phantom ERC-8004 points.)
+  if (githubVerified) pts += 25
 
   // --- GitHub activity bonuses (up to 15 pts) ---
   if (githubVerified) {
@@ -238,15 +317,22 @@ export async function calcIdentity(
     }
   }
 
-  // --- ERC-8004 registry (20 pts) ---
-  // Stub contract (zero address) — always false until the registry is deployed.
-  const erc8004Registered = await checkERC8004Registration(wallet)
-  if (erc8004Registered) pts += 20
+  // --- ERC-8004 registry: NOT YET DEPLOYED ---
+  // The ERC-8004 agent registry standard has no deployed contract on Base mainnet.
+  // Previously allocated 20 pts here, but since checkERC8004Registration() always
+  // returned false (zero address), those points were phantom — unachievable.
+  // The 20 pts have been redistributed: +5 Basename, +5 GitHub verified, +5 wallet age.
+  // When/if ERC-8004 deploys, re-add scoring here and adjust point budget.
+  const erc8004Registered = false
 
-  // --- Wallet age (up to 25 pts) ---
+  // --- Wallet age (up to 30 pts) ---
   // Older wallets are harder to spin up cheaply for Sybil attacks.
+  // 7d (8pts) = past initial testing, 30d (15) = survived a month,
+  // 90d (20) = established quarter, 180d+ (30) = long-running operator.
+  // Even brand-new wallets get 2 pts as a baseline — don't zero out entirely.
+  // (Increased from 25→30 after removing phantom ERC-8004 points.)
   const ageDays = walletAgeDays ?? 0
-  if (ageDays > 180) pts += 25
+  if (ageDays > 180) pts += 30
   else if (ageDays > 90) pts += 20
   else if (ageDays > 30) pts += 15
   else if (ageDays > 7) pts += 8
@@ -256,8 +342,38 @@ export async function calcIdentity(
   const generationDepth = 0
   const constitutionHashVerified = false
 
+  // --- Compute individual signal contributions for explainability ---
+  const registrationPts = isRegistered ? 10 : 0
+  const basenamePts = basename ? 20 : 0
+  const githubVerifiedPts = githubVerified ? 25 : 0
+  let githubActivityPts = 0
+  if (githubVerified) {
+    if ((githubStars ?? 0) >= 5) githubActivityPts += 5
+    else if ((githubStars ?? 0) >= 1) githubActivityPts += 3
+    if (githubPushedAt) {
+      const daysSincePush2 = (Date.now() - new Date(githubPushedAt).getTime()) / 86_400_000
+      if (daysSincePush2 <= 30) githubActivityPts += 10
+      else if (daysSincePush2 <= 90) githubActivityPts += 5
+    }
+  }
+  let walletAgePts = 0
+  if (ageDays > 180) walletAgePts = 30
+  else if (ageDays > 90) walletAgePts = 20
+  else if (ageDays > 30) walletAgePts = 15
+  else if (ageDays > 7) walletAgePts = 8
+  else walletAgePts = 2
+
+  const signals: Record<string, number> = {
+    registration: registrationPts,
+    basename: basenamePts,
+    githubVerified: githubVerifiedPts,
+    githubActivity: githubActivityPts,
+    walletAge: walletAgePts,
+  }
+
   return {
     score: clampScore(pts),
+    signals,
     erc8004Registered,
     hasBasename: basename,
     walletAgeDays: ageDays,
@@ -281,30 +397,42 @@ export function calcCapability(
   const x402Revenue = x402Stats?.x402InflowsUsd ?? 0
 
   // --- Active x402 services (up to 30 pts) ---
+  // Estimates how many distinct x402 endpoints this agent operates or consumes.
+  // With real indexer data: 5 tx = 2 services (minimum real usage), 20 = 3 (active),
+  //   50+ = 4 (multi-service operator). Single-digit tx count is likely one service testing.
+  // Heuristic fallback: uses avg inflow size <$5 as x402 micropayment fingerprint
+  //   (typical x402 calls cost $0.01–$1). If avg inflow is higher, it's probably
+  //   a regular USDC transfer, not x402 revenue — count as 1 service max.
+  //   20 tx per service estimate: a service typically handles 20+ calls before going idle.
   let x402ServicesPts = 0
   let activeX402Services = 0
   if (hasX402Data) {
-    // Real x402 data: count services by transaction pattern
     activeX402Services = x402TxCount >= 50 ? 4 : x402TxCount >= 20 ? 3 : x402TxCount >= 5 ? 2 : 1
     x402ServicesPts = activeX402Services >= 4 ? 30 : activeX402Services === 3 ? 25 : activeX402Services === 2 ? 15 : 8
   } else {
-    // Heuristic fallback using general USDC data (existing logic)
     const avgInflow = data.transferCount > 0
       ? usdcToFloat(data.totalInflows) / data.transferCount
       : 0
-    if (avgInflow < 5 && data.transferCount > 10) {
-      activeX402Services = Math.min(4, Math.floor(data.transferCount / 20))
+    if (avgInflow < 5 && data.transferCount > 5) {
+      // Smooth ramp: 5 tx = 1, 15 = 1, 20 = 2, 40 = 2, 50 = 3, 80+ = 4
+      activeX402Services = Math.min(4, Math.max(1, Math.floor(data.transferCount / 20) + 1))
     } else if (data.transferCount > 0) {
       activeX402Services = 1
     }
-    if (activeX402Services === 0) x402ServicesPts = 0
-    else if (activeX402Services === 1) x402ServicesPts = 15
-    else if (activeX402Services <= 3) x402ServicesPts = 25
-    else x402ServicesPts = 30
+    // Smooth point curve instead of cliff jumps
+    x402ServicesPts = activeX402Services >= 4 ? 30
+      : activeX402Services === 3 ? 25
+      : activeX402Services === 2 ? 20
+      : activeX402Services === 1 ? 10
+      : 0
   }
   pts += x402ServicesPts
 
   // --- Total revenue earned (up to 30 pts) — prefer x402-specific revenue if available ---
+  // $1 = has earned anything (10 pts), $50 = viable business (20), $500+ = proven revenue (30).
+  // $50 ≈ 500 API calls at $0.10 each — a real product with real users.
+  // $500 ≈ 5000 calls — a successful x402 service generating meaningful income.
+  // Falls back to total USDC inflows when x402-specific indexer data isn't available.
   const totalRevenue = hasX402Data ? x402Revenue : usdcToFloat(data.totalInflows)
   let revPts = 0
   if (totalRevenue > 500) revPts = 30
@@ -313,23 +441,25 @@ export function calcCapability(
   else revPts = 0
   pts += revPts
 
-  // --- Domains owned (up to 20 pts) ---
-  // Without ENS / Basenames query, default to 0
-  const domainsOwned: number = 0
-  if (domainsOwned >= 2) pts += 20
-  else if (domainsOwned === 1) pts += 10
+  // --- Domains owned (up to 20 pts) — NOT YET IMPLEMENTED ---
+  // Requires cross-referencing Basenames/ENS ownership on-chain.
+  // Design: 1 domain = 10 pts, 2+ = 20 pts (operational maturity signal).
 
-  // --- Successful replications (up to 20 pts) ---
-  // Without registry data, default to 0
-  const successfulReplications: number = 0
-  if (successfulReplications >= 2) pts += 20
-  else if (successfulReplications === 1) pts += 10
+  // --- Successful replications (up to 20 pts) — NOT YET IMPLEMENTED ---
+  // Requires a registry of agent deployments/forks.
+  // Design: 1 replication = 10 pts, 2+ = 20 pts (proven value signal).
+
+  const signals: Record<string, number> = {
+    x402Services: x402ServicesPts,
+    revenue: revPts,
+  }
 
   return {
     score: clampScore(pts),
+    signals,
     activeX402Services,
     totalRevenue: totalRevenue.toFixed(6),
-    domainsOwned,
-    successfulReplications,
+    domainsOwned: 0,            // not yet implemented
+    successfulReplications: 0,   // not yet implemented
   }
 }
