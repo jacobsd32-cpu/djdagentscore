@@ -113,7 +113,7 @@ export function detectSybil(wallet: string, db: Database): SybilResult {
       const diff = Math.abs(
         new Date(walletRow.first_seen).getTime() - new Date(partnerRow.first_seen).getTime(),
       )
-      if (diff < 24 * 60 * 60 * 1000) {
+      if (diff <= 24 * 60 * 60 * 1000) {
         indicators.push('coordinated_creation')
         capIdentity(50)
       }
@@ -131,6 +131,57 @@ export function detectSybil(wallet: string, db: Database): SybilResult {
   if (txCount > 50 && uniquePartnerCount < 5) {
     indicators.push('volume_without_diversity')
     capReliability(45)
+  }
+
+  // ── CHECK 6: Funding chain detection ──────────────────────────────────
+  // If this wallet received its earliest inflows from a single funder AND
+  // subsequently transacts predominantly with that same funder, it's likely
+  // a controlled puppet wallet. We check if the top partner by volume is
+  // also the earliest funder (first inflow source in raw_transactions).
+  if (uniquePartnerCount > 0) {
+    const firstFunder = db
+      .prepare<[string], { from_wallet: string }>(
+        `SELECT from_wallet FROM raw_transactions
+         WHERE to_wallet = ?
+         ORDER BY timestamp ASC LIMIT 1`,
+      )
+      .get(w)
+
+    if (firstFunder && firstFunder.from_wallet === partners[0].partner) {
+      // Top partner is also the wallet's original funder — strong sybil signal
+      indicators.push('funded_by_top_partner')
+      capIdentity(40)
+      capReliability(35)
+    }
+  }
+
+  // ── CHECK 7: Tight cluster detection ──────────────────────────────────
+  // If a wallet's partners also transact heavily with each other, the group
+  // forms a closed cluster typical of sybil rings. We check how many of
+  // the wallet's top 5 partners have relationships with each other.
+  // A high interconnection ratio (>50%) indicates a sybil cluster.
+  if (uniquePartnerCount >= 3) {
+    const topPartners = partners.slice(0, 5).map((p) => p.partner)
+    let interconnections = 0
+    let possiblePairs = 0
+    for (let i = 0; i < topPartners.length; i++) {
+      for (let j = i + 1; j < topPartners.length; j++) {
+        possiblePairs++
+        const link = db
+          .prepare<[string, string, string, string], { cnt: number }>(
+            `SELECT COUNT(*) as cnt FROM relationship_graph
+             WHERE (wallet_a = ? AND wallet_b = ?)
+                OR (wallet_a = ? AND wallet_b = ?)`,
+          )
+          .get(topPartners[i], topPartners[j], topPartners[j], topPartners[i])
+        if (link && link.cnt > 0) interconnections++
+      }
+    }
+    if (possiblePairs > 0 && interconnections / possiblePairs > 0.5) {
+      indicators.push('tight_cluster')
+      capReliability(30)
+      capIdentity(40)
+    }
   }
 
   return {
