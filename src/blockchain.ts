@@ -1,17 +1,34 @@
-import { createPublicClient, http, parseAbiItem, namehash } from 'viem'
+import { createPublicClient, http, fallback, parseAbiItem, namehash } from 'viem'
 import { base } from 'viem/chains'
 import type { WalletUSDCData } from './types.js'
 
 // ---------- Client ----------
 
 const BASE_RPC_URL = process.env.BASE_RPC_URL ?? 'https://base-mainnet.public.blastapi.io'
+const BASE_RPC_FALLBACK_URL = process.env.BASE_RPC_FALLBACK_URL ?? 'https://mainnet.base.org'
 
+// Use viem's built-in `fallback` transport for automatic failover.
+// Primary RPC is tried first; on failure, requests transparently fall back
+// to the secondary. Each transport has its own retry/timeout config.
+// viem's fallback transport includes a built-in circuit breaker: after
+// `retryCount` consecutive failures on a transport it is skipped for
+// subsequent requests until the next ranking interval (default 10s).
 export const publicClient = createPublicClient({
   chain: base,
-  transport: http(BASE_RPC_URL, {
-    timeout: 30_000,
-    retryCount: 2,
-    retryDelay: 1_500,
+  transport: fallback([
+    http(BASE_RPC_URL, {
+      timeout: 30_000,
+      retryCount: 2,
+      retryDelay: 1_500,
+    }),
+    http(BASE_RPC_FALLBACK_URL, {
+      timeout: 30_000,
+      retryCount: 2,
+      retryDelay: 2_000,
+    }),
+  ], {
+    // Re-rank transports every 15 seconds based on latency
+    rank: { interval: 15_000, sampleCount: 5, timeout: 3_000, weights: { latency: 0.4, stability: 0.6 } },
   }),
 })
 
