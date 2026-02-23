@@ -4,10 +4,7 @@
  */
 import { Hono } from 'hono'
 import { db } from '../db.js'
-
-function isValidAddress(addr: string): boolean {
-  return /^0x[0-9a-fA-F]{40}$/.test(addr)
-}
+import { isValidAddress } from '../types.js'
 
 const blacklist = new Hono()
 

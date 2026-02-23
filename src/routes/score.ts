@@ -1,11 +1,8 @@
-import { Hono } from 'hono'
+import { Hono, type Context } from 'hono'
 import { getOrCalculateScore } from '../scoring/engine.js'
 import { submitJob, getJob } from '../jobs/scoreQueue.js'
+import { isValidAddress } from '../types.js'
 import type { Address, BasicScoreResponse } from '../types.js'
-
-function isValidAddress(addr: string): addr is Address {
-  return /^0x[0-9a-fA-F]{40}$/.test(addr)
-}
 
 const score = new Hono()
 
@@ -26,6 +23,8 @@ score.get('/basic', async (c) => {
     recommendation: result.recommendation,
     modelVersion: result.modelVersion,
     lastUpdated: result.lastUpdated,
+    computedAt: result.computedAt,
+    scoreFreshness: result.scoreFreshness,
     ...(result.stale ? { stale: true } : {}),
   }
 
@@ -43,8 +42,9 @@ score.get('/full', async (c) => {
   return c.json(result)
 })
 
-// GET /v1/score/refresh?wallet=0x...
-score.get('/refresh', async (c) => {
+// POST /v1/score/refresh — forces a live recalculation (mutation → POST is correct)
+// Also accepts GET for backward compatibility (deprecated).
+async function handleRefresh(c: Context) {
   const wallet = c.req.query('wallet')
   if (!wallet || !isValidAddress(wallet)) {
     return c.json({ error: 'Invalid or missing wallet address' }, 400)
@@ -52,13 +52,27 @@ score.get('/refresh', async (c) => {
 
   const result = await getOrCalculateScore(wallet.toLowerCase() as Address, true)
   return c.json(result)
-})
+}
+score.post('/refresh', handleRefresh)
+score.get('/refresh', handleRefresh) // deprecated — prefer POST
 
-// POST /v1/score/compute?wallet=0x...
+// POST /v1/score/compute
 // Queues a background full-scan score computation and returns a jobId immediately.
 // Free — useful when the caller can't wait 20-150s for the synchronous endpoints.
-score.post('/compute', (c) => {
-  const wallet = c.req.query('wallet')
+// Accepts wallet from JSON body { wallet: "0x..." } or query param ?wallet=0x... (deprecated).
+score.post('/compute', async (c) => {
+  let wallet: string | undefined = c.req.query('wallet')
+
+  // Prefer body over query param for POST requests
+  if (!wallet) {
+    try {
+      const body = await c.req.json<{ wallet?: string }>()
+      wallet = body?.wallet
+    } catch {
+      // no body — fall through to validation
+    }
+  }
+
   if (!wallet || !isValidAddress(wallet)) {
     return c.json({ error: 'Invalid or missing wallet address' }, 400)
   }

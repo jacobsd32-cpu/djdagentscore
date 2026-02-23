@@ -1,14 +1,10 @@
 import { Hono } from 'hono'
 import { v4 as uuidv4 } from 'uuid'
 import { insertReport, getScore, applyReportPenalty, scoreToTier } from '../db.js'
-import { REPORT_REASONS } from '../types.js'
+import { isValidAddress, REPORT_REASONS } from '../types.js'
 import type { Address, ReportReason, ReportBody } from '../types.js'
 
 const PENALTY_PER_REPORT = 5
-
-function isValidAddress(addr: string): addr is Address {
-  return /^0x[0-9a-fA-F]{40}$/.test(addr)
-}
 
 const report = new Hono()
 

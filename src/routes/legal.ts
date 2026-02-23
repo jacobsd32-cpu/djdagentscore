@@ -42,7 +42,7 @@ const tosContent = `
 <h1 class="subtitle">TERMS OF SERVICE</h1>
 <p class="date">Last Updated: February 20, 2026</p>
 
-<p>These Terms of Service (&ldquo;<strong>Terms</strong>&rdquo;) govern your access to and use of the DJD Agent Score API and related services (the &ldquo;<strong>Service</strong>&rdquo;), operated by [DJD Agent Score LLC] (&ldquo;<strong>Company,</strong>&rdquo; &ldquo;<strong>we,</strong>&rdquo; &ldquo;<strong>our</strong>&rdquo;). By accessing or using the Service, you agree to be bound by these Terms. If you do not agree, do not use the Service.</p>
+<p>These Terms of Service (&ldquo;<strong>Terms</strong>&rdquo;) govern your access to and use of the DJD Agent Score API and related services (the &ldquo;<strong>Service</strong>&rdquo;), operated by DJD Agent Score (&ldquo;<strong>Company,</strong>&rdquo; &ldquo;<strong>we,</strong>&rdquo; &ldquo;<strong>our</strong>&rdquo;). By accessing or using the Service, you agree to be bound by these Terms. If you do not agree, do not use the Service.</p>
 
 <h1>1. Description of Service</h1>
 <p>DJD Agent Score is an experimental reputation scoring API for autonomous AI agent wallets on the Base blockchain. The Service provides trust scores, fraud reports, and related data products, accessible via HTTP endpoints and payable through the x402 micropayment protocol using USDC.</p>
@@ -122,7 +122,7 @@ const tosContent = `
 <p>These Terms constitute the entire agreement between you and the Company regarding the Service and supersede all prior agreements and understandings.</p>
 
 <h1>18. Contact</h1>
-<p>For questions regarding these Terms, contact: [insert email address for DJD Agent Score LLC]</p>
+<p>For questions regarding these Terms, contact: feedback@djdagentscore.xyz</p>
 `;
 
 // ─── PRIVACY POLICY ───
@@ -132,7 +132,7 @@ const privacyContent = `
 <h1 class="subtitle">PRIVACY POLICY</h1>
 <p class="date">Last Updated: February 20, 2026</p>
 
-<p>This Privacy Policy describes how [DJD Agent Score LLC] (&ldquo;<strong>Company,</strong>&rdquo; &ldquo;<strong>we,</strong>&rdquo; &ldquo;<strong>our</strong>&rdquo;) collects, uses, stores, and discloses information in connection with the DJD Agent Score API and related services (the &ldquo;<strong>Service</strong>&rdquo;). By using the Service, you acknowledge and agree to this Privacy Policy.</p>
+<p>This Privacy Policy describes how DJD Agent Score (&ldquo;<strong>Company,</strong>&rdquo; &ldquo;<strong>we,</strong>&rdquo; &ldquo;<strong>our</strong>&rdquo;) collects, uses, stores, and discloses information in connection with the DJD Agent Score API and related services (the &ldquo;<strong>Service</strong>&rdquo;). By using the Service, you acknowledge and agree to this Privacy Policy.</p>
 
 <h1>1. Nature of Data Collected</h1>
 <p>The Service operates in the blockchain and autonomous agent ecosystem. The primary identifiers used by the Service are public blockchain wallet addresses. Wallet addresses are cryptographic public keys published on the Base blockchain and are not, by themselves, personally identifiable information (&ldquo;<strong>PII</strong>&rdquo;). However, we recognize that wallet addresses may become linked to identifiable individuals through external means. We treat all data with appropriate care regardless of classification.</p>
@@ -209,7 +209,7 @@ const privacyContent = `
 
 <h1>12. Contact</h1>
 <p>For questions, concerns, or data subject requests regarding this Privacy Policy, contact:</p>
-<p>[DJD Agent Score LLC]<br>[Insert email address]</p>
+<p>DJD Agent Score<br>feedback@djdagentscore.xyz</p>
 `;
 
 const leaderboardHtml = `<!DOCTYPE html>

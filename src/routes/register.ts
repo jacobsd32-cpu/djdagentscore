@@ -1,10 +1,8 @@
 import { Hono } from 'hono'
 import { upsertRegistration, getRegistration, updateGithubVerification } from '../db.js'
+import { isValidAddress } from '../types.js'
 import type { Address, AgentRegistrationBody, AgentRegistrationResponse } from '../types.js'
-
-function isValidAddress(addr: string): addr is Address {
-  return /^0x[0-9a-fA-F]{40}$/.test(addr)
-}
+import { log } from '../logger.js'
 
 function isValidUrl(url: string): boolean {
   try {
@@ -48,7 +46,10 @@ async function verifyGithubRepo(
       headers['Authorization'] = `Bearer ${process.env.GITHUB_TOKEN}`
     }
 
-    const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers })
+    const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+      headers,
+      signal: AbortSignal.timeout(10_000), // 10s timeout
+    })
 
     if (!resp.ok) return null // 404 = doesn't exist, 403 = private
 
@@ -83,10 +84,10 @@ async function verifyAndStoreGithub(wallet: string, githubUrl: string): Promise<
   const result = await verifyGithubRepo(parsed.owner, parsed.repo)
   if (result) {
     updateGithubVerification(wallet, true, result.stars, result.pushedAt)
-    console.log(`[register] GitHub verified: ${wallet} → ${parsed.owner}/${parsed.repo} (${result.stars}★)`)
+    log.info('register', `GitHub verified: ${wallet} → ${parsed.owner}/${parsed.repo} (${result.stars}★)`)
   } else {
     updateGithubVerification(wallet, false, null, null)
-    console.log(`[register] GitHub not verified: ${wallet} → ${githubUrl}`)
+    log.warn('register', `GitHub not verified: ${wallet} → ${githubUrl}`)
   }
 }
 

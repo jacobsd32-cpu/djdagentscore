@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { getScore, getScoreHistory, getRegistration } from '../db.js'
+import { getScore, getScoreHistory, getRegistration, scoreToTier } from '../db.js'
 import type { ScoreRow, ScoreHistoryRow, AgentRegistrationRow } from '../types.js'
 
 // ---------- Helpers ----------
@@ -87,7 +87,7 @@ function renderPage(
   const historyRows = history.slice(0, 8).map((h) => `
     <div class="hist-row">
       <span class="hist-score" style="color:${scoreColor(h.score)}">${h.score}</span>
-      <span class="hist-tier">${tier}</span>
+      <span class="hist-tier">${scoreToTier(h.score)}</span>
       <span class="hist-date">${fmtDate(h.calculated_at)}</span>
     </div>`).join('')
 
