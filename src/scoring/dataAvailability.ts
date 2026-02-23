@@ -17,13 +17,12 @@ export interface DataAvailabilityInputs {
   txCount: number
   walletAgeDays: number
   usdcBalance: number // USDC float
-  erc8004Registered: boolean
   ratingCount: number
   uniquePartners: number
 }
 
 export function buildDataAvailability(inputs: DataAvailabilityInputs): DataAvailability {
-  const { txCount, walletAgeDays, usdcBalance, erc8004Registered, ratingCount, uniquePartners } =
+  const { txCount, walletAgeDays, usdcBalance, ratingCount, uniquePartners } =
     inputs
 
   // Transaction history
@@ -69,13 +68,17 @@ export function buildDataAvailability(inputs: DataAvailabilityInputs): DataAvail
   }
 
   // Identity data
+  // Note: erc8004Registered is always false (registry not deployed on Base).
+  // Identity assessment is based on partner diversity and other signals instead.
   let identityData: string
-  if (!erc8004Registered && uniquePartners === 0) {
+  if (uniquePartners === 0) {
     identityData = 'none'
-  } else if (!erc8004Registered) {
-    identityData = 'partial (not ERC-8004 registered)'
+  } else if (uniquePartners < 3) {
+    identityData = 'minimal'
+  } else if (uniquePartners < 10) {
+    identityData = 'partial'
   } else {
-    identityData = 'complete'
+    identityData = 'strong'
   }
 
   // Community data
@@ -97,7 +100,8 @@ export interface ImprovementPathInputs {
   txCount: number
   walletAgeDays: number
   uniquePartners: number
-  erc8004Registered: boolean
+  hasBasename: boolean
+  githubVerified: boolean
   confidence: number
 }
 
@@ -106,7 +110,7 @@ export interface ImprovementPathInputs {
  * Empty if the wallet already has strong data coverage (confidence >= 0.7).
  */
 export function buildImprovementPath(inputs: ImprovementPathInputs): string[] {
-  const { txCount, walletAgeDays, uniquePartners, erc8004Registered, confidence } = inputs
+  const { txCount, walletAgeDays, uniquePartners, hasBasename, githubVerified, confidence } = inputs
 
   if (confidence >= 0.7) return []
 
@@ -130,8 +134,13 @@ export function buildImprovementPath(inputs: ImprovementPathInputs): string[] {
     path.push('Expand to 10+ unique partners to maximize diversity signal')
   }
 
-  if (!erc8004Registered) {
-    path.push('Register with ERC-8004 to establish on-chain agent identity')
+  // Suggest achievable identity signals the wallet hasn't claimed yet
+  if (!hasBasename && !githubVerified) {
+    path.push('Register a Basename (*.base.eth) or verify a GitHub repo to strengthen identity')
+  } else if (!hasBasename) {
+    path.push('Register a Basename (*.base.eth) for additional identity verification')
+  } else if (!githubVerified) {
+    path.push('Verify a GitHub repo to strengthen your identity signal')
   }
 
   if (path.length === 0 && confidence < 0.5) {

@@ -95,7 +95,6 @@ export function detectGaming(
   // 0 tx in last 1hr AND >20 tx in the preceding 24hr window → -8 reliability.
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-  const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
 
   const recentRow = db
     .prepare<[string, string, string], { count: number }>(
@@ -111,7 +110,7 @@ export function detectGaming(
          WHERE (from_wallet = ? OR to_wallet = ?)
            AND timestamp >= ? AND timestamp < ?`,
       )
-      .get(w, w, twoDaysAgo, oneDayAgo)
+      .get(w, w, oneDayAgo, oneHourAgo)
 
     if (priorBurstRow && priorBurstRow.count > 20) {
       indicators.push('burst_and_stop')
@@ -127,6 +126,48 @@ export function detectGaming(
     if (!indicators.includes('deposit_and_score')) {
       indicators.push('balance_window_dressing')
       penalties.viability += 10
+    }
+  }
+
+  // ── CHECK 5: Wash trading (self-transfer loops) ─────────────────────────
+  // Detects funds sent A→B then B→A within 24 hours (round-trip).
+  // A high ratio of round-trip volume to total volume indicates wash trading
+  // used to inflate transaction counts without real economic activity.
+  // Threshold: >40% of 7-day volume is round-trip → flag as wash trading.
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  const washRow = db
+    .prepare<unknown[], { wash_volume: number; total_volume: number }>(`
+      WITH outgoing AS (
+        SELECT to_wallet AS partner, SUM(amount) AS out_vol
+        FROM raw_transactions
+        WHERE from_wallet = ? AND timestamp >= ?
+        GROUP BY to_wallet
+      ),
+      incoming AS (
+        SELECT from_wallet AS partner, SUM(amount) AS in_vol
+        FROM raw_transactions
+        WHERE to_wallet = ? AND timestamp >= ?
+        GROUP BY from_wallet
+      )
+      SELECT
+        COALESCE(SUM(MIN(o.out_vol, i.in_vol)), 0) AS wash_volume,
+        COALESCE((SELECT SUM(amount) FROM raw_transactions
+                  WHERE (from_wallet = ? OR to_wallet = ?) AND timestamp >= ?), 0) AS total_volume
+      FROM outgoing o
+      INNER JOIN incoming i ON o.partner = i.partner
+    `)
+    .get(w, sevenDaysAgo, w, sevenDaysAgo, w, w, sevenDaysAgo)
+
+  if (washRow && washRow.total_volume > 0) {
+    const washRatio = washRow.wash_volume / washRow.total_volume
+    // >40% round-trip volume = wash trading; scale penalty by severity
+    if (washRatio > 0.4) {
+      indicators.push('wash_trading')
+      // Heavier penalty for higher wash ratios: 8 pts at 40%, up to 15 at 80%+
+      const scaledPenalty = Math.min(15, Math.round(8 + (washRatio - 0.4) * 17.5))
+      penalties.reliability += scaledPenalty
+      penalties.composite += 5
     }
   }
 
