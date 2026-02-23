@@ -40,7 +40,9 @@
                   "confidence": 0.1,
                   "recommendation": "insufficient_history",
                   "modelVersion": "1.0.0",
-                  "lastUpdated": "2026-02-21T20:00:00.000Z"
+                  "lastUpdated": "2026-02-21T20:00:00.000Z",
+                  "computedAt": "2026-02-21T20:00:00.000Z",
+                  "scoreFreshness": 0.85
                 }
               }
             }
@@ -76,11 +78,35 @@
       }
     },
     "/v1/score/refresh": {
-      "get": {
+      "post": {
         "tags": ["score"],
         "summary": "Force live recalculation",
-        "description": "Bypasses the cache and triggers a fresh on-chain scan. Returns the full score response. **Requires x402 payment of $0.25 USDC on Base.**",
+        "description": "Bypasses the cache and triggers a fresh on-chain scan. Returns the full score response. **Requires x402 payment of $0.25 USDC on Base.** Prefer POST; GET is accepted for backward compatibility but deprecated.",
         "operationId": "refreshScore",
+        "parameters": [
+          { "$ref": "#/components/parameters/wallet" }
+        ],
+        "security": [{ "x402": [] }],
+        "x-x402": { "price": "$0.25", "network": "base" },
+        "responses": {
+          "200": {
+            "description": "Freshly computed full score",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FullScoreResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "402": { "$ref": "#/components/responses/PaymentRequired" }
+        }
+      },
+      "get": {
+        "tags": ["score"],
+        "summary": "Force live recalculation (deprecated — use POST)",
+        "description": "**Deprecated.** Use `POST /v1/score/refresh` instead. This GET alias is kept for backward compatibility only.",
+        "operationId": "refreshScoreDeprecated",
+        "deprecated": true,
         "parameters": [
           { "$ref": "#/components/parameters/wallet" }
         ],
@@ -107,8 +133,31 @@
         "description": "Submits a background full-scan scoring job and returns a `jobId` immediately (HTTP 202). Use `GET /v1/score/job/{jobId}` to poll for completion. Free — no payment required. Useful when the caller cannot wait 20-150s for the synchronous endpoints.",
         "operationId": "computeScore",
         "parameters": [
-          { "$ref": "#/components/parameters/wallet" }
+          {
+            "name": "wallet",
+            "in": "query",
+            "required": false,
+            "description": "Wallet address (deprecated — prefer JSON body)",
+            "deprecated": true,
+            "schema": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" }
+          }
         ],
+        "requestBody": {
+          "description": "Preferred: pass wallet in JSON body",
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["wallet"],
+                "properties": {
+                  "wallet": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$", "description": "Base wallet address" }
+                }
+              },
+              "example": { "wallet": "0x3e4ef1f774857c69e33dddc471e110c7ac7bb528" }
+            }
+          }
+        },
         "responses": {
           "202": {
             "description": "Job queued",
@@ -240,20 +289,26 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["targetWallet", "reporterWallet", "reason"],
+                "required": ["target", "reporter", "reason", "details"],
                 "properties": {
-                  "targetWallet":   { "type": "string", "description": "Wallet being reported" },
-                  "reporterWallet": { "type": "string", "description": "Wallet submitting the report" },
-                  "reason":         { "type": "string", "description": "Category of misconduct" },
-                  "details":        { "type": "string", "description": "Supporting details and evidence" },
-                  "txHashes":       { "type": "array", "items": { "type": "string" }, "description": "On-chain evidence transaction hashes" }
+                  "target":   { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$", "description": "Wallet being reported" },
+                  "reporter": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$", "description": "Wallet submitting the report (must differ from target)" },
+                  "reason":   { "type": "string", "enum": ["failed_delivery", "payment_fraud", "impersonation", "malicious_behavior", "other"], "description": "Category of misconduct" },
+                  "details":  { "type": "string", "maxLength": 1000, "description": "Supporting details and evidence (required, max 1000 chars)" }
                 }
               }
             }
           }
         },
         "responses": {
-          "201": { "description": "Report submitted" },
+          "201": {
+            "description": "Report submitted",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ReportResponse" }
+              }
+            }
+          },
           "400": { "$ref": "#/components/responses/BadRequest" },
           "402": { "$ref": "#/components/responses/PaymentRequired" }
         }
@@ -271,7 +326,14 @@
         "security": [{ "x402": [] }],
         "x-x402": { "price": "$0.05", "network": "base" },
         "responses": {
-          "200": { "description": "Blacklist status returned" },
+          "200": {
+            "description": "Blacklist status returned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BlacklistResponse" }
+              }
+            }
+          },
           "400": { "$ref": "#/components/responses/BadRequest" },
           "402": { "$ref": "#/components/responses/PaymentRequired" }
         }
@@ -357,6 +419,8 @@
           "recommendation": { "type": "string", "enum": ["proceed", "proceed_with_caution", "insufficient_history", "high_risk", "flagged_for_review", "rpc_unavailable"] },
           "modelVersion":   { "type": "string" },
           "lastUpdated":    { "type": "string", "format": "date-time" },
+          "computedAt":     { "type": "string", "format": "date-time", "description": "ISO-8601 timestamp of when the score was computed (may differ from lastUpdated when served from cache)" },
+          "scoreFreshness": { "type": "number", "minimum": 0, "maximum": 1, "description": "Freshness factor: 1 = just computed, decays linearly toward 0 at cache expiry. Consumers can use this to weight trust." },
           "stale":          { "type": "boolean", "description": "True when RPC was unavailable and a cached result was returned" }
         }
       },
@@ -457,6 +521,26 @@
           "totalAgentsScored":     { "type": "integer" },
           "totalAgentsRegistered": { "type": "integer" },
           "lastUpdated":           { "type": "string", "format": "date-time" }
+        }
+      },
+      "ReportResponse": {
+        "type": "object",
+        "properties": {
+          "reportId":          { "type": "string", "format": "uuid" },
+          "status":            { "type": "string", "enum": ["accepted"] },
+          "targetCurrentScore":{ "type": "integer", "minimum": 0, "maximum": 100 },
+          "penaltyApplied":    { "type": "integer" }
+        }
+      },
+      "BlacklistResponse": {
+        "type": "object",
+        "properties": {
+          "wallet":          { "type": "string" },
+          "reported":        { "type": "boolean", "description": "True if the wallet has active fraud reports" },
+          "reportCount":     { "type": "integer" },
+          "mostRecentDate":  { "type": "string", "format": "date-time", "nullable": true },
+          "reasons":         { "type": "array", "items": { "type": "string" }, "description": "Unique report reason categories" },
+          "disputeStatus":   { "type": "string", "enum": ["none"], "description": "Currently always 'none' (dispute system not yet implemented)" }
         }
       }
     },
