@@ -12,14 +12,14 @@ export interface CalibrationReport {
 }
 
 interface OutcomeRow {
-  outcome_label: string
+  outcome_type: string
   avg_score: number
   count: number
 }
 
 interface TierRow {
   tier: string
-  outcome_label: string
+  outcome_type: string
   count: number
 }
 
@@ -28,29 +28,29 @@ export function generateCalibrationReport(db: Database, modelVersion: string): C
   const periodEnd = now.toISOString()
   const periodStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
-  // Average score by outcome label
+  // Average score by outcome type
   const outcomeRows = db.prepare(`
-    SELECT so.outcome_label, ROUND(AVG(s.composite_score)) as avg_score, COUNT(*) as count
+    SELECT so.outcome_type, ROUND(AVG(s.composite_score)) as avg_score, COUNT(*) as count
     FROM score_outcomes so
-    JOIN scores s ON so.wallet = s.wallet
-    WHERE so.labeled_at >= ?
-    GROUP BY so.outcome_label
+    JOIN scores s ON so.target_wallet = s.wallet
+    WHERE so.outcome_at >= ?
+    GROUP BY so.outcome_type
   `).all(periodStart) as OutcomeRow[]
 
   const avgScoreByOutcome: Record<string, number> = {}
   let totalScored = 0
   for (const row of outcomeRows) {
-    avgScoreByOutcome[row.outcome_label] = row.avg_score
+    avgScoreByOutcome[row.outcome_type] = row.avg_score
     totalScored += row.count
   }
 
   // Tier accuracy: for each tier, what % of wallets have positive outcomes
   const tierRows = db.prepare(`
-    SELECT s.tier, so.outcome_label, COUNT(*) as count
+    SELECT s.tier, so.outcome_type, COUNT(*) as count
     FROM scores s
-    JOIN score_outcomes so ON s.wallet = so.wallet
-    WHERE so.labeled_at >= ?
-    GROUP BY s.tier, so.outcome_label
+    JOIN score_outcomes so ON s.wallet = so.target_wallet
+    WHERE so.outcome_at >= ?
+    GROUP BY s.tier, so.outcome_type
   `).all(periodStart) as TierRow[]
 
   const tierTotals: Record<string, number> = {}
@@ -59,7 +59,7 @@ export function generateCalibrationReport(db: Database, modelVersion: string): C
 
   for (const row of tierRows) {
     tierTotals[row.tier] = (tierTotals[row.tier] || 0) + row.count
-    if (positiveOutcomes.has(row.outcome_label)) {
+    if (positiveOutcomes.has(row.outcome_type)) {
       tierPositive[row.tier] = (tierPositive[row.tier] || 0) + row.count
     }
   }

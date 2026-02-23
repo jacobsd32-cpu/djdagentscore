@@ -126,6 +126,12 @@ db.exec(`
     '["sybil_detection","velocity_checks","confidence_interval"]',
     'Initial launch model'
   );
+  INSERT OR IGNORE INTO model_versions (version, weights_json, features_json, notes) VALUES (
+    '2.0.0',
+    '{"reliability":0.30,"viability":0.25,"identity":0.20,"behavior":0.15,"capability":0.10}',
+    '["sybil_detection","gaming_detection","behavior_analysis","integrity_multiplier","confidence_interval","data_availability","improvement_path"]',
+    'Scoring overhaul v2 — 5 dimensions, multiplicative integrity, behavior analysis'
+  );
 
   -- Blockchain Indexing
   CREATE TABLE IF NOT EXISTS raw_transactions (
@@ -488,6 +494,10 @@ const stmtCountReports = db.prepare<[string], { count: number }>(`
   SELECT COUNT(*) as count FROM fraud_reports WHERE target_wallet = ?
 `)
 
+const stmtCountReportsAfter = db.prepare<[string, string], { count: number }>(`
+  SELECT COUNT(*) as count FROM fraud_reports WHERE target_wallet = ? AND created_at > ?
+`)
+
 const stmtGetReportsByTarget = db.prepare<[string], FraudReportRow>(`
   SELECT * FROM fraud_reports WHERE target_wallet = ? ORDER BY created_at DESC
 `)
@@ -708,6 +718,10 @@ export function insertReport(report: {
 
 export function countReportsByTarget(wallet: string): number {
   return stmtCountReports.get(wallet)!.count
+}
+
+export function countReportsAfterDate(wallet: string, afterDate: string): number {
+  return stmtCountReportsAfter.get(wallet, afterDate)!.count
 }
 
 export function applyReportPenalty(wallet: string, penalty: number): void {

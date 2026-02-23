@@ -32,6 +32,7 @@ import {
   getScoreHistory,
   scoreToTier,
   countReportsByTarget,
+  countReportsAfterDate,
   countUniquePartners,
   countRatingsReceived,
   countPriorQueries,
@@ -416,14 +417,13 @@ export async function getOrCalculateScore(
   if (!forceRefresh && cached && new Date(cached.expires_at) > now) {
     const history = getScoreHistory(wallet)
     const result = buildFullResponseFromCache(wallet, cached, history)
-    // Reapply integrity multiplier at serve time so new reports take effect immediately
-    // instead of waiting for cache expiry.
-    const reports = countReportsByTarget(wallet)
-    if (reports > 0) {
-      const sybilInd = cached.sybil_indicators ? JSON.parse(cached.sybil_indicators as string) : []
-      const gamingInd = cached.gaming_indicators ? JSON.parse(cached.gaming_indicators as string) : []
-      const mult = computeIntegrityMultiplier(sybilInd, gamingInd, reports)
-      result.score = Math.round(result.score * mult)
+    // Apply fraud-report dampening ONLY for reports filed AFTER this score was cached.
+    // The cached composite_score already includes the integrity multiplier (sybil + gaming
+    // + reports) from compute time — reapplying all factors would double-penalize.
+    const newReports = countReportsAfterDate(wallet, cached.calculated_at)
+    if (newReports > 0) {
+      const fraudMult = Math.pow(0.90, newReports)
+      result.score = Math.round(result.score * fraudMult)
       result.tier = scoreToTier(result.score) as FullScoreResponse['tier']
     }
     return result
@@ -434,13 +434,11 @@ export async function getOrCalculateScore(
   if (!forceRefresh && cached) {
     const history = getScoreHistory(wallet)
     const staleResult = buildFullResponseFromCache(wallet, cached, history)
-    // Reapply integrity multiplier at serve time (same logic as fresh cache path above)
-    const reports = countReportsByTarget(wallet)
-    if (reports > 0) {
-      const sybilInd = cached.sybil_indicators ? JSON.parse(cached.sybil_indicators as string) : []
-      const gamingInd = cached.gaming_indicators ? JSON.parse(cached.gaming_indicators as string) : []
-      const mult = computeIntegrityMultiplier(sybilInd, gamingInd, reports)
-      staleResult.score = Math.round(staleResult.score * mult)
+    // Apply fraud-report dampening ONLY for reports filed AFTER this score was cached.
+    const newReports = countReportsAfterDate(wallet, cached.calculated_at)
+    if (newReports > 0) {
+      const fraudMult = Math.pow(0.90, newReports)
+      staleResult.score = Math.round(staleResult.score * fraudMult)
       staleResult.tier = scoreToTier(staleResult.score) as FullScoreResponse['tier']
     }
     // Fire-and-forget background refresh — at most 1 running at a time.

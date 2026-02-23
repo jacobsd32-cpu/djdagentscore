@@ -85,11 +85,18 @@ export function createTestDb(): Database.Database {
     );
 
     CREATE TABLE IF NOT EXISTS score_outcomes (
-      wallet TEXT PRIMARY KEY,
-      outcome_label TEXT,
-      labeled_at TEXT,
-      score_at_label INTEGER,
-      notes TEXT
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      query_id INTEGER,
+      target_wallet TEXT NOT NULL,
+      requester_wallet TEXT,
+      score_at_query INTEGER,
+      tier_at_query TEXT,
+      confidence_at_query REAL,
+      model_version TEXT,
+      outcome_type TEXT,
+      outcome_at TEXT,
+      days_to_outcome INTEGER,
+      outcome_value REAL
     );
 
     CREATE TABLE IF NOT EXISTS fraud_reports (

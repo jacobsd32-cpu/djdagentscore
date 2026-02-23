@@ -12,7 +12,7 @@ describe('generateCalibrationReport', () => {
       VALUES (?, ?, 70, 60, 50, 40, ?, 0.8, '2.0.0', ?, ?)
     `)
     const insertOutcome = db.prepare(`
-      INSERT INTO score_outcomes (wallet, outcome_label, labeled_at, score_at_label)
+      INSERT INTO score_outcomes (target_wallet, outcome_type, outcome_at, score_at_query)
       VALUES (?, ?, ?, ?)
     `)
 
