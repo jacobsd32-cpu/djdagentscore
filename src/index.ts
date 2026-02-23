@@ -18,6 +18,7 @@ import { responseHeadersMiddleware } from './middleware/responseHeaders.js'
 import { queryLoggerMiddleware } from './middleware/queryLogger.js'
 import { freeTierMiddleware } from './middleware/freeTier.js'
 import { startBlockchainIndexer, stopBlockchainIndexer } from './jobs/blockchainIndexer.js'
+import { startUsdcTransferIndexer, stopUsdcTransferIndexer } from './jobs/usdcTransferIndexer.js'
 import { runHourlyRefresh } from './jobs/scoreRefresh.js'
 import { runIntentMatcher } from './jobs/intentMatcher.js'
 import { runOutcomeMatcher } from './jobs/outcomeMatcher.js'
@@ -26,6 +27,7 @@ import { runDailyAggregator } from './jobs/dailyAggregator.js'
 import { runGithubReverify } from './jobs/githubReverify.js'
 import { jobStats } from './jobs/jobStats.js'
 import { db } from './db.js'
+import { log } from './logger.js'
 
 // ---------- Config ----------
 
@@ -106,7 +108,7 @@ app.notFound((c) => c.json({ error: 'Not found' }, 404))
 
 // Global error handler
 app.onError((err, c) => {
-  console.error('[error]', err)
+  log.error('http', 'Unhandled error', err)
   return c.json({ error: 'Internal server error' }, 500)
 })
 
@@ -115,9 +117,10 @@ app.onError((err, c) => {
 const intervals: ReturnType<typeof setInterval>[] = []
 
 function shutdown() {
-  console.log('\n[server] Shutting down…')
+  log.info('server', 'Shutting down…')
   for (const id of intervals) clearInterval(id)
   stopBlockchainIndexer()
+  stopUsdcTransferIndexer()
   process.exit(0)
 }
 process.on('SIGINT', shutdown)
@@ -126,31 +129,36 @@ process.on('SIGTERM', shutdown)
 // ---------- Start ----------
 
 serve({ fetch: app.fetch, port: PORT }, (info) => {
-  console.log(`[server] DJD Agent Score API running on http://localhost:${info.port}`)
-  console.log(`[server] payTo: ${PAY_TO}`)
-  console.log(`[server] facilitator: ${FACILITATOR_URL}`)
+  log.info('server', `DJD Agent Score API running on http://localhost:${info.port}`)
+  log.info('server', `payTo: ${PAY_TO}`)
+  log.info('server', `facilitator: ${FACILITATOR_URL}`)
 
-  console.log('[jobs] Starting background processes...')
+  log.info('jobs', 'Starting background processes...')
 
   // ── 1. Blockchain indexer (continuous) ─────────────────────────────────────
   startBlockchainIndexer().catch((err) =>
-    console.error('[indexer] fatal error, stopped:', err),
+    log.error('indexer', 'Fatal error, stopped', err),
+  )
+
+  // ── 1b. USDC Transfer indexer (continuous) ─────────────────────────────────
+  startUsdcTransferIndexer().catch((err) =>
+    log.error('usdc-indexer', 'Fatal error, stopped', err),
   )
 
   // ── 2. Hourly score refresh + wallet snapshots + economy metrics ───────────
   intervals.push(
     setInterval(
-      () => runHourlyRefresh().catch((err) => console.error('[refresh] job error:', err)),
+      () => runHourlyRefresh().catch((err) => log.error('refresh', 'Job error', err)),
       60 * 60 * 1000,
     ),
   )
 
   // ── 3. Intent matcher (every 6 hours, start after 60s) ────────────────────
   setTimeout(() => {
-    runIntentMatcher(db).catch((err) => console.error('[intent] startup error:', err))
+    runIntentMatcher(db).catch((err) => log.error('intent', 'Startup error', err))
     intervals.push(
       setInterval(
-        () => runIntentMatcher(db).catch((err) => console.error('[intent] job error:', err)),
+        () => runIntentMatcher(db).catch((err) => log.error('intent', 'Job error', err)),
         6 * 60 * 60 * 1000,
       ),
     )
@@ -158,10 +166,10 @@ serve({ fetch: app.fetch, port: PORT }, (info) => {
 
   // ── 4. Outcome matcher (every 6 hours, start after 90s) ───────────────────
   setTimeout(() => {
-    runOutcomeMatcher(db).catch((err) => console.error('[outcome] startup error:', err))
+    runOutcomeMatcher(db).catch((err) => log.error('outcome', 'Startup error', err))
     intervals.push(
       setInterval(
-        () => runOutcomeMatcher(db).catch((err) => console.error('[outcome] job error:', err)),
+        () => runOutcomeMatcher(db).catch((err) => log.error('outcome', 'Job error', err)),
         6 * 60 * 60 * 1000,
       ),
     )
@@ -170,7 +178,7 @@ serve({ fetch: app.fetch, port: PORT }, (info) => {
   // ── 5. Anomaly detector (every 15 min) ─────────────────────────────────────
   intervals.push(
     setInterval(
-      () => runAnomalyDetector(db).catch((err) => console.error('[anomaly] job error:', err)),
+      () => runAnomalyDetector(db).catch((err) => log.error('anomaly', 'Job error', err)),
       15 * 60 * 1000,
     ),
   )
@@ -178,7 +186,7 @@ serve({ fetch: app.fetch, port: PORT }, (info) => {
   // ── 6. Enhanced Sybil monitoring (every 5 min) ────────────────────────────
   intervals.push(
     setInterval(
-      () => runSybilMonitor(db).catch((err) => console.error('[sybil-monitor] job error:', err)),
+      () => runSybilMonitor(db).catch((err) => log.error('sybil', 'Job error', err)),
       5 * 60 * 1000,
     ),
   )
@@ -190,8 +198,8 @@ serve({ fetch: app.fetch, port: PORT }, (info) => {
       async () => {
         const today = new Date().toISOString().split('T')[0]!
         if (today !== lastAggDate) {
-          await runDailyAggregator(db).catch((err) => console.error('[daily] job error:', err))
-          await runGithubReverify().catch((err) => console.error('[github-reverify] job error:', err))
+          await runDailyAggregator(db).catch((err) => log.error('daily', 'Job error', err))
+          await runGithubReverify().catch((err) => log.error('github-reverify', 'Job error', err))
           lastAggDate = today
         }
       },
@@ -199,7 +207,7 @@ serve({ fetch: app.fetch, port: PORT }, (info) => {
     ),
   )
 
-  console.log('[jobs] All background processes registered')
+  log.info('jobs', 'All background processes registered')
 
   // Expose jobStats for health route (module-level singleton, already imported)
   void jobStats
