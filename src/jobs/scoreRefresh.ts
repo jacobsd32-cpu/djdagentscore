@@ -14,6 +14,7 @@ import { db, getExpiredWallets } from '../db.js'
 import { getOrCalculateScore } from '../scoring/engine.js'
 import { jobStats } from './jobStats.js'
 import type { Address } from '../types.js'
+import { log } from '../logger.js'
 
 const REFRESH_BATCH_SIZE = 50
 const INTER_WALLET_DELAY_MS = 200
@@ -65,7 +66,7 @@ async function snapshotAndUpdateMetrics(wallet: string): Promise<void> {
       nowStr,
     )
   } catch (err) {
-    console.warn(`[refresh] balance fetch failed for ${wallet}:`, (err as Error).message)
+    log.warn('refresh', `Balance fetch failed for ${wallet}`, err)
   }
 
   // ── Compute per-period metrics ────────────────────────────────────────────
@@ -211,7 +212,7 @@ function insertHourlyEconomyMetrics(hourStart: Date): void {
 // ---------- Public API ----------
 
 export async function runHourlyRefresh(): Promise<void> {
-  console.log('[refresh] Starting hourly refresh...')
+  log.info('refresh', 'Starting hourly refresh...')
   const hourStart = new Date()
   hourStart.setMinutes(0, 0, 0)
 
@@ -232,9 +233,9 @@ export async function runHourlyRefresh(): Promise<void> {
     const toRefresh = [...new Set([...expired, ...certified])].slice(0, REFRESH_BATCH_SIZE)
 
     if (toRefresh.length === 0) {
-      console.log('[refresh] No wallets to refresh')
+      log.info('refresh', 'No wallets to refresh')
     } else {
-      console.log(`[refresh] Refreshing ${toRefresh.length} wallet(s)`)
+      log.info('refresh', `Refreshing ${toRefresh.length} wallet(s)`)
       let refreshed = 0
 
       for (const wallet of toRefresh) {
@@ -242,9 +243,9 @@ export async function runHourlyRefresh(): Promise<void> {
           await snapshotAndUpdateMetrics(wallet)
           await getOrCalculateScore(wallet as Address, true, 0) // no timeout for background
           refreshed++
-          console.log(`[refresh] Refreshed ${wallet}`)
+          log.info('refresh', `Refreshed ${wallet}`)
         } catch (err) {
-          console.error(`[refresh] Failed for ${wallet}:`, err)
+          log.error('refresh', `Failed for ${wallet}`, err)
         }
         await new Promise((res) => setTimeout(res, INTER_WALLET_DELAY_MS))
       }
@@ -255,14 +256,14 @@ export async function runHourlyRefresh(): Promise<void> {
     // Aggregate hourly economy metrics
     try {
       insertHourlyEconomyMetrics(hourStart)
-      console.log('[refresh] Hourly economy metrics aggregated')
+      log.info('refresh', 'Hourly economy metrics aggregated')
     } catch (err) {
-      console.error('[refresh] Economy metrics aggregation failed:', err)
+      log.error('refresh', 'Economy metrics aggregation failed', err)
     }
 
     jobStats.hourlyRefresh.lastRun = new Date().toISOString()
-    console.log('[refresh] Hourly refresh complete')
+    log.info('refresh', 'Hourly refresh complete')
   } catch (err) {
-    console.error('[refresh] Hourly refresh error:', err)
+    log.error('refresh', 'Hourly refresh error', err)
   }
 }

@@ -7,6 +7,7 @@
  */
 import type { Database as DatabaseType } from 'better-sqlite3'
 import { jobStats } from './jobStats.js'
+import { log } from '../logger.js'
 
 interface HourlyAgg {
   sum_new_wallets: number
@@ -100,7 +101,7 @@ function rollupPeriod(
 }
 
 export async function runDailyAggregator(db: DatabaseType): Promise<void> {
-  console.log('[daily] Starting daily aggregator...')
+  log.info('daily', 'Starting daily aggregator...')
 
   try {
     const now = new Date()
@@ -116,7 +117,7 @@ export async function runDailyAggregator(db: DatabaseType): Promise<void> {
 
     // ── 1. Create daily row from yesterday's hourly rows ──────────────────────
     rollupPeriod(db, yesterdayStart, todayStart, 'daily', 'hourly')
-    console.log(`[daily] Created daily summary for ${yesterdayStart.split('T')[0]}`)
+    log.info('daily', `Created daily summary for ${yesterdayStart.split('T')[0]}`)
 
     // ── 2. Weekly rollup (only on Monday) ─────────────────────────────────────
     if (now.getUTCDay() === 1) {
@@ -127,7 +128,7 @@ export async function runDailyAggregator(db: DatabaseType): Promise<void> {
       ).toISOString()
 
       rollupPeriod(db, weekStartStr, todayStart, 'weekly', 'daily')
-      console.log('[daily] Created weekly summary')
+      log.info('daily', 'Created weekly summary')
     }
 
     // ── 3. Monthly rollup (only on 1st of month) ──────────────────────────────
@@ -136,12 +137,12 @@ export async function runDailyAggregator(db: DatabaseType): Promise<void> {
       const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString()
 
       rollupPeriod(db, monthStart, monthEnd, 'monthly', 'daily')
-      console.log('[daily] Created monthly summary')
+      log.info('daily', 'Created monthly summary')
     }
 
     jobStats.dailyAggregator.lastRun = new Date().toISOString()
-    console.log('[daily] Daily aggregator complete')
+    log.info('daily', 'Daily aggregator complete')
   } catch (err) {
-    console.error('[daily] Daily aggregator error:', err)
+    log.error('daily', 'Daily aggregator error', err)
   }
 }

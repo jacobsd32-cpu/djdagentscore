@@ -28,6 +28,7 @@
  * On RPC error, waits 30 seconds before retrying.
  */
 import { parseAbiItem } from 'viem'
+import { log } from '../logger.js'
 import { publicClient, USDC_ADDRESS } from '../blockchain.js'
 import { getIndexerState, setIndexerState, indexTransferBatch } from '../db.js'
 import type { IndexedTransfer } from '../db.js'
@@ -277,15 +278,15 @@ export async function startBlockchainIndexer(): Promise<void> {
     if (storedBlock < minBlock) {
       lastBlockIndexed = currentBlock
       setIndexerState(STATE_KEY, currentBlock.toString())
-      console.log(`[indexer] Stored state too old (${storedBlock}) — skipping to current block ${currentBlock}`)
+      log.warn('indexer', `Stored state too old (${storedBlock}) — skipping to current block ${currentBlock}`)
     } else {
       lastBlockIndexed = storedBlock
-      console.log(`[indexer] Resuming from block ${lastBlockIndexed}`)
+      log.info('indexer', `Resuming from block ${lastBlockIndexed}`)
     }
   } else {
     lastBlockIndexed = currentBlock
     setIndexerState(STATE_KEY, currentBlock.toString())
-    console.log(`[indexer] First run — starting from current block ${currentBlock}`)
+    log.info('indexer', `First run — starting from current block ${currentBlock}`)
   }
 
   while (running) {
@@ -297,16 +298,14 @@ export async function startBlockchainIndexer(): Promise<void> {
         const count = await fetchAndIndexRange(fromBlock, tip)
 
         if (count > 0) {
-          console.log(
-            `[indexer] Indexed ${count} transfer(s) in blocks ${fromBlock}–${tip}`,
-          )
+          log.info('indexer', `Indexed ${count} transfer(s) in blocks ${fromBlock}–${tip}`)
         }
 
         lastBlockIndexed = tip
         setIndexerState(STATE_KEY, tip.toString())
       }
     } catch (err) {
-      console.error('[indexer] RPC error:', err)
+      log.error('indexer', 'RPC error', err)
       await new Promise((r) => setTimeout(r, RETRY_DELAY_MS))
       continue
     }
@@ -317,5 +316,5 @@ export async function startBlockchainIndexer(): Promise<void> {
 
 export function stopBlockchainIndexer(): void {
   running = false
-  console.log('[indexer] Stopped.')
+  log.info('indexer', 'Stopped.')
 }
