@@ -18,11 +18,13 @@ import {
   calcIdentity,
   calcCapability,
 } from './dimensions.js'
+import { calcBehavior } from './behavior.js'
 import { detectSybil } from './sybil.js'
 import { detectGaming, getAvgBalance24h } from './gaming.js'
 import { calcConfidence } from './confidence.js'
 import { determineRecommendation } from './recommendation.js'
 import { buildDataAvailability, buildImprovementPath } from './dataAvailability.js'
+import { log } from '../logger.js'
 import {
   db,
   upsertScore,
@@ -36,6 +38,7 @@ import {
   getRegistration,
   getWalletX402Stats,
   getWalletIndexFirstSeen,
+  getTransferTimestamps,
 } from '../db.js'
 import type {
   Address,
@@ -63,6 +66,17 @@ const SCORE_COMPUTE_TIMEOUT_MS = 75_000
 // background scan is started. The hourly refresh job catches anything that was skipped.
 let _bgRefreshActive = false
 
+/** Linear decay from 1.0 (just computed) → 0.0 (at cache expiry).
+ *  Consumers can multiply their trust by this factor. */
+function calcFreshness(computedAt: string, expiresAt: string): number {
+  const computed = new Date(computedAt).getTime()
+  const expires = new Date(expiresAt).getTime()
+  const now = Date.now()
+  if (expires <= computed) return 1 // degenerate — treat as fresh
+  const freshness = (expires - now) / (expires - computed)
+  return Math.max(0, Math.min(1, Math.round(freshness * 100) / 100))
+}
+
 // ---------- Core calculation ----------
 
 async function computeScore(wallet: Address): Promise<{
@@ -71,6 +85,7 @@ async function computeScore(wallet: Address): Promise<{
   viability: number
   identity: number
   capability: number
+  behavior: number
   dimensions: ScoreDimensions
   rawData: object
   confidence: number
@@ -99,6 +114,18 @@ async function computeScore(wallet: Address): Promise<{
   // ── STEP 3: Gaming checks (DB + current balance) ──────────────────────────
   const gaming = detectGaming(wallet, currentBalanceUsdc, db)
 
+  // Effective balance for viability: use 24hr avg if window-dressing detected.
+  // Computed here (before dimension calculations) so calcViability uses it.
+  const effectiveBalance = gaming.overrides.useAvgBalance
+    ? (getAvgBalance24h(wallet, db) ?? currentBalanceUsdc)
+    : currentBalanceUsdc
+  const effectiveBalanceRaw = BigInt(Math.round(effectiveBalance * 1_000_000))
+
+  // Override balance in usdcData so calcViability scores the adjusted amount
+  const usdcDataForViability = gaming.overrides.useAvgBalance
+    ? { ...usdcData, balance: effectiveBalanceRaw }
+    : usdcData
+
   // ── STEP 4: Calculate 4 dimensions ────────────────────────────────────────
   const reg = getRegistration(wallet.toLowerCase())
   const x402Stats = getWalletX402Stats(wallet)
@@ -119,7 +146,7 @@ async function computeScore(wallet: Address): Promise<{
 
   const [rel, via, cap] = await Promise.all([
     Promise.resolve(calcReliability(usdcData, blockNow, nonce)),
-    Promise.resolve(calcViability(usdcData, walletAgeDays, ethBalanceWei)),
+    Promise.resolve(calcViability(usdcDataForViability, walletAgeDays, ethBalanceWei)),
     Promise.resolve(calcCapability(usdcData, x402Stats)),
   ])
   const idn = await calcIdentity(
@@ -133,16 +160,16 @@ async function computeScore(wallet: Address): Promise<{
     basename,
   )
 
-  // Effective balance for viability: use 24hr avg if window-dressing detected
-  const effectiveBalance = gaming.overrides.useAvgBalance
-    ? (getAvgBalance24h(wallet, db) ?? currentBalanceUsdc)
-    : currentBalanceUsdc
+  // ── STEP 4b: Behavior dimension (DB-only, no RPC) ────────────────────────
+  const behaviorTimestamps = getTransferTimestamps(wallet)
+  const behaviorResult = calcBehavior(behaviorTimestamps)
 
   // ── STEP 5: Apply sybil caps to dimension scores ──────────────────────────
   let relScore = rel.score
   let viaScore = via.score
   let idnScore = idn.score
   let capScore = cap.score
+  let behScore = behaviorResult.score
 
   if (sybil.caps.reliability !== undefined) {
     relScore = Math.min(relScore, sybil.caps.reliability)
@@ -157,7 +184,7 @@ async function computeScore(wallet: Address): Promise<{
 
   // ── STEP 7: Calculate composite ───────────────────────────────────────────
   let composite = Math.round(
-    relScore * 0.35 + viaScore * 0.30 + idnScore * 0.20 + capScore * 0.15,
+    relScore * 0.30 + viaScore * 0.25 + idnScore * 0.20 + behScore * 0.15 + capScore * 0.10,
   )
 
   // ── STEP 8: Apply gaming composite penalty ────────────────────────────────
@@ -189,7 +216,6 @@ async function computeScore(wallet: Address): Promise<{
     txCount: usdcData.transferCount,
     walletAgeDays,
     usdcBalance: effectiveBalance,
-    erc8004Registered: idn.erc8004Registered,
     ratingCount,
     uniquePartners,
   })
@@ -198,7 +224,8 @@ async function computeScore(wallet: Address): Promise<{
     txCount: usdcData.transferCount,
     walletAgeDays,
     uniquePartners,
-    erc8004Registered: idn.erc8004Registered,
+    hasBasename: idn.hasBasename,
+    githubVerified: !!reg?.github_verified,
     confidence,
   })
 
@@ -249,6 +276,10 @@ async function computeScore(wallet: Address): Promise<{
         successfulReplications: cap.successfulReplications,
       },
     },
+    behavior: {
+      score: behScore,
+      data: behaviorResult.data,
+    },
   }
 
   return {
@@ -257,6 +288,7 @@ async function computeScore(wallet: Address): Promise<{
     viability: viaScore,
     identity: idnScore,
     capability: capScore,
+    behavior: behScore,
     dimensions,
     rawData: {
       usdcData: {
@@ -311,7 +343,16 @@ export async function getOrCalculateScore(
 
   if (!forceRefresh && cached && new Date(cached.expires_at) > now) {
     const history = getScoreHistory(wallet)
-    return buildFullResponseFromCache(wallet, cached, history)
+    const result = buildFullResponseFromCache(wallet, cached, history)
+    // Reapply fraud penalties at serve time so new reports take effect immediately
+    // instead of waiting for cache expiry.
+    const reports = countReportsByTarget(wallet)
+    if (reports > 0) {
+      const penalty = Math.min(reports * PENALTY_PER_REPORT, MAX_REPORT_PENALTY)
+      result.score = Math.max(0, result.score - penalty)
+      result.tier = scoreToTier(result.score) as FullScoreResponse['tier']
+    }
+    return result
   }
 
   // If there's a stale cached score, return it immediately and refresh in background.
@@ -319,6 +360,13 @@ export async function getOrCalculateScore(
   if (!forceRefresh && cached) {
     const history = getScoreHistory(wallet)
     const staleResult = buildFullResponseFromCache(wallet, cached, history)
+    // Reapply fraud penalties at serve time (same logic as fresh cache path above)
+    const reports = countReportsByTarget(wallet)
+    if (reports > 0) {
+      const penalty = Math.min(reports * PENALTY_PER_REPORT, MAX_REPORT_PENALTY)
+      staleResult.score = Math.max(0, staleResult.score - penalty)
+      staleResult.tier = scoreToTier(staleResult.score) as FullScoreResponse['tier']
+    }
     // Fire-and-forget background refresh — at most 1 running at a time.
     // Without this guard, 25 simultaneous requests for stale wallets would fire 25
     // concurrent computeScore calls (each doing 120+ getLogs), OOM-ing the machine.
@@ -327,7 +375,7 @@ export async function getOrCalculateScore(
       computeScore(wallet).then(result => {
         const reports = countReportsByTarget(wallet)
         const penalised = applyPenalty(result.composite, reports)
-        upsertScore(wallet, penalised, result.reliability, result.viability, result.identity, result.capability, result.rawData, {
+        upsertScore(wallet, penalised, result.reliability, result.viability, result.identity, result.capability, result.behavior, result.rawData, {
           confidence: result.confidence,
           recommendation: result.recommendation,
           modelVersion: MODEL_VERSION,
@@ -361,6 +409,7 @@ export async function getOrCalculateScore(
       result.viability,
       result.identity,
       result.capability,
+      result.behavior,
       result.rawData,
       {
         confidence: result.confidence,
@@ -391,7 +440,7 @@ export async function getOrCalculateScore(
       },
     )
   } catch (err) {
-    console.error(`[engine] RPC error for ${wallet}:`, err)
+    log.error('engine', `RPC error for ${wallet}`, err)
 
     if (cached) {
       const history = getScoreHistory(wallet)
@@ -423,7 +472,7 @@ export async function getOrCalculateScore(
     // so the next request retries the full RPC scan rather than serving 0.
     if (partial > 0) {
       try {
-        upsertScore(wallet, partial, 0, 0, idnScore, 0, {}, { recommendation: 'rpc_unavailable', confidence: 0 })
+        upsertScore(wallet, partial, 0, 0, idnScore, 0, null, {}, { recommendation: 'rpc_unavailable', confidence: 0 })
       } catch (_) { /* ignore */ }
     }
 
@@ -441,6 +490,8 @@ export async function getOrCalculateScore(
         sybilFlag: false,
         gamingIndicators: [],
         lastUpdated: calculatedAt,
+        computedAt: calculatedAt,
+        scoreFreshness: 1.0,
         dimensions: {
           reliability: { score: 0, data: { txCount: 0, nonce: 0, successRate: 0, lastTxTimestamp: null, failedTxCount: 0, uptimeEstimate: 0 } },
           viability:   { score: 0, data: { usdcBalance: '0', ethBalance: '0', inflows30d: '0', outflows30d: '0', inflows7d: '0', outflows7d: '0', totalInflows: '0', walletAgedays: 0, everZeroBalance: false } },
@@ -491,6 +542,8 @@ function buildFullResponseFromDimensions(
     sybilFlag: opts.sybilFlag,
     gamingIndicators: opts.gamingIndicators,
     lastUpdated: calculatedAt,
+    computedAt: calculatedAt,
+    scoreFreshness: 1.0, // just computed
     dimensions,
     dataAvailability: opts.dataAvailability,
     improvementPath: opts.improvementPath.length > 0 ? opts.improvementPath : undefined,
@@ -574,6 +627,8 @@ function buildFullResponseFromCache(
     sybilFlag: (cached.sybil_flag ?? 0) === 1,
     gamingIndicators: JSON.parse(cached.gaming_indicators ?? '[]') as string[],
     lastUpdated: cached.calculated_at,
+    computedAt: cached.calculated_at,
+    scoreFreshness: calcFreshness(cached.calculated_at, cached.expires_at),
     dimensions: zeroDimensions,
     dataAvailability: unknownAvailability,
     scoreHistory: history.map((h) => ({
@@ -624,6 +679,8 @@ function buildZeroScore(wallet: Address, calculatedAt: string): FullScoreRespons
     sybilFlag: false,
     gamingIndicators: [],
     lastUpdated: calculatedAt,
+    computedAt: calculatedAt,
+    scoreFreshness: 1.0,
     dimensions: zeroDimensions,
     dataAvailability: {
       transactionHistory: 'none (0 transactions)',
@@ -636,7 +693,7 @@ function buildZeroScore(wallet: Address, calculatedAt: string): FullScoreRespons
       'Complete 10+ transactions to improve reliability data',
       'Maintain wallet activity for 7+ days',
       'Transact with 3+ unique partners',
-      'Register with ERC-8004 to establish on-chain agent identity',
+      'Register a Basename (*.base.eth) or verify a GitHub repo to strengthen identity',
     ],
     scoreHistory: [],
   }

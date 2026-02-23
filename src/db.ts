@@ -89,6 +89,7 @@ addColumnIfMissing('scores', 'model_version', "TEXT DEFAULT '1.0.0'")
 addColumnIfMissing('scores', 'sybil_flag', 'INTEGER DEFAULT 0')
 addColumnIfMissing('scores', 'sybil_indicators', "TEXT DEFAULT '[]'")
 addColumnIfMissing('scores', 'gaming_indicators', "TEXT DEFAULT '[]'")
+addColumnIfMissing('scores', 'behavior_score', 'INTEGER')
 
 // Migrate score_history to include confidence + model_version
 addColumnIfMissing('score_history', 'confidence', 'REAL DEFAULT 0.0')
@@ -405,11 +406,11 @@ const stmtUpsertScore = db.prepare(`
   INSERT INTO scores
     (wallet, composite_score, reliability_score, viability_score, identity_score, capability_score,
      tier, raw_data, calculated_at, expires_at,
-     confidence, recommendation, model_version, sybil_flag, sybil_indicators, gaming_indicators)
+     confidence, recommendation, model_version, sybil_flag, sybil_indicators, gaming_indicators, behavior_score)
   VALUES
     (@wallet, @composite_score, @reliability_score, @viability_score, @identity_score, @capability_score,
      @tier, @raw_data, @calculated_at, @expires_at,
-     @confidence, @recommendation, @model_version, @sybil_flag, @sybil_indicators, @gaming_indicators)
+     @confidence, @recommendation, @model_version, @sybil_flag, @sybil_indicators, @gaming_indicators, @behavior_score)
   ON CONFLICT(wallet) DO UPDATE SET
     composite_score   = excluded.composite_score,
     reliability_score = excluded.reliability_score,
@@ -425,7 +426,8 @@ const stmtUpsertScore = db.prepare(`
     model_version     = excluded.model_version,
     sybil_flag        = excluded.sybil_flag,
     sybil_indicators  = excluded.sybil_indicators,
-    gaming_indicators = excluded.gaming_indicators
+    gaming_indicators = excluded.gaming_indicators,
+    behavior_score    = excluded.behavior_score
 `)
 
 const stmtGetScore = db.prepare<[string], ScoreRow>(`
@@ -541,6 +543,7 @@ export function upsertScore(
   viabilityScore: number,
   identityScore: number,
   capabilityScore: number,
+  behaviorScore: number | null,
   rawData: object,
   meta: ScoreMetadata = {},
 ): void {
@@ -555,6 +558,7 @@ export function upsertScore(
     viabilityScore,
     identityScore,
     capabilityScore,
+    behaviorScore,
     tier,
     rawData,
     now,
@@ -571,6 +575,7 @@ const upsertScoreTxn = db.transaction(
     viabilityScore: number,
     identityScore: number,
     capabilityScore: number,
+    behaviorScore: number | null,
     tier: string,
     rawData: object,
     now: Date,
@@ -584,6 +589,7 @@ const upsertScoreTxn = db.transaction(
       viability_score: viabilityScore,
       identity_score: identityScore,
       capability_score: capabilityScore,
+      behavior_score: behaviorScore,
       tier,
       raw_data: JSON.stringify(rawData),
       calculated_at: now.toISOString(),
@@ -934,6 +940,27 @@ export function countPriorQueries(wallet: string): number {
     )
     .get(wallet.toLowerCase())
   return row?.count ?? 0
+}
+
+// ---------- behavior dimension helpers ----------
+
+/** Return ISO-8601 timestamps for a wallet, preferring usdc_transfers then raw_transactions. */
+export function getTransferTimestamps(wallet: string): string[] {
+  const w = wallet.toLowerCase()
+  // Try usdc_transfers first (P1 indexed data)
+  let rows = db
+    .prepare<[string, string], { timestamp: string }>(
+      `SELECT timestamp FROM usdc_transfers WHERE from_wallet = ? OR to_wallet = ? ORDER BY timestamp`,
+    )
+    .all(w, w)
+  if (rows.length >= 10) return rows.map(r => r.timestamp)
+  // Fallback to raw_transactions (x402 indexer data)
+  rows = db
+    .prepare<[string, string], { timestamp: string }>(
+      `SELECT timestamp FROM raw_transactions WHERE from_wallet = ? OR to_wallet = ? ORDER BY timestamp`,
+    )
+    .all(w, w)
+  return rows.map(r => r.timestamp)
 }
 
 export const indexTransferBatch: Transaction<(transfers: IndexedTransfer[]) => void> = db.transaction((transfers: IndexedTransfer[]) => {
