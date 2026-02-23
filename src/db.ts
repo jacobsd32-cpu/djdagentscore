@@ -20,9 +20,15 @@ fs.mkdirSync(path.dirname(DB_PATH), { recursive: true })
 
 export const db: DatabaseType = new Database(DB_PATH)
 
-// Performance settings
-db.pragma('journal_mode = WAL')
-db.pragma('synchronous = NORMAL')
+// Performance & safety settings
+// NOTE: We use DELETE journal mode instead of WAL because Fly.io volumes are
+// network-attached storage (not local disk). WAL relies on shared-memory
+// (mmap) semantics that are not guaranteed on network-attached volumes and
+// can silently corrupt the database on crash or volume hiccup. DELETE mode
+// is slower for concurrent reads but safe on any filesystem.
+// Switch to WAL only if running on local SSD / persistent disk.
+db.pragma('journal_mode = DELETE')
+db.pragma('synchronous = FULL')
 db.pragma('foreign_keys = ON')
 
 // ---------- Schema ----------
@@ -357,6 +363,33 @@ db.exec(`
     website_url   TEXT,
     registered_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`)
+
+// ── P1: USDC Transfer Index ───────────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS usdc_transfers (
+    tx_hash TEXT UNIQUE,
+    block_number INTEGER,
+    from_wallet TEXT,
+    to_wallet TEXT,
+    amount_usdc REAL,
+    timestamp TEXT
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_usdc_transfers_from ON usdc_transfers(from_wallet);
+  CREATE INDEX IF NOT EXISTS idx_usdc_transfers_to ON usdc_transfers(to_wallet);
+  CREATE INDEX IF NOT EXISTS idx_usdc_transfers_block ON usdc_transfers(block_number);
+
+  CREATE TABLE IF NOT EXISTS wallet_transfer_stats (
+    wallet TEXT PRIMARY KEY,
+    total_tx_count INTEGER DEFAULT 0,
+    total_volume_in REAL DEFAULT 0,
+    total_volume_out REAL DEFAULT 0,
+    unique_partners INTEGER DEFAULT 0,
+    first_seen TEXT,
+    last_seen TEXT,
+    updated_at TEXT
   );
 `)
 
