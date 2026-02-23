@@ -1,11 +1,17 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+
+// Mock blockchain.js to avoid loading viem (which hangs the vitest process).
+// dimensions.ts only uses the pure helper usdcToFloat from blockchain.js.
+vi.mock('../src/blockchain.js', () => ({
+  usdcToFloat: (raw: bigint) => Number(raw) / 1_000_000,
+  estimateWalletAgeDays: vi.fn(() => Promise.resolve(0)),
+  getPublicClient: vi.fn(),
+}))
+
+import { calcReliability, calcViability, calcCapability, calcIdentity } from '../src/scoring/dimensions.js'
 
 describe('dimension signal breakdowns', () => {
-  it('calcReliability returns score and signals', async () => {
-    const { calcReliability } = await import('../src/scoring/dimensions.js')
-    expect(typeof calcReliability).toBe('function')
-
-    // Call with minimal data (zero transfers)
+  it('calcReliability returns score and signals', () => {
     const result = calcReliability(
       {
         balance: 0n,
@@ -27,9 +33,7 @@ describe('dimension signal breakdowns', () => {
     }
   })
 
-  it('calcViability returns score and signals', async () => {
-    const { calcViability } = await import('../src/scoring/dimensions.js')
-
+  it('calcViability returns score and signals', () => {
     const result = calcViability(
       {
         balance: 10_000_000n, // 10 USDC
@@ -48,9 +52,7 @@ describe('dimension signal breakdowns', () => {
     expect(result.signals.usdcBalance).toBeGreaterThan(0)
   })
 
-  it('calcCapability returns score and signals', async () => {
-    const { calcCapability } = await import('../src/scoring/dimensions.js')
-
+  it('calcCapability returns score and signals', () => {
     const result = calcCapability(
       {
         balance: 0n,
@@ -69,8 +71,6 @@ describe('dimension signal breakdowns', () => {
   })
 
   it('calcIdentity returns score and signals', async () => {
-    const { calcIdentity } = await import('../src/scoring/dimensions.js')
-
     const result = await calcIdentity(
       '0x0000000000000000000000000000000000000001',
       90, null, true, true, 10, new Date().toISOString(), true,

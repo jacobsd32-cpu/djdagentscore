@@ -2,35 +2,46 @@ import { createPublicClient, http, fallback, parseAbiItem, namehash } from 'viem
 import { base } from 'viem/chains'
 import type { WalletUSDCData } from './types.js'
 
-// ---------- Client ----------
+// ---------- Client (lazy singleton) ----------
 
 const BASE_RPC_URL = process.env.BASE_RPC_URL ?? 'https://base-mainnet.public.blastapi.io'
 const BASE_RPC_FALLBACK_URL = process.env.BASE_RPC_FALLBACK_URL ?? 'https://mainnet.base.org'
 
-// Use viem's built-in `fallback` transport for automatic failover.
-// Primary RPC is tried first; on failure, requests transparently fall back
-// to the secondary. Each transport has its own retry/timeout config.
-// viem's fallback transport includes a built-in circuit breaker: after
-// `retryCount` consecutive failures on a transport it is skipped for
-// subsequent requests until the next ranking interval (default 10s).
-export const publicClient = createPublicClient({
-  chain: base,
-  transport: fallback([
-    http(BASE_RPC_URL, {
-      timeout: 30_000,
-      retryCount: 2,
-      retryDelay: 1_500,
-    }),
-    http(BASE_RPC_FALLBACK_URL, {
-      timeout: 30_000,
-      retryCount: 2,
-      retryDelay: 2_000,
-    }),
-  ], {
-    // Re-rank transports every 15 seconds based on latency
-    rank: { interval: 15_000, sampleCount: 5, timeout: 3_000, weights: { latency: 0.4, stability: 0.6 } },
-  }),
-})
+// Lazy-initialised so that importing this module for pure helpers
+// (usdcToFloat, clamp, etc.) doesn't trigger an RPC connection.
+// The client is created on first call to getPublicClient().
+type Client = ReturnType<typeof createPublicClient>
+let _publicClient: Client | null = null
+
+export function getPublicClient(): Client {
+  if (!_publicClient) {
+    // Use viem's built-in `fallback` transport for automatic failover.
+    // Primary RPC is tried first; on failure, requests transparently fall back
+    // to the secondary. Each transport has its own retry/timeout config.
+    // viem's fallback transport includes a built-in circuit breaker: after
+    // `retryCount` consecutive failures on a transport it is skipped for
+    // subsequent requests until the next ranking interval (default 10s).
+    _publicClient = createPublicClient({
+      chain: base,
+      transport: fallback([
+        http(BASE_RPC_URL, {
+          timeout: 30_000,
+          retryCount: 2,
+          retryDelay: 1_500,
+        }),
+        http(BASE_RPC_FALLBACK_URL, {
+          timeout: 30_000,
+          retryCount: 2,
+          retryDelay: 2_000,
+        }),
+      ], {
+        // Re-rank transports every 15 seconds based on latency
+        rank: { interval: 15_000, sampleCount: 5, timeout: 3_000, weights: { latency: 0.4, stability: 0.6 } },
+      }),
+    })
+  }
+  return _publicClient
+}
 
 // ---------- Constants ----------
 
@@ -109,7 +120,7 @@ async function processLogBatch(
     const batchLogs = await Promise.all(
       batch.map(([from, to]) => {
         if (direction === 'in') {
-          return publicClient.getLogs({
+          return getPublicClient().getLogs({
             address: USDC_ADDRESS,
             event: TRANSFER_EVENT,
             args: { to: wallet },
@@ -117,7 +128,7 @@ async function processLogBatch(
             toBlock: to,
           })
         } else {
-          return publicClient.getLogs({
+          return getPublicClient().getLogs({
             address: USDC_ADDRESS,
             event: TRANSFER_EVENT,
             args: { from: wallet },
@@ -148,7 +159,7 @@ async function processLogBatch(
 // ---------- Public API ----------
 
 export async function getUSDCBalance(wallet: `0x${string}`): Promise<bigint> {
-  const balance = await publicClient.readContract({
+  const balance = await getPublicClient().readContract({
     address: USDC_ADDRESS,
     abi: BALANCE_OF_ABI,
     functionName: 'balanceOf',
@@ -165,7 +176,7 @@ export async function getWalletUSDCData(
   wallet: `0x${string}`,
   windowDays = 14,
 ): Promise<WalletUSDCData> {
-  const currentBlock = await publicClient.getBlockNumber()
+  const currentBlock = await getPublicClient().getBlockNumber()
   const fromBlock = clamp(
     currentBlock - BLOCKS_PER_DAY * BigInt(windowDays),
     0n,
@@ -225,7 +236,7 @@ export async function checkERC8004Registration(wallet: `0x${string}`): Promise<b
     return false
   }
   try {
-    const result = await publicClient.readContract({
+    const result = await getPublicClient().readContract({
       address: ERC8004_REGISTRY,
       abi: ERC8004_ABI,
       functionName: 'isRegistered',
@@ -241,7 +252,7 @@ export async function checkERC8004Registration(wallet: `0x${string}`): Promise<b
  * Returns the latest block number, used for block-to-time conversions.
  */
 export async function getCurrentBlock(): Promise<bigint> {
-  return publicClient.getBlockNumber()
+  return getPublicClient().getBlockNumber()
 }
 
 /** Convert raw USDC units (6 decimals) to a USD dollar string, e.g. "12.50" */
@@ -261,7 +272,7 @@ export function usdcToFloat(raw: bigint): number {
  * A high nonce indicates a well-used, long-running wallet.
  */
 export async function getTransactionCount(wallet: `0x${string}`): Promise<number> {
-  return publicClient.getTransactionCount({ address: wallet })
+  return getPublicClient().getTransactionCount({ address: wallet })
 }
 
 /**
@@ -269,7 +280,7 @@ export async function getTransactionCount(wallet: `0x${string}`): Promise<number
  * Holding ETH for gas indicates an actively operated wallet.
  */
 export async function getETHBalance(wallet: `0x${string}`): Promise<bigint> {
-  return publicClient.getBalance({ address: wallet })
+  return getPublicClient().getBalance({ address: wallet })
 }
 
 /**
@@ -281,7 +292,7 @@ export async function hasBasename(wallet: `0x${string}`): Promise<boolean> {
     const addrHex = wallet.slice(2).toLowerCase()
     const node = namehash(`${addrHex}.addr.reverse`)
 
-    const resolverAddr = await publicClient.readContract({
+    const resolverAddr = await getPublicClient().readContract({
       address: BASE_ENS_REGISTRY,
       abi: ENS_REGISTRY_ABI,
       functionName: 'resolver',
@@ -290,7 +301,7 @@ export async function hasBasename(wallet: `0x${string}`): Promise<boolean> {
 
     if (resolverAddr === '0x0000000000000000000000000000000000000000') return false
 
-    const name = await publicClient.readContract({
+    const name = await getPublicClient().readContract({
       address: resolverAddr,
       abi: ENS_RESOLVER_NAME_ABI,
       functionName: 'name',

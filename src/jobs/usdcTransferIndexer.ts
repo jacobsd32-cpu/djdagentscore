@@ -7,7 +7,7 @@
  */
 import { parseAbiItem } from 'viem'
 import { log } from '../logger.js'
-import { publicClient, USDC_ADDRESS } from '../blockchain.js'
+import { getPublicClient, USDC_ADDRESS } from '../blockchain.js'
 import { db } from '../db.js'
 import { getIndexerState, setIndexerState } from '../db.js'
 import { indexUsdcTransferBatch, refreshWalletTransferStats } from './usdcTransferHelpers.js'
@@ -37,13 +37,13 @@ function blockToIsoTimestamp(blockNumber: bigint, anchorBlock: bigint, anchorTsM
 
 async function fetchAndIndexChunk(start: bigint, end: bigint): Promise<number> {
   const [transferLogs, anchorBlockData] = await Promise.all([
-    publicClient.getLogs({
+    getPublicClient().getLogs({
       address: USDC_ADDRESS,
       event: TRANSFER_EVENT,
       fromBlock: start,
       toBlock: end,
     }),
-    publicClient.getBlock({ blockNumber: start }).catch(() => null),
+    getPublicClient().getBlock({ blockNumber: start }).catch(() => null),
   ])
 
   if (transferLogs.length === 0) return 0
@@ -103,7 +103,7 @@ export async function startUsdcTransferIndexer(): Promise<void> {
   running = true
 
   const stored = getIndexerState(STATE_KEY)
-  const currentBlock = await publicClient.getBlockNumber()
+  const currentBlock = await getPublicClient().getBlockNumber()
 
   if (stored) {
     lastBlockIndexed = BigInt(stored)
@@ -116,7 +116,7 @@ export async function startUsdcTransferIndexer(): Promise<void> {
 
   while (running) {
     try {
-      const tip = await publicClient.getBlockNumber()
+      const tip = await getPublicClient().getBlockNumber()
 
       if (tip > lastBlockIndexed) {
         let start = lastBlockIndexed + 1n

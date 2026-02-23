@@ -9,7 +9,7 @@
  * After all wallets, aggregates an hourly economy_metrics row.
  */
 import { parseAbi } from 'viem'
-import { publicClient, USDC_ADDRESS } from '../blockchain.js'
+import { getPublicClient, USDC_ADDRESS } from '../blockchain.js'
 import { db, getExpiredWallets } from '../db.js'
 import { getOrCalculateScore } from '../scoring/engine.js'
 import { jobStats } from './jobStats.js'
@@ -53,7 +53,7 @@ async function snapshotAndUpdateMetrics(wallet: string): Promise<void> {
   // ── Fetch and snapshot current USDC balance ──────────────────────────────
   let currentBalance = 0
   try {
-    const raw = await publicClient.readContract({
+    const raw = await getPublicClient().readContract({
       address: USDC_ADDRESS,
       abi: BALANCE_OF_ABI,
       functionName: 'balanceOf',
@@ -217,20 +217,9 @@ export async function runHourlyRefresh(): Promise<void> {
   hourStart.setMinutes(0, 0, 0)
 
   try {
-    // Expired wallets + certified wallets due for 15-min refresh
+    // Expired wallets due for refresh
     const expired = getExpiredWallets()
-    const certifiedRows = db
-      .prepare<[], { wallet: string }>(
-        `SELECT cs.wallet FROM certified_subscriptions cs
-         JOIN scores s ON cs.wallet = s.wallet
-         WHERE cs.active = 1
-           AND s.calculated_at < datetime('now', '-15 minutes')
-           AND s.expires_at > datetime('now')`,
-      )
-      .all()
-    const certified = certifiedRows.map((r) => r.wallet)
-
-    const toRefresh = [...new Set([...expired, ...certified])].slice(0, REFRESH_BATCH_SIZE)
+    const toRefresh = expired.slice(0, REFRESH_BATCH_SIZE)
 
     if (toRefresh.length === 0) {
       log.info('refresh', 'No wallets to refresh')

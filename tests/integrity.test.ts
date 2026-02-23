@@ -1,36 +1,7 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 
-// Mock modules that trigger side-effects (real SQLite open) on import.
-// computeIntegrityMultiplier is a pure function and doesn't use any of these.
-vi.mock('../src/db.js', () => ({
-  db: { prepare: () => ({ get: () => null, all: () => [], run: () => {} }), exec: () => {}, pragma: () => {}, transaction: (fn: Function) => fn },
-  upsertScore: vi.fn(),
-  getScore: vi.fn(),
-  getScoreHistory: vi.fn(() => []),
-  scoreToTier: (s: number) => s >= 90 ? 'Elite' : s >= 75 ? 'Trusted' : s >= 50 ? 'Established' : s >= 25 ? 'Emerging' : 'Unverified',
-  countReportsByTarget: vi.fn(() => 0),
-  countReportsAfterDate: vi.fn(() => 0),
-  countUniquePartners: vi.fn(() => 0),
-  countRatingsReceived: vi.fn(() => 0),
-  countPriorQueries: vi.fn(() => 0),
-  getRegistration: vi.fn(),
-  getWalletX402Stats: vi.fn(() => ({ x402TxCount: 0, x402InflowsUsd: 0, x402OutflowsUsd: 0, x402FirstSeen: null })),
-  getWalletIndexFirstSeen: vi.fn(() => null),
-  getTransferTimestamps: vi.fn(() => []),
-}))
-vi.mock('../src/blockchain.js', () => ({
-  getWalletUSDCData: vi.fn(),
-  getCurrentBlock: vi.fn(() => 0n),
-  estimateWalletAgeDays: vi.fn(() => 0),
-  getTransactionCount: vi.fn(() => 0),
-  getETHBalance: vi.fn(() => 0n),
-  hasBasename: vi.fn(() => null),
-}))
-vi.mock('../src/logger.js', () => ({
-  log: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-}))
-
-import { computeIntegrityMultiplier } from '../src/scoring/engine.js'
+// computeIntegrityMultiplier is a pure function — no mocks needed!
+import { computeIntegrityMultiplier, SYBIL_FACTORS, GAMING_FACTORS } from '../src/scoring/integrity.js'
 
 describe('computeIntegrityMultiplier', () => {
   it('returns 1.0 with no indicators', () => {
@@ -66,10 +37,27 @@ describe('computeIntegrityMultiplier', () => {
 
   it('floors at 0.10', () => {
     const result = computeIntegrityMultiplier(
-      ['wash_trading', 'self_funding_loop', 'coordinated_creation', 'zero_organic_activity'],
-      ['nonce_inflation', 'artificial_partner_diversity'],
+      ['self_funding_loop', 'coordinated_creation', 'zero_organic_activity'],
+      ['nonce_inflation', 'artificial_partner_diversity', 'wash_trading'],
       5,
     )
     expect(result).toBeGreaterThanOrEqual(0.10)
+  })
+})
+
+describe('factor lookup tables', () => {
+  it('SYBIL_FACTORS does not contain wash_trading (only gaming.ts emits it)', () => {
+    expect(SYBIL_FACTORS).not.toHaveProperty('wash_trading')
+  })
+
+  it('GAMING_FACTORS contains wash_trading', () => {
+    expect(GAMING_FACTORS).toHaveProperty('wash_trading')
+    expect(GAMING_FACTORS.wash_trading).toBe(0.50)
+  })
+
+  it('unknown indicators use default fallback', () => {
+    // Unknown sybil → 0.80, unknown gaming → 0.85
+    const result = computeIntegrityMultiplier(['unknown_sybil'], ['unknown_gaming'], 0)
+    expect(result).toBeCloseTo(0.80 * 0.85) // 0.68
   })
 })
