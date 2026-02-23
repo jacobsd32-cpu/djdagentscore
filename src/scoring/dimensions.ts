@@ -396,7 +396,9 @@ export function calcCapability(
   const x402TxCount = x402Stats?.x402TxCount ?? 0
   const x402Revenue = x402Stats?.x402InflowsUsd ?? 0
 
-  // --- Active x402 services (up to 30 pts) ---
+  // --- Active x402 services (up to 50 pts) ---
+  // Weight increased from 30→50 to compensate for unimplemented features (domains,
+  // replications) so agents can reach 100. Will be rebalanced when those ship.
   // Estimates how many distinct x402 endpoints this agent operates or consumes.
   // With real indexer data: 5 tx = 2 services (minimum real usage), 20 = 3 (active),
   //   50+ = 4 (multi-service operator). Single-digit tx count is likely one service testing.
@@ -408,7 +410,7 @@ export function calcCapability(
   let activeX402Services = 0
   if (hasX402Data) {
     activeX402Services = x402TxCount >= 50 ? 4 : x402TxCount >= 20 ? 3 : x402TxCount >= 5 ? 2 : 1
-    x402ServicesPts = activeX402Services >= 4 ? 30 : activeX402Services === 3 ? 25 : activeX402Services === 2 ? 15 : 8
+    x402ServicesPts = activeX402Services >= 4 ? 50 : activeX402Services === 3 ? 40 : activeX402Services === 2 ? 25 : 12
   } else {
     const avgInflow = data.transferCount > 0
       ? usdcToFloat(data.totalInflows) / data.transferCount
@@ -420,33 +422,34 @@ export function calcCapability(
       activeX402Services = 1
     }
     // Smooth point curve instead of cliff jumps
-    x402ServicesPts = activeX402Services >= 4 ? 30
-      : activeX402Services === 3 ? 25
-      : activeX402Services === 2 ? 20
-      : activeX402Services === 1 ? 10
+    x402ServicesPts = activeX402Services >= 4 ? 50
+      : activeX402Services === 3 ? 40
+      : activeX402Services === 2 ? 30
+      : activeX402Services === 1 ? 15
       : 0
   }
   pts += x402ServicesPts
 
-  // --- Total revenue earned (up to 30 pts) — prefer x402-specific revenue if available ---
-  // $1 = has earned anything (10 pts), $50 = viable business (20), $500+ = proven revenue (30).
+  // --- Total revenue earned (up to 50 pts) — prefer x402-specific revenue if available ---
+  // Weight increased from 30→50 to compensate for unimplemented features.
+  // $1 = has earned anything (15 pts), $50 = viable business (30), $500+ = proven revenue (50).
   // $50 ≈ 500 API calls at $0.10 each — a real product with real users.
   // $500 ≈ 5000 calls — a successful x402 service generating meaningful income.
   // Falls back to total USDC inflows when x402-specific indexer data isn't available.
   const totalRevenue = hasX402Data ? x402Revenue : usdcToFloat(data.totalInflows)
   let revPts = 0
-  if (totalRevenue > 500) revPts = 30
-  else if (totalRevenue > 50) revPts = 20
-  else if (totalRevenue > 1) revPts = 10
+  if (totalRevenue > 500) revPts = 50
+  else if (totalRevenue > 50) revPts = 30
+  else if (totalRevenue > 1) revPts = 15
   else revPts = 0
   pts += revPts
 
-  // --- Domains owned (up to 20 pts) — NOT YET IMPLEMENTED ---
-  // Requires cross-referencing Basenames/ENS ownership on-chain.
+  // --- Domains owned — NOT YET IMPLEMENTED (0 pts) ---
+  // When implemented, rebalance services (50→30) and revenue (50→30) to make room.
   // Design: 1 domain = 10 pts, 2+ = 20 pts (operational maturity signal).
 
-  // --- Successful replications (up to 20 pts) — NOT YET IMPLEMENTED ---
-  // Requires a registry of agent deployments/forks.
+  // --- Successful replications — NOT YET IMPLEMENTED (0 pts) ---
+  // When implemented, rebalance services (50→30) and revenue (50→30) to make room.
   // Design: 1 replication = 10 pts, 2+ = 20 pts (proven value signal).
 
   const signals: Record<string, number> = {

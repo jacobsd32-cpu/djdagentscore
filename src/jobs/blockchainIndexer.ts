@@ -45,9 +45,10 @@ const AUTHORIZATION_USED_EVENT = parseAbiItem(
   'event AuthorizationUsed(address indexed authorizer, bytes32 indexed nonce)',
 )
 
-// No backfill on first run — start from current block to avoid OOM on 1GB machine.
-// Historical data is not needed; per-wallet scoring uses direct RPC queries.
-const BACKFILL_BLOCKS = 0n
+// Backfill ~28 hours of history on first run (~50k blocks at 2s/block).
+// This provides enough relationship graph data for sybil detection without
+// risking OOM on a 1GB machine from fetching ALL Base USDC transfers.
+const BACKFILL_BLOCKS = 50_000n
 
 // x402 is a micro-payment protocol — realistic API prices are $0.01–$0.50.
 // Transfers above this threshold are almost certainly DeFi (Morpho, Aave, etc.)
@@ -284,9 +285,12 @@ export async function startBlockchainIndexer(): Promise<void> {
       log.info('indexer', `Resuming from block ${lastBlockIndexed}`)
     }
   } else {
-    lastBlockIndexed = currentBlock
-    setIndexerState(STATE_KEY, currentBlock.toString())
-    log.info('indexer', `First run — starting from current block ${currentBlock}`)
+    // First run — backfill recent history so the relationship graph and
+    // wallet_index have data for sybil detection on initial queries.
+    const backfillStart = currentBlock > BACKFILL_BLOCKS ? currentBlock - BACKFILL_BLOCKS : 0n
+    lastBlockIndexed = backfillStart
+    setIndexerState(STATE_KEY, backfillStart.toString())
+    log.info('indexer', `First run — backfilling from block ${backfillStart} (${BACKFILL_BLOCKS} blocks behind tip ${currentBlock})`)
   }
 
   while (running) {
