@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { db } from '../db.js'
 import { generateCalibrationReport } from '../scoring/calibrationReport.js'
+import { MODEL_VERSION } from '../scoring/responseBuilders.js'
 
 const admin = new Hono()
 
@@ -28,7 +29,7 @@ admin.get('/calibration', (c) => {
   }
 
   // No report yet — generate one
-  const report = generateCalibrationReport(db, '2.0.0')
+  const report = generateCalibrationReport(db, MODEL_VERSION)
   return c.json({
     ...report,
     avg_score_by_outcome: JSON.parse(report.avg_score_by_outcome),
@@ -38,7 +39,7 @@ admin.get('/calibration', (c) => {
 })
 
 admin.post('/calibration/generate', (c) => {
-  const report = generateCalibrationReport(db, '2.0.0')
+  const report = generateCalibrationReport(db, MODEL_VERSION)
   return c.json({
     ...report,
     avg_score_by_outcome: JSON.parse(report.avg_score_by_outcome),

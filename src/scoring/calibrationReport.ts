@@ -1,15 +1,50 @@
+/**
+ * Calibration Report — measures whether the scoring model is predictive.
+ *
+ * The key question: do wallets with higher scores at query time actually produce
+ * better real-world outcomes?  We answer this with three analyses:
+ *
+ * 1. **Score-Outcome Separation** — avg score of positive-outcome wallets vs
+ *    negative-outcome wallets. A healthy model shows a large gap.
+ *
+ * 2. **Tier Accuracy** — for each tier, what % of wallets have positive outcomes?
+ *    Elite should be >> Emerging. If not, the model isn't discriminating.
+ *
+ * 3. **Monotonicity Check** — do tiers with higher scores consistently produce
+ *    better outcome rates? Violations indicate broken thresholds.
+ *
+ * Outcome types (from outcomeMatcher.ts):
+ *   positive: 'successful_tx', 'multiple_successful_tx'
+ *   negative: 'fraud_report'
+ *   neutral:  'no_activity'
+ */
+
 import type { Database } from 'better-sqlite3'
+
+// ── Outcome classification ──────────────────────────────────────────────────
+
+/** Outcomes that indicate the score was predictive (wallet is trustworthy). */
+export const POSITIVE_OUTCOMES = new Set(['successful_tx', 'multiple_successful_tx'])
+
+/** Outcomes that indicate the score overestimated trust. */
+export const NEGATIVE_OUTCOMES = new Set(['fraud_report'])
+
+// 'no_activity' is neutral — doesn't indicate model success or failure.
+
+// ── Report type ─────────────────────────────────────────────────────────────
 
 export interface CalibrationReport {
   generated_at: string
   period_start: string
   period_end: string
   total_scored: number
-  avg_score_by_outcome: string  // JSON
-  tier_accuracy: string         // JSON
-  recommendations: string       // JSON string[]
+  avg_score_by_outcome: string  // JSON: Record<outcome_type, { avgScore, count }>
+  tier_accuracy: string         // JSON: Record<tier, { total, positive, negative, positiveRate }>
+  recommendations: string       // JSON: string[]
   model_version: string
 }
+
+// ── Row types for SQLite queries ────────────────────────────────────────────
 
 interface OutcomeRow {
   outcome_type: string
@@ -23,75 +58,143 @@ interface TierRow {
   count: number
 }
 
+/** Tier ordering for monotonicity check (highest to lowest). */
+const TIER_ORDER = ['Elite', 'Trusted', 'Established', 'Emerging', 'Unverified'] as const
+
+// ── Main generator ──────────────────────────────────────────────────────────
+
 export function generateCalibrationReport(db: Database, modelVersion: string): CalibrationReport {
   const now = new Date()
   const periodEnd = now.toISOString()
   const periodStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
-  // Average score by outcome type
+  // ── 1. Average score by outcome type ────────────────────────────────────
+  // Uses score_at_query (the score at the time the lookup was made) so we
+  // evaluate the model's prediction, not the current (possibly updated) score.
   const outcomeRows = db.prepare(`
-    SELECT so.outcome_type, ROUND(AVG(s.composite_score)) as avg_score, COUNT(*) as count
-    FROM score_outcomes so
-    JOIN scores s ON so.target_wallet = s.wallet
-    WHERE so.outcome_at >= ?
-    GROUP BY so.outcome_type
+    SELECT outcome_type,
+           ROUND(AVG(score_at_query)) as avg_score,
+           COUNT(*) as count
+    FROM score_outcomes
+    WHERE outcome_at >= ?
+      AND score_at_query IS NOT NULL
+    GROUP BY outcome_type
   `).all(periodStart) as OutcomeRow[]
 
-  const avgScoreByOutcome: Record<string, number> = {}
+  const avgScoreByOutcome: Record<string, { avgScore: number; count: number }> = {}
   let totalScored = 0
   for (const row of outcomeRows) {
-    avgScoreByOutcome[row.outcome_type] = row.avg_score
+    avgScoreByOutcome[row.outcome_type] = {
+      avgScore: row.avg_score,
+      count: row.count,
+    }
     totalScored += row.count
   }
 
-  // Tier accuracy: for each tier, what % of wallets have positive outcomes
+  // ── 2. Tier accuracy ────────────────────────────────────────────────────
+  // For each tier, count positive/negative/total outcomes.
+  // Uses tier_at_query so we evaluate the tier assigned at prediction time.
   const tierRows = db.prepare(`
-    SELECT s.tier, so.outcome_type, COUNT(*) as count
-    FROM scores s
-    JOIN score_outcomes so ON s.wallet = so.target_wallet
-    WHERE so.outcome_at >= ?
-    GROUP BY s.tier, so.outcome_type
+    SELECT tier_at_query as tier, outcome_type, COUNT(*) as count
+    FROM score_outcomes
+    WHERE outcome_at >= ?
+      AND tier_at_query IS NOT NULL
+    GROUP BY tier_at_query, outcome_type
   `).all(periodStart) as TierRow[]
 
-  const tierTotals: Record<string, number> = {}
-  const tierPositive: Record<string, number> = {}
-  const positiveOutcomes = new Set(['reliable_transactor', 'growing'])
+  const tierStats: Record<string, { total: number; positive: number; negative: number; positiveRate: number }> = {}
 
   for (const row of tierRows) {
-    tierTotals[row.tier] = (tierTotals[row.tier] || 0) + row.count
-    if (positiveOutcomes.has(row.outcome_type)) {
-      tierPositive[row.tier] = (tierPositive[row.tier] || 0) + row.count
+    if (!tierStats[row.tier]) {
+      tierStats[row.tier] = { total: 0, positive: 0, negative: 0, positiveRate: 0 }
+    }
+    tierStats[row.tier].total += row.count
+    if (POSITIVE_OUTCOMES.has(row.outcome_type)) {
+      tierStats[row.tier].positive += row.count
+    }
+    if (NEGATIVE_OUTCOMES.has(row.outcome_type)) {
+      tierStats[row.tier].negative += row.count
     }
   }
 
-  const tierAccuracy: Record<string, number> = {}
-  for (const tier of Object.keys(tierTotals)) {
-    tierAccuracy[tier] = Math.round(((tierPositive[tier] || 0) / tierTotals[tier]) * 100) / 100
+  // Calculate positive rates
+  for (const tier of Object.keys(tierStats)) {
+    const s = tierStats[tier]
+    s.positiveRate = s.total > 0 ? Math.round((s.positive / s.total) * 100) / 100 : 0
   }
 
-  // Generate recommendations
+  // ── 3. Recommendations ──────────────────────────────────────────────────
   const recommendations: string[] = []
-  if (avgScoreByOutcome.dormant && avgScoreByOutcome.dormant > 50) {
-    recommendations.push('High-scoring wallets going dormant — consider recency weighting')
-  }
-  if (avgScoreByOutcome.reported && avgScoreByOutcome.reported > 40) {
-    recommendations.push('Reported wallets have moderate scores — integrity modifiers may need tuning')
+
+  // 3a. Score-outcome separation: positive outcomes should have higher avg scores
+  const positiveScores = outcomeRows.filter(r => POSITIVE_OUTCOMES.has(r.outcome_type))
+  const negativeScores = outcomeRows.filter(r => NEGATIVE_OUTCOMES.has(r.outcome_type))
+  const avgPositive = weightedAvg(positiveScores)
+  const avgNegative = weightedAvg(negativeScores)
+
+  if (avgPositive !== null && avgNegative !== null) {
+    const separation = avgPositive - avgNegative
+    if (separation < 10) {
+      recommendations.push(
+        `Weak score-outcome separation (${separation.toFixed(0)} points). ` +
+        `Positive outcomes avg ${avgPositive.toFixed(0)}, negative avg ${avgNegative.toFixed(0)}. ` +
+        `Consider reweighting dimensions.`,
+      )
+    } else {
+      recommendations.push(
+        `Score-outcome separation is healthy (${separation.toFixed(0)} points). ` +
+        `Positive avg ${avgPositive.toFixed(0)}, negative avg ${avgNegative.toFixed(0)}.`,
+      )
+    }
   }
 
+  // 3b. Monotonicity: higher tiers should have better positive rates
+  const orderedTiers = TIER_ORDER.filter(t => tierStats[t])
+  let lastRate = Infinity
+  for (const tier of orderedTiers) {
+    const rate = tierStats[tier].positiveRate
+    if (rate > lastRate) {
+      recommendations.push(
+        `Monotonicity violation: ${tier} (${(rate * 100).toFixed(0)}% positive) ` +
+        `outperforms the tier above it (${(lastRate * 100).toFixed(0)}% positive). ` +
+        `Tier thresholds may need adjustment.`,
+      )
+    }
+    lastRate = rate
+  }
+
+  // 3c. Fraud wallets with high scores indicate weak integrity checks
+  if (avgScoreByOutcome.fraud_report && avgScoreByOutcome.fraud_report.avgScore > 50) {
+    recommendations.push(
+      `Fraudulent wallets have moderate avg score (${avgScoreByOutcome.fraud_report.avgScore}). ` +
+      `Integrity multiplier or sybil detection may need tuning.`,
+    )
+  }
+
+  // 3d. No-activity wallets with high scores suggest over-scoring inactive wallets
+  if (avgScoreByOutcome.no_activity && avgScoreByOutcome.no_activity.avgScore > 60) {
+    recommendations.push(
+      `Inactive wallets have high avg score (${avgScoreByOutcome.no_activity.avgScore}). ` +
+      `Consider adding recency decay.`,
+    )
+  }
+
+  // ── Build and persist report ────────────────────────────────────────────
   const report: CalibrationReport = {
     generated_at: now.toISOString(),
     period_start: periodStart,
     period_end: periodEnd,
     total_scored: totalScored,
     avg_score_by_outcome: JSON.stringify(avgScoreByOutcome),
-    tier_accuracy: JSON.stringify(tierAccuracy),
+    tier_accuracy: JSON.stringify(tierStats),
     recommendations: JSON.stringify(recommendations),
     model_version: modelVersion,
   }
 
-  // Persist report
   db.prepare(`
-    INSERT INTO calibration_reports (generated_at, period_start, period_end, total_scored, avg_score_by_outcome, tier_accuracy, recommendations, model_version)
+    INSERT INTO calibration_reports
+      (generated_at, period_start, period_end, total_scored,
+       avg_score_by_outcome, tier_accuracy, recommendations, model_version)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     report.generated_at, report.period_start, report.period_end,
@@ -100,4 +203,18 @@ export function generateCalibrationReport(db: Database, modelVersion: string): C
   )
 
   return report
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Weighted average score across outcome rows (weighted by row count). */
+function weightedAvg(rows: OutcomeRow[]): number | null {
+  if (rows.length === 0) return null
+  let totalScore = 0
+  let totalCount = 0
+  for (const r of rows) {
+    totalScore += r.avg_score * r.count
+    totalCount += r.count
+  }
+  return totalCount > 0 ? totalScore / totalCount : null
 }

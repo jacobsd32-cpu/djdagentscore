@@ -8,6 +8,7 @@
 import type { Database as DatabaseType } from 'better-sqlite3'
 import { jobStats } from './jobStats.js'
 import { log } from '../logger.js'
+import { MODEL_VERSION } from '../scoring/responseBuilders.js'
 
 interface UnmatchedLookup {
   id: number
@@ -131,7 +132,7 @@ export async function runOutcomeMatcher(db: DatabaseType): Promise<void> {
         lookup.target_score ?? null,
         lookup.target_tier ?? null,
         null, // confidence_at_query not stored in query_log
-        '1.0.0',
+        MODEL_VERSION,
         outcomeType,
         outcomeAt,
         daysToOutcome,

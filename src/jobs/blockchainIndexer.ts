@@ -29,7 +29,7 @@
  */
 import { parseAbiItem } from 'viem'
 import { log } from '../logger.js'
-import { publicClient, USDC_ADDRESS } from '../blockchain.js'
+import { getPublicClient, USDC_ADDRESS } from '../blockchain.js'
 import { getIndexerState, setIndexerState, indexTransferBatch } from '../db.js'
 import type { IndexedTransfer } from '../db.js'
 
@@ -100,13 +100,13 @@ function blockToIsoTimestamp(
 async function fetchAndIndexChunk(start: bigint, end: bigint): Promise<number> {
   // Fetch both event types AND the chunk's real start-block timestamp in parallel.
   const [transferLogs, authUsedLogs, anchorBlockData] = await Promise.all([
-    publicClient.getLogs({
+    getPublicClient().getLogs({
       address: USDC_ADDRESS,
       event: TRANSFER_EVENT,
       fromBlock: start,
       toBlock: end,
     }),
-    publicClient.getLogs({
+    getPublicClient().getLogs({
       address: USDC_ADDRESS,
       event: AUTHORIZATION_USED_EVENT,
       fromBlock: start,
@@ -114,7 +114,7 @@ async function fetchAndIndexChunk(start: bigint, end: bigint): Promise<number> {
     }),
     // Graceful fallback: if the block fetch fails we still index with the
     // genesis-based approximation (less accurate but non-fatal).
-    publicClient.getBlock({ blockNumber: start }).catch(() => null),
+    getPublicClient().getBlock({ blockNumber: start }).catch(() => null),
   ])
 
   // No x402 settlements in this range
@@ -148,7 +148,7 @@ async function fetchAndIndexChunk(start: bigint, end: bigint): Promise<number> {
       const batch = hashes.slice(i, i + BATCH_SIZE)
       const txs = await Promise.all(
         batch.map((h) =>
-          publicClient.getTransaction({ hash: h as `0x${string}` }).catch(() => null),
+          getPublicClient().getTransaction({ hash: h as `0x${string}` }).catch(() => null),
         ),
       )
       for (let j = 0; j < batch.length; j++) {
@@ -266,7 +266,7 @@ export async function startBlockchainIndexer(): Promise<void> {
 
   // Determine starting block
   const stored = getIndexerState(STATE_KEY)
-  const currentBlock = await publicClient.getBlockNumber()
+  const currentBlock = await getPublicClient().getBlockNumber()
 
   // Max gap we're willing to index on startup: 1 day of blocks.
   // If the stored state is further behind than this, skip to current block
@@ -295,7 +295,7 @@ export async function startBlockchainIndexer(): Promise<void> {
 
   while (running) {
     try {
-      const tip = await publicClient.getBlockNumber()
+      const tip = await getPublicClient().getBlockNumber()
 
       if (tip > lastBlockIndexed) {
         const fromBlock = lastBlockIndexed + 1n

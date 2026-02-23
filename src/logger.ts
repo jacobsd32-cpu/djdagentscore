@@ -1,45 +1,78 @@
 /**
- * Lightweight structured logger.
+ * Structured logger — pino-backed with the same `log.info(tag, msg)` facade.
  *
- * Wraps console with ISO timestamps and a consistent [tag] prefix.
- * On production (NODE_ENV=production), emits single-line JSON for Fly.io log drain.
- * In development, emits human-readable lines.
+ * In production (NODE_ENV=production), emits newline-delimited JSON for Fly.io
+ * log drain.  In development, pipes through pino-pretty for human-readable
+ * output with colours and timestamps.
  *
  * Usage:
  *   import { log } from './logger.js'
  *   log.info('server', `Listening on port ${port}`)
  *   log.error('engine', 'RPC timeout', err)
+ *
+ * Advanced — create a child logger bound to a tag for hot-path code:
+ *   import { childLogger } from './logger.js'
+ *   const clog = childLogger('indexer')
+ *   clog.info('tick')
  */
 
+import pino from 'pino'
+
 const isProduction = process.env.NODE_ENV === 'production'
+const isTest = !!process.env.VITEST
 
-function formatMessage(level: string, tag: string, msg: string, extra?: unknown): string {
-  if (isProduction) {
-    const entry: Record<string, unknown> = {
-      ts: new Date().toISOString(),
-      level,
-      tag,
-      msg,
-    }
-    if (extra !== undefined) {
-      entry.error = extra instanceof Error ? extra.message : String(extra)
-    }
-    return JSON.stringify(entry)
+// Base pino instance.
+// In dev we use pino-pretty for human-readable output;
+// in prod and test we emit raw JSON (fastest path — no worker thread overhead).
+function buildTransport(): pino.TransportSingleOptions | undefined {
+  if (isProduction || isTest) return undefined
+  return {
+    target: 'pino-pretty',
+    options: {
+      colorize: true,
+      translateTime: 'HH:MM:ss.l',
+      ignore: 'pid,hostname',
+    },
   }
-
-  const ts = new Date().toISOString().slice(11, 23) // HH:MM:SS.mmm
-  const suffix = extra ? ` ${extra instanceof Error ? extra.message : extra}` : ''
-  return `${ts} [${tag}] ${msg}${suffix}`
 }
+
+const baseLogger = pino({
+  level: process.env.LOG_LEVEL ?? (isTest ? 'silent' : isProduction ? 'info' : 'debug'),
+  transport: buildTransport(),
+})
+
+/**
+ * Create a child logger bound to a tag. Useful for hot-path modules
+ * that want to avoid passing the tag on every call.
+ */
+export function childLogger(tag: string): pino.Logger {
+  return baseLogger.child({ tag })
+}
+
+// ---------- Facade matching the old log.{info,warn,error}(tag, msg, extra?) API ----------
+// This keeps all 12 existing call-sites working without changes.
 
 export const log = {
   info(tag: string, msg: string) {
-    console.log(formatMessage('info', tag, msg))
+    baseLogger.info({ tag }, msg)
   },
   warn(tag: string, msg: string, extra?: unknown) {
-    console.warn(formatMessage('warn', tag, msg, extra))
+    if (extra !== undefined) {
+      baseLogger.warn({ tag, error: extra instanceof Error ? extra.message : String(extra) }, msg)
+    } else {
+      baseLogger.warn({ tag }, msg)
+    }
   },
   error(tag: string, msg: string, extra?: unknown) {
-    console.error(formatMessage('error', tag, msg, extra))
+    if (extra instanceof Error) {
+      baseLogger.error({ tag, err: extra }, msg)
+    } else if (extra !== undefined) {
+      baseLogger.error({ tag, error: String(extra) }, msg)
+    } else {
+      baseLogger.error({ tag }, msg)
+    }
   },
 }
+
+/** The raw pino instance — use sparingly for middleware or when you need full pino features. */
+export { baseLogger }

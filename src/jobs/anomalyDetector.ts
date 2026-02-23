@@ -7,8 +7,7 @@
  *   3. Balance freefall (wallet_snapshots)
  *   4. Newly Sybil-flagged wallets
  *
- * For each anomaly, fires matching monitoring_subscription webhooks
- * (fire-and-forget, never blocks the main job).
+ * TODO: Add webhook notification when monitoring_subscriptions is implemented.
  */
 import type { Database as DatabaseType } from 'better-sqlite3'
 import { jobStats } from './jobStats.js'
@@ -39,47 +38,6 @@ interface SnapshotRow {
   wallet: string
   usdc_balance: number
   snapshot_at: string
-}
-
-interface MonitoringSubRow {
-  webhook_url: string | null
-  alert_type: string
-}
-
-function fireWebhook(url: string, payload: object): void {
-  // Fire-and-forget — never blocks the caller, but logs failures for visibility
-  ;(async () => {
-    try {
-      const resp = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(5_000),
-      })
-      if (!resp.ok) {
-        log.warn('webhook', `Delivery failed: ${url} responded ${resp.status}`)
-      }
-    } catch (err) {
-      log.warn('webhook', `Delivery error for ${url}`, err)
-    }
-  })()
-}
-
-function notifySubscribers(db: DatabaseType, anomaly: Anomaly): void {
-  const subs = db
-    .prepare<[string, string], MonitoringSubRow>(
-      `SELECT webhook_url, alert_type FROM monitoring_subscriptions
-       WHERE target_wallet = ?
-         AND active = 1
-         AND (alert_type = ? OR alert_type = 'all')`,
-    )
-    .all(anomaly.wallet, anomaly.type)
-
-  for (const sub of subs) {
-    if (sub.webhook_url) {
-      fireWebhook(sub.webhook_url, { anomaly, timestamp: anomaly.detected_at })
-    }
-  }
 }
 
 export async function runAnomalyDetector(db: DatabaseType): Promise<void> {
@@ -191,14 +149,14 @@ export async function runAnomalyDetector(db: DatabaseType): Promise<void> {
       })
     }
 
-    // ── Notify subscribers and log ─────────────────────────────────────────
+    // ── Log anomalies ─────────────────────────────────────────────────────
     for (const anomaly of anomalies) {
-      notifySubscribers(db, anomaly)
+      log.info('anomaly', `[${anomaly.severity}] ${anomaly.type} on ${anomaly.wallet}: ${anomaly.details}`)
     }
 
     jobStats.anomalyDetector.lastRun = detectedAt
     jobStats.anomalyDetector.anomaliesFound = anomalies.length
-    log.info('anomaly', `Found ${anomalies.length} anomaly(ies), notified relevant subscribers`)
+    log.info('anomaly', `Found ${anomalies.length} anomaly(ies)`)
   } catch (err) {
     log.error('anomaly', 'Anomaly detector error', err)
   }
