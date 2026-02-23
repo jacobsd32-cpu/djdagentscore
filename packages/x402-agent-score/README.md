@@ -1,6 +1,6 @@
 # x402-agent-score
 
-Hono middleware that checks the [DJD Agent Score](https://djd-agent-score.fly.dev) reputation of the wallet paying your x402 API — and optionally blocks low-reputation agents.
+Hono middleware that checks the [DJD Agent Score](https://djdagentscore.xyz) reputation of the wallet paying your x402 API — and optionally blocks low-reputation agents.
 
 Scores are based on on-chain signals: wallet age, transaction history, ETH balance, USDC activity, Basename ownership, and GitHub-verified registration. Scores range 0–100.
 
@@ -55,8 +55,8 @@ agentScoreGate({
   // Default: tries c.get('x402PayerAddress'), X-Agent-Wallet header, ?wallet query param
   getWallet: (c) => c.get('myPayerAddress'),
 
-  // Score API base URL. Default: https://djd-agent-score.fly.dev
-  apiUrl: 'https://djd-agent-score.fly.dev',
+  // Score API base URL. Default: https://djdagentscore.xyz
+  apiUrl: 'https://djdagentscore.xyz',
 
   // Local cache TTL (ms). Avoids a score API call on every request. Default: 5 min
   cacheTtl: 300_000,
@@ -110,7 +110,7 @@ A rejected request receives:
   "score": 12,
   "tier": "Unverified",
   "minRequired": 20,
-  "improve": "https://djd-agent-score.fly.dev/v1/agent/register"
+  "improve": "https://djdagentscore.xyz/v1/agent/register"
 }
 ```
 
@@ -119,7 +119,7 @@ A rejected request receives:
 Agents can boost their score by self-registering:
 
 ```bash
-curl -X POST https://djd-agent-score.fly.dev/v1/agent/register \
+curl -X POST https://djdagentscore.xyz/v1/agent/register \
   -H 'Content-Type: application/json' \
   -d '{"wallet":"0x...","name":"My Agent","github_url":"https://github.com/..."}'
 ```

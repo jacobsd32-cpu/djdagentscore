@@ -28,7 +28,7 @@ export interface AgentScoreOptions {
 
   /**
    * DJD Agent Score API base URL.
-   * Default: https://djd-agent-score.fly.dev
+   * Default: https://djdagentscore.xyz
    */
   apiUrl?: string
 
@@ -56,7 +56,7 @@ interface ScoreApiResponse {
 
 // ---------- Middleware ----------
 
-const DEFAULT_API_URL = 'https://djd-agent-score.fly.dev'
+const DEFAULT_API_URL = 'https://djdagentscore.xyz'
 
 export function agentScoreGate(options: AgentScoreOptions = {}): MiddlewareHandler {
   const {
@@ -132,10 +132,10 @@ export function agentScoreGate(options: AgentScoreOptions = {}): MiddlewareHandl
         )
       }
 
-      await next()
       c.header('X-Agent-Score', String(cached.score))
       c.header('X-Agent-Tier', cached.tier)
       c.header('X-Agent-Recommendation', cached.recommendation)
+      await next()
       return
     }
 
@@ -158,8 +158,8 @@ export function agentScoreGate(options: AgentScoreOptions = {}): MiddlewareHandl
     }
 
     // Allow through, tag as unscored so callers can handle it downstream
-    await next()
     c.header('X-Agent-Score', 'unscored')
     c.header('X-Agent-Tier', 'Unknown')
+    await next()
   }
 }
