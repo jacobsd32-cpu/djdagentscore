@@ -148,6 +148,10 @@ async function computeScore(wallet: Address): Promise<{
   dataAvailability: DataAvailability
   improvementPath: string[]
   integrityMultiplier: number
+  breakdown: Record<string, Record<string, number>>
+  scoreRange: { low: number; high: number }
+  topContributors: string[]
+  topDetractors: string[]
 }> {
   // ── STEP 1: Sybil detection (DB only, fast) ───────────────────────────────
   const sybil = detectSybil(wallet, db)
