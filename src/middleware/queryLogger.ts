@@ -6,6 +6,7 @@
  */
 import type { MiddlewareHandler } from 'hono'
 import { insertQueryLog } from '../db.js'
+import { log } from '../logger.js'
 
 const ENDPOINT_PRICES: Record<string, number> = {
   '/v1/score/basic': 0.03,
@@ -79,6 +80,6 @@ export const queryLoggerMiddleware: MiddlewareHandler = async (c, next) => {
     })
   } catch (err) {
     // Never let logging failure affect the response
-    console.error('[queryLogger] failed to log:', err)
+    log.error('queryLogger', 'Failed to log', err)
   }
 }
