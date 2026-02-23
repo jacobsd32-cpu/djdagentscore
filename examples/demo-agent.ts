@@ -10,7 +10,7 @@
  *   npx tsx examples/demo-agent.ts
  *
  * Environment variables (all optional):
- *   DJD_API_URL       — API base URL  (default: https://djd-agent-score.life.conway.tech)
+ *   DJD_API_URL       — API base URL  (default: https://djdagentscore.xyz)
  *   AGENT_WALLET      — Wallet address (default: 0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528)
  *   AGENT_GITHUB_URL  — GitHub URL to include in registration
  *   AGENT_WEBSITE_URL — Website URL to include in registration
@@ -21,7 +21,7 @@
 // ---------- Config ----------
 
 const API_URL = (
-  process.env.DJD_API_URL ?? 'https://djd-agent-score.life.conway.tech'
+  process.env.DJD_API_URL ?? 'https://djdagentscore.xyz'
 ).replace(/\/$/, '')
 
 const WALLET =
