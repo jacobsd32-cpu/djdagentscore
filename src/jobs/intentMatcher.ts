@@ -7,6 +7,7 @@
  */
 import type { Database as DatabaseType } from 'better-sqlite3'
 import { jobStats } from './jobStats.js'
+import { log } from '../logger.js'
 
 interface UnmatchedQuery {
   id: number
@@ -21,7 +22,7 @@ interface TxRow {
 }
 
 export async function runIntentMatcher(db: DatabaseType): Promise<void> {
-  console.log('[intent] Starting intent matcher...')
+  log.info('intent', 'Starting intent matcher...')
 
   try {
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
@@ -97,10 +98,8 @@ export async function runIntentMatcher(db: DatabaseType): Promise<void> {
 
     jobStats.intentMatcher.lastRun = new Date().toISOString()
     jobStats.intentMatcher.queriesProcessed = processed
-    console.log(
-      `[intent] Intent matcher: processed ${processed} queries, ${conversions} had follow-up transactions`,
-    )
+    log.info('intent', `Processed ${processed} queries, ${conversions} had follow-up transactions`)
   } catch (err) {
-    console.error('[intent] Intent matcher error:', err)
+    log.error('intent', 'Intent matcher error', err)
   }
 }

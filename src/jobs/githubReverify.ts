@@ -10,6 +10,7 @@
  */
 
 import { getAllRegistrationsWithGithub, updateGithubVerification } from '../db.js'
+import { log } from '../logger.js'
 
 const INTER_CALL_DELAY_MS = 2_000
 
@@ -37,7 +38,10 @@ async function fetchGithubRepo(
     if (process.env.GITHUB_TOKEN) {
       headers['Authorization'] = `Bearer ${process.env.GITHUB_TOKEN}`
     }
-    const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers })
+    const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+      headers,
+      signal: AbortSignal.timeout(10_000), // 10s timeout
+    })
     if (!resp.ok) return null
     const data = await resp.json() as { private: boolean; stargazers_count: number; pushed_at: string }
     if (data.private) return null
@@ -51,7 +55,7 @@ export async function runGithubReverify(): Promise<void> {
   const registrations = getAllRegistrationsWithGithub()
   if (registrations.length === 0) return
 
-  console.log(`[github-reverify] Re-verifying ${registrations.length} registered wallet(s)`)
+  log.info('github-reverify', `Re-verifying ${registrations.length} registered wallet(s)`)
   let updated = 0
 
   for (const reg of registrations) {
@@ -67,7 +71,7 @@ export async function runGithubReverify(): Promise<void> {
     if (result) {
       updateGithubVerification(reg.wallet, true, result.stars, result.pushedAt)
       updated++
-      console.log(`[github-reverify] ${reg.wallet.slice(0, 10)}… → ${parsed.owner}/${parsed.repo} (${result.stars}★)`)
+      log.info('github-reverify', `${reg.wallet.slice(0, 10)}… → ${parsed.owner}/${parsed.repo} (${result.stars}★)`)
     } else {
       updateGithubVerification(reg.wallet, false, null, null)
     }
@@ -75,5 +79,5 @@ export async function runGithubReverify(): Promise<void> {
     await new Promise((r) => setTimeout(r, INTER_CALL_DELAY_MS))
   }
 
-  console.log(`[github-reverify] Done — ${updated}/${registrations.length} verified`)
+  log.info('github-reverify', `Done — ${updated}/${registrations.length} verified`)
 }

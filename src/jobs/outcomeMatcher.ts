@@ -7,6 +7,7 @@
  */
 import type { Database as DatabaseType } from 'better-sqlite3'
 import { jobStats } from './jobStats.js'
+import { log } from '../logger.js'
 
 interface UnmatchedLookup {
   id: number
@@ -28,7 +29,7 @@ interface FraudRow {
 }
 
 export async function runOutcomeMatcher(db: DatabaseType): Promise<void> {
-  console.log('[outcome] Starting outcome matcher...')
+  log.info('outcome', 'Starting outcome matcher...')
 
   try {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
@@ -142,11 +143,8 @@ export async function runOutcomeMatcher(db: DatabaseType): Promise<void> {
 
     jobStats.outcomeMatcher.lastRun = new Date().toISOString()
     jobStats.outcomeMatcher.outcomesRecorded = processed
-    console.log(
-      `[outcome] Outcome matcher: processed ${processed} queries, ` +
-        `${successful} successful, ${frauds} fraud, ${noActivity} no_activity`,
-    )
+    log.info('outcome', `Processed ${processed} queries: ${successful} successful, ${frauds} fraud, ${noActivity} no_activity`)
   } catch (err) {
-    console.error('[outcome] Outcome matcher error:', err)
+    log.error('outcome', 'Outcome matcher error', err)
   }
 }

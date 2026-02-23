@@ -12,6 +12,7 @@
  */
 import type { Database as DatabaseType } from 'better-sqlite3'
 import { jobStats } from './jobStats.js'
+import { log } from '../logger.js'
 
 interface Anomaly {
   wallet: string
@@ -46,17 +47,20 @@ interface MonitoringSubRow {
 }
 
 function fireWebhook(url: string, payload: object): void {
-  // Fire-and-forget — errors are silently swallowed
+  // Fire-and-forget — never blocks the caller, but logs failures for visibility
   ;(async () => {
     try {
-      await fetch(url, {
+      const resp = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(5_000),
       })
-    } catch {
-      // Ignore webhook delivery failures
+      if (!resp.ok) {
+        log.warn('webhook', `Delivery failed: ${url} responded ${resp.status}`)
+      }
+    } catch (err) {
+      log.warn('webhook', `Delivery error for ${url}`, err)
     }
   })()
 }
@@ -79,7 +83,7 @@ function notifySubscribers(db: DatabaseType, anomaly: Anomaly): void {
 }
 
 export async function runAnomalyDetector(db: DatabaseType): Promise<void> {
-  console.log('[anomaly] Starting anomaly detector...')
+  log.info('anomaly', 'Starting anomaly detector...')
 
   try {
     const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString()
@@ -194,11 +198,9 @@ export async function runAnomalyDetector(db: DatabaseType): Promise<void> {
 
     jobStats.anomalyDetector.lastRun = detectedAt
     jobStats.anomalyDetector.anomaliesFound = anomalies.length
-    console.log(
-      `[anomaly] Anomaly detector: found ${anomalies.length} anomaly(ies), notified relevant subscribers`,
-    )
+    log.info('anomaly', `Found ${anomalies.length} anomaly(ies), notified relevant subscribers`)
   } catch (err) {
-    console.error('[anomaly] Anomaly detector error:', err)
+    log.error('anomaly', 'Anomaly detector error', err)
   }
 }
 
@@ -227,11 +229,11 @@ export async function runSybilMonitor(db: DatabaseType): Promise<void> {
         .get(wallet, wallet, fiveMinAgo)
 
       if (newTx && newTx.count > 0) {
-        console.log(`[sybil-monitor] Flagged wallet ${wallet} has ${newTx.count} new tx(s) — queued for rescore`)
+        log.info('sybil', `Flagged wallet ${wallet} has ${newTx.count} new tx(s) — queued for rescore`)
         // The scoring engine will re-evaluate sybil on next refresh
       }
     }
   } catch (err) {
-    console.error('[sybil-monitor] Error:', err)
+    log.error('sybil', 'Monitor error', err)
   }
 }
