@@ -50,7 +50,7 @@ import type {
   ScoreRow,
 } from '../types.js'
 
-const MODEL_VERSION = '1.0.0'
+const MODEL_VERSION = '2.0.0'
 
 // Max time to wait for RPC computation before falling back to identity-only score.
 // On-demand user requests use this timeout so they never hang for 90-150s.
