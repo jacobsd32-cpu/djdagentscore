@@ -11,7 +11,7 @@
 import { createHash } from 'node:crypto'
 import type { MiddlewareHandler } from 'hono'
 import { countFreeTierUsesToday } from '../db.js'
-import { getOrCalculateScore } from '../scoring/engine.js'
+import { getOrCalculateScore, MODEL_VERSION } from '../scoring/engine.js'
 import { isValidAddress } from '../types.js'
 import type { Address } from '../types.js'
 
@@ -60,7 +60,7 @@ export const freeTierMiddleware: MiddlewareHandler = async (c, next) => {
     tier: result.tier,
     confidence: (result as unknown as Record<string, unknown>).confidence ?? 0,
     recommendation: (result as unknown as Record<string, unknown>).recommendation ?? 'insufficient_history',
-    modelVersion: '1.0.0',
+    modelVersion: MODEL_VERSION,
     lastUpdated: result.lastUpdated,
     computedAt: result.computedAt,
     scoreFreshness: result.scoreFreshness,

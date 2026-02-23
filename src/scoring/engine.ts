@@ -51,17 +51,19 @@ import type {
   ScoreRow,
 } from '../types.js'
 
-const MODEL_VERSION = '2.0.0'
+export const MODEL_VERSION = '2.0.0'
 
 // Max time to wait for RPC computation before falling back to identity-only score.
 // On-demand user requests use this timeout so they never hang for 90-150s.
 // Pass 0 to disable (used by background refresh jobs).
 const SCORE_COMPUTE_TIMEOUT_MS = 75_000
 
-// Prevent simultaneous background stale-serve refreshes from OOMing the machine.
-// If a refresh is already in flight, the stale score is still returned but no new
-// background scan is started. The hourly refresh job catches anything that was skipped.
-let _bgRefreshActive = false
+// Track which wallets have a background stale-serve refresh in flight.
+// Per-wallet tracking allows concurrent refreshes for DIFFERENT wallets
+// while still deduplicating multiple requests for the SAME stale wallet.
+// Cap the Set size to prevent unbounded memory growth if something goes wrong.
+const _bgRefreshingWallets = new Set<string>()
+const MAX_CONCURRENT_BG_REFRESHES = 5
 
 /** Linear decay from 1.0 (just computed) → 0.0 (at cache expiry).
  *  Consumers can multiply their trust by this factor. */
@@ -215,12 +217,30 @@ async function computeScore(wallet: Address): Promise<{
   const behaviorTimestamps = getTransferTimestamps(wallet)
   const behaviorResult = calcBehavior(behaviorTimestamps)
 
-  // ── STEP 5: Dimension scores (no caps/penalties — P4 uses multiplicative) ─
-  const relScore = rel.score
-  const viaScore = via.score
-  const idnScore = idn.score
+  // ── STEP 5: Dimension scores — apply sybil caps + gaming penalties ────────
+  // Sybil caps are surgical: they limit individual dimensions that are likely
+  // inflated by sybil activity (e.g., symmetric_transactions → cap Reliability at 30).
+  // Gaming penalties are subtractive: they reduce specific dimensions based on
+  // detected gaming patterns (e.g., burst_and_stop → -8 Reliability).
+  // The integrity multiplier (Step 7) is a separate, blunt instrument applied
+  // to the composite score for overall trust reduction.
+  let relScore = rel.score
+  let viaScore = via.score
+  let idnScore = idn.score
   const capScore = cap.score
   const behScore = behaviorResult.score
+
+  // Apply sybil caps — clamp dimensions to ceilings when sybil patterns detected
+  if (sybil.caps.reliability !== undefined) {
+    relScore = Math.min(relScore, sybil.caps.reliability)
+  }
+  if (sybil.caps.identity !== undefined) {
+    idnScore = Math.min(idnScore, sybil.caps.identity)
+  }
+
+  // Apply gaming penalties — subtract per-dimension deductions
+  relScore = Math.max(0, relScore - gaming.penalties.reliability)
+  viaScore = Math.max(0, viaScore - gaming.penalties.viability)
 
   // ── STEP 6: Calculate raw composite ─────────────────────────────────────
   const rawComposite = Math.round(
@@ -275,7 +295,7 @@ async function computeScore(wallet: Address): Promise<{
     confidence,
   })
 
-  // ── Assemble dimensions object with capped/penalized scores ───────────────
+  // ── Assemble dimensions object with cap/penalty-adjusted scores ──────────
   const dimensions: ScoreDimensions = {
     reliability: {
       score: relScore,
@@ -441,11 +461,12 @@ export async function getOrCalculateScore(
       staleResult.score = Math.round(staleResult.score * fraudMult)
       staleResult.tier = scoreToTier(staleResult.score) as FullScoreResponse['tier']
     }
-    // Fire-and-forget background refresh — at most 1 running at a time.
+    // Fire-and-forget background refresh — deduplicated per wallet, capped globally.
     // Without this guard, 25 simultaneous requests for stale wallets would fire 25
     // concurrent computeScore calls (each doing 120+ getLogs), OOM-ing the machine.
-    if (!_bgRefreshActive) {
-      _bgRefreshActive = true
+    const wKey = wallet.toLowerCase()
+    if (!_bgRefreshingWallets.has(wKey) && _bgRefreshingWallets.size < MAX_CONCURRENT_BG_REFRESHES) {
+      _bgRefreshingWallets.add(wKey)
       computeScore(wallet).then(result => {
         upsertScore(wallet, result.composite, result.reliability, result.viability, result.identity, result.capability, result.behavior, result.rawData, {
           confidence: result.confidence,
@@ -454,7 +475,7 @@ export async function getOrCalculateScore(
           sybilFlag: result.sybilFlag,
         })
       }).catch(() => { /* ignore background refresh errors */ }).finally(() => {
-        _bgRefreshActive = false
+        _bgRefreshingWallets.delete(wKey)
       })
     }
     return { ...staleResult, stale: true }
