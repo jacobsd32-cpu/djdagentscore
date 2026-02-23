@@ -1,4 +1,34 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+
+// Mock modules that trigger side-effects (real SQLite open) on import.
+// computeIntegrityMultiplier is a pure function and doesn't use any of these.
+vi.mock('../src/db.js', () => ({
+  db: { prepare: () => ({ get: () => null, all: () => [], run: () => {} }), exec: () => {}, pragma: () => {}, transaction: (fn: Function) => fn },
+  upsertScore: vi.fn(),
+  getScore: vi.fn(),
+  getScoreHistory: vi.fn(() => []),
+  scoreToTier: (s: number) => s >= 90 ? 'Elite' : s >= 75 ? 'Trusted' : s >= 50 ? 'Established' : s >= 25 ? 'Emerging' : 'Unverified',
+  countReportsByTarget: vi.fn(() => 0),
+  countUniquePartners: vi.fn(() => 0),
+  countRatingsReceived: vi.fn(() => 0),
+  countPriorQueries: vi.fn(() => 0),
+  getRegistration: vi.fn(),
+  getWalletX402Stats: vi.fn(() => ({ x402TxCount: 0, x402InflowsUsd: 0, x402OutflowsUsd: 0, x402FirstSeen: null })),
+  getWalletIndexFirstSeen: vi.fn(() => null),
+  getTransferTimestamps: vi.fn(() => []),
+}))
+vi.mock('../src/blockchain.js', () => ({
+  getWalletUSDCData: vi.fn(),
+  getCurrentBlock: vi.fn(() => 0n),
+  estimateWalletAgeDays: vi.fn(() => 0),
+  getTransactionCount: vi.fn(() => 0),
+  getETHBalance: vi.fn(() => 0n),
+  hasBasename: vi.fn(() => null),
+}))
+vi.mock('../src/logger.js', () => ({
+  log: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}))
+
 import { computeIntegrityMultiplier } from '../src/scoring/engine.js'
 
 describe('computeIntegrityMultiplier', () => {
