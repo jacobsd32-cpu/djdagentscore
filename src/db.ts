@@ -382,6 +382,19 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_usdc_transfers_to ON usdc_transfers(to_wallet);
   CREATE INDEX IF NOT EXISTS idx_usdc_transfers_block ON usdc_transfers(block_number);
 
+  -- P3: Calibration Reports
+  CREATE TABLE IF NOT EXISTS calibration_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    generated_at TEXT,
+    period_start TEXT,
+    period_end TEXT,
+    total_scored INTEGER,
+    avg_score_by_outcome TEXT,
+    tier_accuracy TEXT,
+    recommendations TEXT,
+    model_version TEXT
+  );
+
   CREATE TABLE IF NOT EXISTS wallet_transfer_stats (
     wallet TEXT PRIMARY KEY,
     total_tx_count INTEGER DEFAULT 0,
