@@ -1,5 +1,10 @@
 export type Address = `0x${string}`
 
+/** Type guard: validates a 0x-prefixed, 40-hex-char Ethereum address. */
+export function isValidAddress(addr: string): addr is Address {
+  return /^0x[0-9a-fA-F]{40}$/.test(addr)
+}
+
 export type Tier = 'Elite' | 'Trusted' | 'Established' | 'Emerging' | 'Unverified'
 
 export type ReportReason =
@@ -56,11 +61,22 @@ export interface CapabilityData {
   successfulReplications: number
 }
 
+export type BehaviorClassification = 'organic' | 'mixed' | 'automated' | 'suspicious' | 'insufficient_data'
+
+export interface BehaviorData {
+  interArrivalCV: number
+  hourlyEntropy: number
+  maxGapHours: number
+  classification: BehaviorClassification
+  txCount: number
+}
+
 export interface ScoreDimensions {
   reliability: { score: number; data: ReliabilityData }
   viability: { score: number; data: ViabilityData }
   identity: { score: number; data: IdentityData }
   capability: { score: number; data: CapabilityData }
+  behavior?: { score: number; data: BehaviorData }
 }
 
 // ---------- Data Availability ----------
@@ -83,6 +99,10 @@ export interface BasicScoreResponse {
   recommendation: string
   modelVersion: string
   lastUpdated: string
+  /** ISO-8601 timestamp of when the underlying score was computed (may differ from lastUpdated when served from cache). */
+  computedAt: string
+  /** 0–1 freshness factor: 1 = just computed, decays linearly toward 0 at cache expiry. Consumers can use this to weight trust. */
+  scoreFreshness: number
   stale?: boolean
 }
 
@@ -99,6 +119,11 @@ export interface FullScoreResponse extends BasicScoreResponse {
   dataAvailability: DataAvailability
   improvementPath?: string[]
   scoreHistory: ScoreHistoryEntry[]
+  integrityMultiplier?: number
+  breakdown?: Record<string, Record<string, number>>
+  scoreRange?: { low: number; high: number }
+  topContributors?: string[]
+  topDetractors?: string[]
 }
 
 // ---------- DB row shapes ----------
@@ -110,6 +135,7 @@ export interface ScoreRow {
   viability_score: number
   identity_score: number
   capability_score: number
+  behavior_score: number | null
   tier: string
   raw_data: string
   calculated_at: string
