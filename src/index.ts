@@ -2,6 +2,7 @@ import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 import { cors } from 'hono/cors'
+import { bodyLimit } from 'hono/body-limit'
 import { paymentMiddleware, type Network } from 'x402-hono'
 
 import healthRoute from './routes/health.js'
@@ -48,6 +49,10 @@ const app = new Hono<AppEnv>()
 
 app.use('*', logger())
 app.use('*', cors())
+app.use('*', bodyLimit({
+  maxSize: 100 * 1024, // 100 KB
+  onError: (c) => c.json({ error: 'Request body too large' }, 413),
+}))
 app.use('*', responseHeadersMiddleware)  // adds X-DJD-* headers to every response
 app.use('*', queryLoggerMiddleware)       // logs every request post-response
 
