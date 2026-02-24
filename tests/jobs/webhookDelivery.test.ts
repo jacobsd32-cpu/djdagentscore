@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { testDb } = vi.hoisted(() => {
   const _Database = require('better-sqlite3')
   const testDb = new _Database(':memory:')
-  testDb.prepare(`
+  testDb
+    .prepare(`
     CREATE TABLE IF NOT EXISTS webhooks (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       wallet      TEXT NOT NULL,
@@ -17,9 +18,11 @@ const { testDb } = vi.hoisted(() => {
       last_delivery_at TEXT,
       disabled_at TEXT
     )
-  `).run()
+  `)
+    .run()
 
-  testDb.prepare(`
+  testDb
+    .prepare(`
     CREATE TABLE IF NOT EXISTS webhook_deliveries (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       webhook_id  INTEGER NOT NULL REFERENCES webhooks(id),
@@ -32,7 +35,8 @@ const { testDb } = vi.hoisted(() => {
       next_retry_at TEXT,
       created_at  TEXT NOT NULL DEFAULT (datetime('now'))
     )
-  `).run()
+  `)
+    .run()
 
   return { testDb }
 })
@@ -53,16 +57,18 @@ vi.mock('../../src/logger.js', () => ({
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
 
-import { queueWebhookEvent, processWebhookQueue } from '../../src/jobs/webhookDelivery.js'
+import { processWebhookQueue, queueWebhookEvent } from '../../src/jobs/webhookDelivery.js'
 
-function insertWebhook(overrides: Partial<{
-  wallet: string
-  url: string
-  secret: string
-  events: string[]
-  tier: string
-  is_active: number
-}> = {}): number {
+function insertWebhook(
+  overrides: Partial<{
+    wallet: string
+    url: string
+    secret: string
+    events: string[]
+    tier: string
+    is_active: number
+  }> = {},
+): number {
   const {
     wallet = '0xabc123',
     url = 'https://example.com/hook',
@@ -72,10 +78,12 @@ function insertWebhook(overrides: Partial<{
     is_active = 1,
   } = overrides
 
-  const result = testDb.prepare(`
+  const result = testDb
+    .prepare(`
     INSERT INTO webhooks (wallet, url, secret, events, tier, is_active)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run(wallet, url, secret, JSON.stringify(events), tier, is_active)
+  `)
+    .run(wallet, url, secret, JSON.stringify(events), tier, is_active)
 
   return Number(result.lastInsertRowid)
 }
@@ -157,10 +165,12 @@ describe('processWebhookQueue', () => {
     const hookId = insertWebhook({ secret: 'my-secret-key' })
 
     // Insert a pending delivery
-    testDb.prepare(`
+    testDb
+      .prepare(`
       INSERT INTO webhook_deliveries (webhook_id, event_type, payload, attempt)
       VALUES (?, 'score.updated', '{"event":"score.updated","data":{}}', 1)
-    `).run(hookId)
+    `)
+      .run(hookId)
 
     // Mock a successful fetch
     mockFetch.mockResolvedValueOnce({
@@ -200,10 +210,12 @@ describe('processWebhookQueue', () => {
   it('handles failed delivery by incrementing attempt and setting next_retry_at', async () => {
     const hookId = insertWebhook()
 
-    testDb.prepare(`
+    testDb
+      .prepare(`
       INSERT INTO webhook_deliveries (webhook_id, event_type, payload, attempt)
       VALUES (?, 'score.updated', '{"event":"score.updated","data":{}}', 1)
-    `).run(hookId)
+    `)
+      .run(hookId)
 
     // Mock a failed fetch
     mockFetch.mockResolvedValueOnce({
@@ -230,10 +242,12 @@ describe('processWebhookQueue', () => {
   it('handles network error (fetch throws) by scheduling retry', async () => {
     const hookId = insertWebhook()
 
-    testDb.prepare(`
+    testDb
+      .prepare(`
       INSERT INTO webhook_deliveries (webhook_id, event_type, payload, attempt)
       VALUES (?, 'score.updated', '{"event":"score.updated","data":{}}', 1)
-    `).run(hookId)
+    `)
+      .run(hookId)
 
     mockFetch.mockRejectedValueOnce(new Error('Network error'))
 
@@ -258,10 +272,12 @@ describe('processWebhookQueue', () => {
   it('does not pick up already-delivered items', async () => {
     const hookId = insertWebhook()
 
-    testDb.prepare(`
+    testDb
+      .prepare(`
       INSERT INTO webhook_deliveries (webhook_id, event_type, payload, attempt, delivered_at, status_code)
       VALUES (?, 'score.updated', '{"event":"score.updated","data":{}}', 1, datetime('now'), 200)
-    `).run(hookId)
+    `)
+      .run(hookId)
 
     await processWebhookQueue()
     expect(mockFetch).not.toHaveBeenCalled()
@@ -271,10 +287,12 @@ describe('processWebhookQueue', () => {
     const hookId = insertWebhook()
 
     // Set next_retry_at far in the future
-    testDb.prepare(`
+    testDb
+      .prepare(`
       INSERT INTO webhook_deliveries (webhook_id, event_type, payload, attempt, next_retry_at)
       VALUES (?, 'score.updated', '{"event":"score.updated","data":{}}', 2, datetime('now', '+1 hour'))
-    `).run(hookId)
+    `)
+      .run(hookId)
 
     await processWebhookQueue()
     expect(mockFetch).not.toHaveBeenCalled()

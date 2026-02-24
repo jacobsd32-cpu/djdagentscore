@@ -6,7 +6,7 @@
  *
  * Formula: txSignal×0.25 + ageSignal×0.25 + partnerSignal×0.20 + ratingSignal×0.15 + querySignal×0.15
  */
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { calcConfidence } from '../src/scoring/confidence.js'
 
 describe('calcConfidence', () => {

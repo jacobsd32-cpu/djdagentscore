@@ -38,9 +38,9 @@ export interface CalibrationReport {
   period_start: string
   period_end: string
   total_scored: number
-  avg_score_by_outcome: string  // JSON: Record<outcome_type, { avgScore, count }>
-  tier_accuracy: string         // JSON: Record<tier, { total, positive, negative, positiveRate }>
-  recommendations: string       // JSON: string[]
+  avg_score_by_outcome: string // JSON: Record<outcome_type, { avgScore, count }>
+  tier_accuracy: string // JSON: Record<tier, { total, positive, negative, positiveRate }>
+  recommendations: string // JSON: string[]
   model_version: string
 }
 
@@ -71,7 +71,8 @@ export function generateCalibrationReport(db: Database, modelVersion: string): C
   // ── 1. Average score by outcome type ────────────────────────────────────
   // Uses score_at_query (the score at the time the lookup was made) so we
   // evaluate the model's prediction, not the current (possibly updated) score.
-  const outcomeRows = db.prepare(`
+  const outcomeRows = db
+    .prepare(`
     SELECT outcome_type,
            ROUND(AVG(score_at_query)) as avg_score,
            COUNT(*) as count
@@ -79,7 +80,8 @@ export function generateCalibrationReport(db: Database, modelVersion: string): C
     WHERE outcome_at >= ?
       AND score_at_query IS NOT NULL
     GROUP BY outcome_type
-  `).all(periodStart) as OutcomeRow[]
+  `)
+    .all(periodStart) as OutcomeRow[]
 
   const avgScoreByOutcome: Record<string, { avgScore: number; count: number }> = {}
   let totalScored = 0
@@ -94,13 +96,15 @@ export function generateCalibrationReport(db: Database, modelVersion: string): C
   // ── 2. Tier accuracy ────────────────────────────────────────────────────
   // For each tier, count positive/negative/total outcomes.
   // Uses tier_at_query so we evaluate the tier assigned at prediction time.
-  const tierRows = db.prepare(`
+  const tierRows = db
+    .prepare(`
     SELECT tier_at_query as tier, outcome_type, COUNT(*) as count
     FROM score_outcomes
     WHERE outcome_at >= ?
       AND tier_at_query IS NOT NULL
     GROUP BY tier_at_query, outcome_type
-  `).all(periodStart) as TierRow[]
+  `)
+    .all(periodStart) as TierRow[]
 
   const tierStats: Record<string, { total: number; positive: number; negative: number; positiveRate: number }> = {}
 
@@ -127,8 +131,8 @@ export function generateCalibrationReport(db: Database, modelVersion: string): C
   const recommendations: string[] = []
 
   // 3a. Score-outcome separation: positive outcomes should have higher avg scores
-  const positiveScores = outcomeRows.filter(r => POSITIVE_OUTCOMES.has(r.outcome_type))
-  const negativeScores = outcomeRows.filter(r => NEGATIVE_OUTCOMES.has(r.outcome_type))
+  const positiveScores = outcomeRows.filter((r) => POSITIVE_OUTCOMES.has(r.outcome_type))
+  const negativeScores = outcomeRows.filter((r) => NEGATIVE_OUTCOMES.has(r.outcome_type))
   const avgPositive = weightedAvg(positiveScores)
   const avgNegative = weightedAvg(negativeScores)
 
@@ -137,27 +141,27 @@ export function generateCalibrationReport(db: Database, modelVersion: string): C
     if (separation < 10) {
       recommendations.push(
         `Weak score-outcome separation (${separation.toFixed(0)} points). ` +
-        `Positive outcomes avg ${avgPositive.toFixed(0)}, negative avg ${avgNegative.toFixed(0)}. ` +
-        `Consider reweighting dimensions.`,
+          `Positive outcomes avg ${avgPositive.toFixed(0)}, negative avg ${avgNegative.toFixed(0)}. ` +
+          `Consider reweighting dimensions.`,
       )
     } else {
       recommendations.push(
         `Score-outcome separation is healthy (${separation.toFixed(0)} points). ` +
-        `Positive avg ${avgPositive.toFixed(0)}, negative avg ${avgNegative.toFixed(0)}.`,
+          `Positive avg ${avgPositive.toFixed(0)}, negative avg ${avgNegative.toFixed(0)}.`,
       )
     }
   }
 
   // 3b. Monotonicity: higher tiers should have better positive rates
-  const orderedTiers = TIER_ORDER.filter(t => tierStats[t])
+  const orderedTiers = TIER_ORDER.filter((t) => tierStats[t])
   let lastRate = Infinity
   for (const tier of orderedTiers) {
     const rate = tierStats[tier].positiveRate
     if (rate > lastRate) {
       recommendations.push(
         `Monotonicity violation: ${tier} (${(rate * 100).toFixed(0)}% positive) ` +
-        `outperforms the tier above it (${(lastRate * 100).toFixed(0)}% positive). ` +
-        `Tier thresholds may need adjustment.`,
+          `outperforms the tier above it (${(lastRate * 100).toFixed(0)}% positive). ` +
+          `Tier thresholds may need adjustment.`,
       )
     }
     lastRate = rate
@@ -167,7 +171,7 @@ export function generateCalibrationReport(db: Database, modelVersion: string): C
   if (avgScoreByOutcome.fraud_report && avgScoreByOutcome.fraud_report.avgScore > 50) {
     recommendations.push(
       `Fraudulent wallets have moderate avg score (${avgScoreByOutcome.fraud_report.avgScore}). ` +
-      `Integrity multiplier or sybil detection may need tuning.`,
+        `Integrity multiplier or sybil detection may need tuning.`,
     )
   }
 
@@ -175,7 +179,7 @@ export function generateCalibrationReport(db: Database, modelVersion: string): C
   if (avgScoreByOutcome.no_activity && avgScoreByOutcome.no_activity.avgScore > 60) {
     recommendations.push(
       `Inactive wallets have high avg score (${avgScoreByOutcome.no_activity.avgScore}). ` +
-      `Consider adding recency decay.`,
+        `Consider adding recency decay.`,
     )
   }
 
@@ -197,9 +201,14 @@ export function generateCalibrationReport(db: Database, modelVersion: string): C
        avg_score_by_outcome, tier_accuracy, recommendations, model_version)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
-    report.generated_at, report.period_start, report.period_end,
-    report.total_scored, report.avg_score_by_outcome, report.tier_accuracy,
-    report.recommendations, report.model_version,
+    report.generated_at,
+    report.period_start,
+    report.period_end,
+    report.total_scored,
+    report.avg_score_by_outcome,
+    report.tier_accuracy,
+    report.recommendations,
+    report.model_version,
   )
 
   return report

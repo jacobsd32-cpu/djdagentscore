@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
-import { getScore, getScoreHistory, getRegistration, scoreToTier } from '../db.js'
+import { getRegistration, getScore, getScoreHistory, scoreToTier } from '../db.js'
 import { getOrCalculateScore } from '../scoring/engine.js'
-import type { ScoreRow, ScoreHistoryRow, AgentRegistrationRow, Address } from '../types.js'
+import type { Address, AgentRegistrationRow, ScoreHistoryRow, ScoreRow } from '../types.js'
 
 // ---------- Helpers ----------
 
@@ -19,27 +19,38 @@ function scoreColor(s: number): string {
 }
 
 function tierClass(tier: string): string {
-  return ({
-    Elite:       'stt-elite',
-    Trusted:     'stt-trusted',
-    Established: 'stt-established',
-    Emerging:    'stt-emerging',
-  } as Record<string, string>)[tier] ?? 'stt-unverified'
+  return (
+    (
+      {
+        Elite: 'stt-elite',
+        Trusted: 'stt-trusted',
+        Established: 'stt-established',
+        Emerging: 'stt-emerging',
+      } as Record<string, string>
+    )[tier] ?? 'stt-unverified'
+  )
 }
 
 function recClass(rec: string): string {
-  return ({
-    proceed:               'rc-proceed',
-    proceed_with_caution:  'rc-caution',
-    insufficient_history:  'rc-insufficient',
-    high_risk:             'rc-high-risk',
-    flagged_for_review:    'rc-flagged',
-  } as Record<string, string>)[rec] ?? 'rc-insufficient'
+  return (
+    (
+      {
+        proceed: 'rc-proceed',
+        proceed_with_caution: 'rc-caution',
+        insufficient_history: 'rc-insufficient',
+        high_risk: 'rc-high-risk',
+        flagged_for_review: 'rc-flagged',
+      } as Record<string, string>
+    )[rec] ?? 'rc-insufficient'
+  )
 }
 
 function fmtDate(iso: string): string {
-  try { return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }
-  catch { return iso }
+  try {
+    return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+  } catch {
+    return iso
+  }
 }
 
 function fmtWallet(w: string): string {
@@ -67,33 +78,38 @@ function renderPage(
   // Force HTTPS in URLs — behind Fly.io's proxy, origin can report http://
   const safeOrigin = origin.replace(/^http:/, 'https:')
   const badgeUrl = `${safeOrigin}/v1/badge/${wallet}.svg`
-  const pageUrl  = `${safeOrigin}/agent/${wallet}`
-  const s   = score?.composite_score ?? 0
+  const pageUrl = `${safeOrigin}/agent/${wallet}`
+  const s = score?.composite_score ?? 0
   const tier = score?.tier ?? 'Unverified'
   const conf = score?.confidence ?? 0
-  const rec  = score?.recommendation ?? 'insufficient_history'
-  const rel  = score?.reliability_score ?? 0
-  const via  = score?.viability_score   ?? 0
-  const idn  = score?.identity_score    ?? 0
-  const beh  = score?.behavior_score    ?? 0
-  const cap  = score?.capability_score  ?? 0
+  const rec = score?.recommendation ?? 'insufficient_history'
+  const rel = score?.reliability_score ?? 0
+  const via = score?.viability_score ?? 0
+  const idn = score?.identity_score ?? 0
+  const beh = score?.behavior_score ?? 0
+  const cap = score?.capability_score ?? 0
   const sybil = score ? (score.sybil_flag ?? 0) === 1 : false
   const calcAt = score?.calculated_at ?? ''
 
   const displayName = reg?.name ?? fmtWallet(wallet)
-  const ogTitle     = `${esc(displayName)} — ${s} · ${esc(tier)} | DJD Agent Score`
-  const ogDesc      = reg?.description
+  const ogTitle = `${esc(displayName)} — ${s} · ${esc(tier)} | DJD Agent Score`
+  const ogDesc = reg?.description
     ? esc(reg.description)
     : `On-chain reputation score for ${fmtWallet(wallet)}: ${s}/100 (${tier})`
 
   const isRegistered = !!reg
 
-  const historyRows = history.slice(0, 8).map((h) => `
+  const historyRows = history
+    .slice(0, 8)
+    .map(
+      (h) => `
     <div class="hist-row">
       <span class="hist-score" style="color:${scoreColor(h.score)}">${h.score}</span>
       <span class="hist-tier">${scoreToTier(h.score)}</span>
       <span class="hist-date">${fmtDate(h.calculated_at)}</span>
-    </div>`).join('')
+    </div>`,
+    )
+    .join('')
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -208,24 +224,35 @@ footer{border-top:1px solid var(--border);padding:24px 0 36px;margin-top:40px}
   <div class="agent-wallet">${esc(wallet)}</div>
   ${reg?.description ? `<div class="agent-desc">${esc(reg.description)}</div>` : ''}
   <div class="agent-links">
-    ${reg?.github_url ? `<a class="agent-link" href="${esc(reg.github_url)}" target="_blank" rel="noopener">
+    ${
+      reg?.github_url
+        ? `<a class="agent-link" href="${esc(reg.github_url)}" target="_blank" rel="noopener">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
       ${esc(reg.github_url.replace('https://github.com/', ''))}${reg.github_stars !== null ? ` · ${reg.github_stars}★` : ''}
-    </a>` : ''}
-    ${reg?.website_url ? `<a class="agent-link" href="${esc(reg.website_url)}" target="_blank" rel="noopener">
+    </a>`
+        : ''
+    }
+    ${
+      reg?.website_url
+        ? `<a class="agent-link" href="${esc(reg.website_url)}" target="_blank" rel="noopener">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
       ${esc(new URL(reg.website_url).hostname)}
-    </a>` : ''}
+    </a>`
+        : ''
+    }
   </div>
 </div>
 
-${!score ? `
+${
+  !score
+    ? `
 <div class="unscored" style="padding:60px 0">
   <div class="unscored-t">Not yet scored</div>
   <div class="unscored-d">This wallet hasn't been scored yet. Use the free lookup tool to score it now.</div>
   <a class="btn-score" href="/?wallet=${esc(wallet)}#lookup">Score this wallet →</a>
 </div>
-` : `
+`
+    : `
 <div class="main">
   <!-- LEFT: score + dimensions + history -->
   <div>
@@ -248,17 +275,21 @@ ${!score ? `
     <div class="card">
       <div class="card-label">Dimensions</div>
       ${dimBar('Reliability', rel, scoreColor(rel))}
-      ${dimBar('Viability',   via, scoreColor(via))}
-      ${dimBar('Identity',    idn, scoreColor(idn))}
-      ${dimBar('Behavior',    beh, scoreColor(beh))}
-      ${dimBar('Capability',  cap, scoreColor(cap))}
+      ${dimBar('Viability', via, scoreColor(via))}
+      ${dimBar('Identity', idn, scoreColor(idn))}
+      ${dimBar('Behavior', beh, scoreColor(beh))}
+      ${dimBar('Capability', cap, scoreColor(cap))}
     </div>
 
-    ${historyRows ? `
+    ${
+      historyRows
+        ? `
     <div class="card">
       <div class="card-label">Score History</div>
       ${historyRows}
-    </div>` : ''}
+    </div>`
+        : ''
+    }
   </div>
 
   <!-- RIGHT: badge + share -->
@@ -282,15 +313,20 @@ ${!score ? `
       </div>
     </div>
 
-    ${!isRegistered ? `
+    ${
+      !isRegistered
+        ? `
     <div class="card" style="margin-top:16px;border-color:rgba(34,211,238,0.2)">
       <div class="card-label" style="color:var(--accent)">Boost this score</div>
       <div style="font-size:12.5px;color:var(--text-dim);line-height:1.65;margin-bottom:14px">Is this your wallet? Register it to add +15 identity points and appear on the leaderboard.</div>
       <a href="/#api-ref" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent)">See registration docs →</a>
-    </div>` : ''}
+    </div>`
+        : ''
+    }
   </div>
 </div>
-`}
+`
+}
 
 <footer>
   <div class="ft-disc">DJD Agent Score is experimental. Scores are algorithmically generated from public blockchain data and unverified submissions. Not financial advice. Not a consumer report under the FCRA. <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a></div>
@@ -332,14 +368,14 @@ agentRoute.get('/:wallet', async (c) => {
   if (!score) {
     try {
       await getOrCalculateScore(raw as Address, false)
-      score = getScore(raw)   // re-read from cache after computation
+      score = getScore(raw) // re-read from cache after computation
     } catch {
       // computation failed — score stays undefined, page renders unscored state
     }
   }
 
   const history = getScoreHistory(raw)
-  const reg     = getRegistration(raw)
+  const reg = getRegistration(raw)
 
   const html = renderPage(raw, score, history, reg, origin)
   return c.html(html)

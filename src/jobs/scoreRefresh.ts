@@ -11,10 +11,10 @@
 import { parseAbi } from 'viem'
 import { getPublicClient, USDC_ADDRESS } from '../blockchain.js'
 import { db, getExpiredWallets } from '../db.js'
-import { getOrCalculateScore } from '../scoring/engine.js'
-import { jobStats } from './jobStats.js'
-import type { Address } from '../types.js'
 import { log } from '../logger.js'
+import { getOrCalculateScore } from '../scoring/engine.js'
+import type { Address } from '../types.js'
+import { jobStats } from './jobStats.js'
 
 const REFRESH_BATCH_SIZE = 50
 const INTER_WALLET_DELAY_MS = 200
@@ -125,10 +125,19 @@ async function snapshotAndUpdateMetrics(wallet: string): Promise<void> {
        last_updated        = excluded.last_updated`,
   ).run(
     wallet,
-    m24.tx_count, m7.tx_count, m30.tx_count,
-    m24.volume_in, m7.volume_in, m30.volume_in,
-    m24.volume_out, m7.volume_out, m30.volume_out,
-    income_burn_ratio, balance_trend_7d, unique_partners_30d, nowStr,
+    m24.tx_count,
+    m7.tx_count,
+    m30.tx_count,
+    m24.volume_in,
+    m7.volume_in,
+    m30.volume_in,
+    m24.volume_out,
+    m7.volume_out,
+    m30.volume_out,
+    income_burn_ratio,
+    balance_trend_7d,
+    unique_partners_30d,
+    nowStr,
   )
 }
 
@@ -137,18 +146,23 @@ function insertHourlyEconomyMetrics(hourStart: Date): void {
   const hourStartStr = hourStart.toISOString()
   const nowStr = now.toISOString()
 
-  const totalWallets =
-    db.prepare<[], { count: number }>('SELECT COUNT(*) as count FROM wallet_index').get()?.count ?? 0
+  const totalWallets = db.prepare<[], { count: number }>('SELECT COUNT(*) as count FROM wallet_index').get()?.count ?? 0
   const newWallets =
-    db.prepare<[string], { count: number }>(
-      'SELECT COUNT(*) as count FROM wallet_index WHERE first_seen >= ?',
-    ).get(hourStartStr)?.count ?? 0
+    db
+      .prepare<[string], { count: number }>('SELECT COUNT(*) as count FROM wallet_index WHERE first_seen >= ?')
+      .get(hourStartStr)?.count ?? 0
   const activeWallets =
-    db.prepare<[string, string], { count: number }>(
-      'SELECT COUNT(DISTINCT from_wallet) as count FROM raw_transactions WHERE timestamp >= ? AND timestamp < ?',
-    ).get(hourStartStr, nowStr)?.count ?? 0
+    db
+      .prepare<[string, string], { count: number }>(
+        'SELECT COUNT(DISTINCT from_wallet) as count FROM raw_transactions WHERE timestamp >= ? AND timestamp < ?',
+      )
+      .get(hourStartStr, nowStr)?.count ?? 0
 
-  interface TxAgg { count: number; volume: number; avg_size: number }
+  interface TxAgg {
+    count: number
+    volume: number
+    avg_size: number
+  }
   const txAgg = db
     .prepare<[string, string], TxAgg>(
       `SELECT COUNT(*) as count,
@@ -159,28 +173,32 @@ function insertHourlyEconomyMetrics(hourStart: Date): void {
     .get(hourStartStr, nowStr)
 
   const deadWallets =
-    db.prepare<[string], { count: number }>(
-      'SELECT COUNT(DISTINCT wallet) as count FROM wallet_snapshots WHERE snapshot_at >= ? AND usdc_balance = 0',
-    ).get(hourStartStr)?.count ?? 0
+    db
+      .prepare<[string], { count: number }>(
+        'SELECT COUNT(DISTINCT wallet) as count FROM wallet_snapshots WHERE snapshot_at >= ? AND usdc_balance = 0',
+      )
+      .get(hourStartStr)?.count ?? 0
 
   const fraudThisHour =
-    db.prepare<[string], { count: number }>(
-      'SELECT COUNT(*) as count FROM fraud_reports WHERE created_at >= ?',
-    ).get(hourStartStr)?.count ?? 0
+    db
+      .prepare<[string], { count: number }>('SELECT COUNT(*) as count FROM fraud_reports WHERE created_at >= ?')
+      .get(hourStartStr)?.count ?? 0
 
   const queriesThisHour =
-    db.prepare<[string], { count: number }>(
-      'SELECT COUNT(*) as count FROM query_log WHERE timestamp >= ?',
-    ).get(hourStartStr)?.count ?? 0
+    db
+      .prepare<[string], { count: number }>('SELECT COUNT(*) as count FROM query_log WHERE timestamp >= ?')
+      .get(hourStartStr)?.count ?? 0
 
   // Score tier distribution
-  interface TierRow { tier: string; count: number }
+  interface TierRow {
+    tier: string
+    count: number
+  }
   const tiers = db.prepare<[], TierRow>('SELECT tier, COUNT(*) as count FROM scores GROUP BY tier').all()
   const tierMap: Record<string, number> = {}
   for (const t of tiers) tierMap[t.tier] = t.count
 
-  const avgScore =
-    db.prepare<[], { avg: number }>('SELECT AVG(composite_score) as avg FROM scores').get()?.avg ?? 0
+  const avgScore = db.prepare<[], { avg: number }>('SELECT AVG(composite_score) as avg FROM scores').get()?.avg ?? 0
 
   const medianRow = db
     .prepare<[], { median: number }>(
@@ -199,13 +217,25 @@ function insertHourlyEconomyMetrics(hourStart: Date): void {
        total_fraud_reports, total_queries
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
-    hourStartStr, nowStr, 'hourly',
-    totalWallets, newWallets, deadWallets, activeWallets,
-    txAgg?.count ?? 0, txAgg?.volume ?? 0, txAgg?.avg_size ?? 0,
-    medianRow?.median ?? 0, Math.round(avgScore * 10) / 10,
-    tierMap['Elite'] ?? 0, tierMap['Trusted'] ?? 0, tierMap['Established'] ?? 0,
-    tierMap['Emerging'] ?? 0, tierMap['Unverified'] ?? 0,
-    fraudThisHour, queriesThisHour,
+    hourStartStr,
+    nowStr,
+    'hourly',
+    totalWallets,
+    newWallets,
+    deadWallets,
+    activeWallets,
+    txAgg?.count ?? 0,
+    txAgg?.volume ?? 0,
+    txAgg?.avg_size ?? 0,
+    medianRow?.median ?? 0,
+    Math.round(avgScore * 10) / 10,
+    tierMap.Elite ?? 0,
+    tierMap.Trusted ?? 0,
+    tierMap.Established ?? 0,
+    tierMap.Emerging ?? 0,
+    tierMap.Unverified ?? 0,
+    fraudThisHour,
+    queriesThisHour,
   )
 }
 

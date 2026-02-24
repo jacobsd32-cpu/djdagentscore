@@ -1,5 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import Database from 'better-sqlite3'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Use vi.hoisted so the db is available when vi.mock factory runs (vi.mock is hoisted)
 const { testDb } = vi.hoisted(() => {
@@ -131,17 +130,15 @@ describe('GET /v1/score/history', () => {
     ])
 
     const app = makeApp()
-    const res = await app.request(
-      `/v1/score/history?wallet=${VALID_WALLET}&after=2024-03-01&before=2024-10-01`,
-    )
+    const res = await app.request(`/v1/score/history?wallet=${VALID_WALLET}&after=2024-03-01&before=2024-10-01`)
     expect(res.status).toBe(200)
 
     const body = await res.json()
     // Should include March 15, June 15, and Sept 15 entries (3 total)
     expect(body.returned).toBe(3)
-    expect(body.history[0].score).toBe(70)  // newest first: Sept
-    expect(body.history[1].score).toBe(60)  // June
-    expect(body.history[2].score).toBe(55)  // March
+    expect(body.history[0].score).toBe(70) // newest first: Sept
+    expect(body.history[1].score).toBe(60) // June
+    expect(body.history[2].score).toBe(55) // March
   })
 
   // 5. Limit capping at 100
@@ -239,9 +236,7 @@ describe('GET /v1/score/history', () => {
 
   // 10. Single record -> no trend (trend is null / not present)
   it('does not include trend when there is only a single history entry', async () => {
-    seedHistory(VALID_WALLET_LOWER, [
-      { score: 65, calculated_at: '2024-06-01T00:00:00Z' },
-    ])
+    seedHistory(VALID_WALLET_LOWER, [{ score: 65, calculated_at: '2024-06-01T00:00:00Z' }])
 
     const app = makeApp()
     const res = await app.request(`/v1/score/history?wallet=${VALID_WALLET}`)

@@ -11,11 +11,7 @@ export interface ErrorBody {
   }
 }
 
-export function errorResponse(
-  code: string,
-  message: string,
-  details?: Record<string, unknown>,
-): ErrorBody {
+export function errorResponse(code: string, message: string, details?: Record<string, unknown>): ErrorBody {
   const body: ErrorBody = { error: { code, message } }
   if (details) body.error.details = details
   return body

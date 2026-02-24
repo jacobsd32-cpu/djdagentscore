@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import crypto from 'node:crypto'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 function hashKey(key: string): string {
   return crypto.createHash('sha256').update(key).digest('hex')
@@ -16,7 +16,7 @@ futureDate.setHours(0, 0, 0, 0)
 const FUTURE_RESET = futureDate.toISOString()
 
 // Mock database with controllable row data
-let mockRow: Record<string, unknown> | undefined = undefined
+let mockRow: Record<string, unknown> | undefined
 
 vi.mock('../../src/db.js', () => ({
   db: {
@@ -54,7 +54,7 @@ describe('apiKeyAuthMiddleware', () => {
 
     const res = await app.request('/test')
     expect(res.status).toBe(200)
-    const body = await res.json() as Record<string, unknown>
+    const body = (await res.json()) as Record<string, unknown>
     expect(body.passedThrough).toBe(true)
   })
 
@@ -70,7 +70,7 @@ describe('apiKeyAuthMiddleware', () => {
       headers: { authorization: 'Bearer some_other_token' },
     })
     expect(res.status).toBe(200)
-    const body = await res.json() as Record<string, unknown>
+    const body = (await res.json()) as Record<string, unknown>
     expect(body.passedThrough).toBe(true)
   })
 
@@ -88,7 +88,7 @@ describe('apiKeyAuthMiddleware', () => {
       headers: { authorization: `Bearer ${TEST_KEY}` },
     })
     expect(res.status).toBe(401)
-    const body = await res.json() as { error: { code: string } }
+    const body = (await res.json()) as { error: { code: string } }
     expect(body.error.code).toBe('api_key_invalid')
   })
 
@@ -119,7 +119,7 @@ describe('apiKeyAuthMiddleware', () => {
       headers: { authorization: `Bearer ${TEST_KEY}` },
     })
     expect(res.status).toBe(401)
-    const body = await res.json() as { error: { code: string } }
+    const body = (await res.json()) as { error: { code: string } }
     expect(body.error.code).toBe('api_key_revoked')
   })
 
@@ -150,7 +150,7 @@ describe('apiKeyAuthMiddleware', () => {
       headers: { authorization: `Bearer ${TEST_KEY}` },
     })
     expect(res.status).toBe(401)
-    const body = await res.json() as { error: { code: string } }
+    const body = (await res.json()) as { error: { code: string } }
     expect(body.error.code).toBe('api_key_invalid')
   })
 
@@ -181,7 +181,7 @@ describe('apiKeyAuthMiddleware', () => {
       headers: { authorization: `Bearer ${TEST_KEY}` },
     })
     expect(res.status).toBe(429)
-    const body = await res.json() as { error: { code: string; details: { limit: number; used: number } } }
+    const body = (await res.json()) as { error: { code: string; details: { limit: number; used: number } } }
     expect(body.error.code).toBe('api_key_quota_exhausted')
     expect(body.error.details.limit).toBe(100)
     expect(body.error.details.used).toBe(100)
@@ -220,7 +220,7 @@ describe('apiKeyAuthMiddleware', () => {
       headers: { authorization: `Bearer ${TEST_KEY}` },
     })
     expect(res.status).toBe(200)
-    const body = await res.json() as Record<string, unknown>
+    const body = (await res.json()) as Record<string, unknown>
     expect(body.apiKeyId).toBe(42)
     expect(body.apiKeyWallet).toBe(TEST_WALLET)
     expect(body.apiKeyTier).toBe('premium')

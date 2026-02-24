@@ -32,8 +32,8 @@ interface TrendAnalysis {
 function calculateTrend(rows: ScoreHistoryRow[]): TrendAnalysis | null {
   if (rows.length < 2) return null
 
-  const scores = rows.map(r => r.score)
-  const latest = scores[0]!           // newest first
+  const scores = rows.map((r) => r.score)
+  const latest = scores[0]! // newest first
   const earliest = scores[scores.length - 1]!
 
   const change = latest - earliest
@@ -68,14 +68,14 @@ history.get('/', (c) => {
   }
 
   const limitParam = Math.min(Math.max(Number(c.req.query('limit') ?? 50), 1), 100)
-  const after = c.req.query('after')   // ISO date string
+  const after = c.req.query('after') // ISO date string
   const before = c.req.query('before') // ISO date string
 
   // Validate date params if provided
-  if (after && isNaN(Date.parse(after))) {
+  if (after && Number.isNaN(Date.parse(after))) {
     return c.json(errorResponse('invalid_date_range', 'Invalid "after" date format. Use ISO 8601 (YYYY-MM-DD)'), 400)
   }
-  if (before && isNaN(Date.parse(before))) {
+  if (before && Number.isNaN(Date.parse(before))) {
     return c.json(errorResponse('invalid_date_range', 'Invalid "before" date format. Use ISO 8601 (YYYY-MM-DD)'), 400)
   }
 
@@ -104,15 +104,21 @@ history.get('/', (c) => {
   // Get total count for the wallet
   let countSql = 'SELECT COUNT(*) as count FROM score_history WHERE wallet = ?'
   const countArgs: (string | number)[] = [wallet.toLowerCase()]
-  if (after) { countSql += ' AND calculated_at >= ?'; countArgs.push(after) }
-  if (before) { countSql += ' AND calculated_at <= ?'; countArgs.push(before) }
+  if (after) {
+    countSql += ' AND calculated_at >= ?'
+    countArgs.push(after)
+  }
+  if (before) {
+    countSql += ' AND calculated_at <= ?'
+    countArgs.push(before)
+  }
   const totalCount = (db.prepare(countSql).get(...countArgs) as { count: number })?.count ?? 0
 
   const trend = calculateTrend(rows)
 
   return c.json({
     wallet: wallet.toLowerCase(),
-    history: rows.map(r => ({
+    history: rows.map((r) => ({
       score: r.score,
       confidence: r.confidence,
       model_version: r.model_version,

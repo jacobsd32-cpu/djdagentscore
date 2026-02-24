@@ -60,28 +60,36 @@ export function refreshWalletTransferStats(db: Database, wallets: string[]): voi
     for (const wallet of wallets) {
       const w = wallet.toLowerCase()
 
-      const outgoing = db.prepare(`
+      const outgoing = db
+        .prepare(`
         SELECT COUNT(*) as cnt, COALESCE(SUM(amount_usdc), 0) as vol,
                MIN(timestamp) as first_ts, MAX(timestamp) as last_ts
         FROM usdc_transfers WHERE from_wallet = ?
-      `).get(w) as { cnt: number; vol: number; first_ts: string | null; last_ts: string | null }
+      `)
+        .get(w) as { cnt: number; vol: number; first_ts: string | null; last_ts: string | null }
 
-      const incoming = db.prepare(`
+      const incoming = db
+        .prepare(`
         SELECT COUNT(*) as cnt, COALESCE(SUM(amount_usdc), 0) as vol,
                MIN(timestamp) as first_ts, MAX(timestamp) as last_ts
         FROM usdc_transfers WHERE to_wallet = ?
-      `).get(w) as { cnt: number; vol: number; first_ts: string | null; last_ts: string | null }
+      `)
+        .get(w) as { cnt: number; vol: number; first_ts: string | null; last_ts: string | null }
 
-      const partners = db.prepare(`
+      const partners = db
+        .prepare(`
         SELECT COUNT(DISTINCT partner) as cnt FROM (
           SELECT to_wallet as partner FROM usdc_transfers WHERE from_wallet = ?
           UNION
           SELECT from_wallet as partner FROM usdc_transfers WHERE to_wallet = ?
         )
-      `).get(w, w) as { cnt: number }
+      `)
+        .get(w, w) as { cnt: number }
 
       const totalTx = outgoing.cnt + incoming.cnt
-      const timestamps = [outgoing.first_ts, incoming.first_ts, outgoing.last_ts, incoming.last_ts].filter(Boolean) as string[]
+      const timestamps = [outgoing.first_ts, incoming.first_ts, outgoing.last_ts, incoming.last_ts].filter(
+        Boolean,
+      ) as string[]
       const firstSeen = timestamps.length > 0 ? timestamps.sort()[0] : null
       const lastSeen = timestamps.length > 0 ? timestamps.sort().reverse()[0] : null
 

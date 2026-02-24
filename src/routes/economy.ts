@@ -8,7 +8,7 @@ const MAX_LIMIT = 90
 
 economy.get('/', (c) => {
   const period = c.req.query('period') ?? 'daily'
-  if (!VALID_PERIODS.includes(period as typeof VALID_PERIODS[number])) {
+  if (!VALID_PERIODS.includes(period as (typeof VALID_PERIODS)[number])) {
     return c.json({ error: `Invalid period. Must be one of: ${VALID_PERIODS.join(', ')}` }, 400)
   }
 

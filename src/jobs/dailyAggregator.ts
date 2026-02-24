@@ -6,8 +6,8 @@
  * and monthly rollups on the 1st of each month.
  */
 import type { Database as DatabaseType } from 'better-sqlite3'
-import { jobStats } from './jobStats.js'
 import { log } from '../logger.js'
+import { jobStats } from './jobStats.js'
 
 interface HourlyAgg {
   sum_new_wallets: number
@@ -80,7 +80,9 @@ function rollupPeriod(
        total_fraud_reports, total_queries
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
-    periodStart, periodEnd, periodType,
+    periodStart,
+    periodEnd,
+    periodType,
     agg.max_total_wallets ?? 0,
     agg.sum_new_wallets ?? 0,
     agg.sum_dead_wallets ?? 0,
@@ -111,9 +113,7 @@ export async function runDailyAggregator(db: DatabaseType): Promise<void> {
     const yesterdayStart = new Date(
       Date.UTC(yesterday.getUTCFullYear(), yesterday.getUTCMonth(), yesterday.getUTCDate()),
     ).toISOString()
-    const todayStart = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
-    ).toISOString()
+    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString()
 
     // ── 1. Create daily row from yesterday's hourly rows ──────────────────────
     rollupPeriod(db, yesterdayStart, todayStart, 'daily', 'hourly')

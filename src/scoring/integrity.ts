@@ -11,31 +11,31 @@
 // indicator fires.  Multiple indicators stack: multiplier = ∏(factors).
 
 export const SYBIL_FACTORS: Record<string, number> = {
-  self_funding_loop: 0.60,
+  self_funding_loop: 0.6,
   coordinated_creation: 0.65,
   single_source_funding: 0.75,
-  zero_organic_activity: 0.70,
-  velocity_anomaly: 0.80,
-  fan_out_funding: 0.60,
+  zero_organic_activity: 0.7,
+  velocity_anomaly: 0.8,
+  fan_out_funding: 0.6,
   // Indicators emitted by sybil.ts:
   closed_loop_trading: 0.55,
-  symmetric_transactions: 0.60,
+  symmetric_transactions: 0.6,
   single_partner: 0.75,
-  volume_without_diversity: 0.80,
-  funded_by_top_partner: 0.60,
+  volume_without_diversity: 0.8,
+  funded_by_top_partner: 0.6,
   tight_cluster: 0.55,
 }
 
 export const GAMING_FACTORS: Record<string, number> = {
   balance_window_dressing: 0.85,
-  burst_and_stop: 0.80,
+  burst_and_stop: 0.8,
   nonce_inflation: 0.75,
-  artificial_partner_diversity: 0.70,
-  revenue_recycling: 0.80,
+  artificial_partner_diversity: 0.7,
+  revenue_recycling: 0.8,
   // Indicators emitted by gaming.ts:
-  velocity_spike: 0.80,
+  velocity_spike: 0.8,
   deposit_and_score: 0.85,
-  wash_trading: 0.50,
+  wash_trading: 0.5,
 }
 
 // ---------- Core function ----------
@@ -58,7 +58,7 @@ export function computeIntegrityMultiplier(
   let multiplier = 1.0
 
   for (const ind of sybilIndicators) {
-    multiplier *= SYBIL_FACTORS[ind] ?? 0.80
+    multiplier *= SYBIL_FACTORS[ind] ?? 0.8
   }
 
   for (const ind of gamingIndicators) {
@@ -66,8 +66,8 @@ export function computeIntegrityMultiplier(
   }
 
   if (fraudReportCount > 0) {
-    multiplier *= Math.pow(0.90, fraudReportCount)
+    multiplier *= 0.9 ** fraudReportCount
   }
 
-  return Math.max(0.10, Math.round(multiplier * 1000) / 1000)
+  return Math.max(0.1, Math.round(multiplier * 1000) / 1000)
 }

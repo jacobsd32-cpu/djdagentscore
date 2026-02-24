@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../src/db.js', () => ({
   countFreeTierUsesToday: vi.fn().mockReturnValue(0),
@@ -27,9 +27,7 @@ describe('freeTierMiddleware', () => {
     const app = new Hono()
     app.use('/v1/score/basic', freeTierMiddleware)
 
-    const res = await app.request(
-      '/v1/score/basic?wallet=0x1234567890abcdef1234567890abcdef12345678',
-    )
+    const res = await app.request('/v1/score/basic?wallet=0x1234567890abcdef1234567890abcdef12345678')
     const body = await res.json()
 
     expect(body.confidence).toBe(0.85)

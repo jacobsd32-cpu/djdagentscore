@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import Database from 'better-sqlite3'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { testDb } = vi.hoisted(() => {
   const _Database = require('better-sqlite3')
   const testDb = new _Database(':memory:')
-  testDb.prepare(`
+  testDb
+    .prepare(`
     CREATE TABLE IF NOT EXISTS webhooks (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       wallet      TEXT NOT NULL,
@@ -18,9 +18,11 @@ const { testDb } = vi.hoisted(() => {
       last_delivery_at TEXT,
       disabled_at TEXT
     )
-  `).run()
+  `)
+    .run()
 
-  testDb.prepare(`
+  testDb
+    .prepare(`
     CREATE TABLE IF NOT EXISTS webhook_deliveries (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       webhook_id  INTEGER NOT NULL REFERENCES webhooks(id),
@@ -33,7 +35,8 @@ const { testDb } = vi.hoisted(() => {
       next_retry_at TEXT,
       created_at  TEXT NOT NULL DEFAULT (datetime('now'))
     )
-  `).run()
+  `)
+    .run()
 
   return { testDb }
 })
@@ -198,10 +201,12 @@ describe('Admin webhook routes', () => {
     const { id } = await createRes.json()
 
     // Insert a test delivery
-    testDb.prepare(`
+    testDb
+      .prepare(`
       INSERT INTO webhook_deliveries (webhook_id, event_type, payload, status_code, delivered_at)
       VALUES (?, 'score.updated', '{}', 200, datetime('now'))
-    `).run(id)
+    `)
+      .run(id)
 
     const res = await app.request(`/webhooks/${id}`, {
       headers: adminHeaders(),
@@ -252,7 +257,10 @@ describe('Admin webhook routes', () => {
     expect(delBody.success).toBe(true)
 
     // Verify not listed as active
-    const row = testDb.prepare('SELECT is_active, disabled_at FROM webhooks WHERE id = ?').get(id) as { is_active: number; disabled_at: string }
+    const row = testDb.prepare('SELECT is_active, disabled_at FROM webhooks WHERE id = ?').get(id) as {
+      is_active: number
+      disabled_at: string
+    }
     expect(row.is_active).toBe(0)
     expect(row.disabled_at).toBeTruthy()
   })

@@ -10,7 +10,9 @@
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint": "biome check src/ tests/",
+    "lint:fix": "biome check --write src/ tests/"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
@@ -22,6 +24,7 @@
     "x402-hono": "0.3.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.4",
     "@flydotio/dockerfile": "^0.7.10",
     "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^22.9.0",

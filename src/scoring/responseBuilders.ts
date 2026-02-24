@@ -6,13 +6,12 @@
  * stays focused on data fetching and scoring logic, not JSON serialization.
  */
 
-import { scoreToTier } from '../db.js'
 import type {
   Address,
+  DataAvailability,
   FullScoreResponse,
   ScoreDimensions,
   ScoreHistoryRow,
-  DataAvailability,
   ScoreRow,
 } from '../types.js'
 
@@ -85,38 +84,61 @@ export function buildFullResponseFromCache(
 ): FullScoreResponse {
   // Re-hydrate raw_data so dimension detail fields contain real values instead of zeros.
   interface StoredUsdcData {
-    balance?: string; inflows30d?: string; outflows30d?: string
-    inflows7d?: string; outflows7d?: string; totalInflows?: string
-    transferCount?: number; walletAgedays?: number
+    balance?: string
+    inflows30d?: string
+    outflows30d?: string
+    inflows7d?: string
+    outflows7d?: string
+    totalInflows?: string
+    transferCount?: number
+    walletAgedays?: number
   }
-  interface StoredRaw { usdcData?: StoredUsdcData; walletAgeDays?: number }
+  interface StoredRaw {
+    usdcData?: StoredUsdcData
+    walletAgeDays?: number
+  }
   let raw: StoredRaw = {}
-  try { raw = JSON.parse(cached.raw_data ?? '{}') as StoredRaw } catch { /* ignore */ }
+  try {
+    raw = JSON.parse(cached.raw_data ?? '{}') as StoredRaw
+  } catch {
+    /* ignore */
+  }
   const ud = raw.usdcData ?? {}
   const walletAgeDays = raw.walletAgeDays ?? 0
   const txCount = ud.transferCount ?? 0
   const bal = ud.balance ?? '0'
   const balUsd = Number(bal) / 1_000_000
   const everZeroBalance = balUsd === 0 && Number(ud.totalInflows ?? '0') > 0
-  const fmt = (v?: string) => ((Number(v ?? '0') / 1_000_000).toFixed(6))
+  const fmt = (v?: string) => (Number(v ?? '0') / 1_000_000).toFixed(6)
 
-  interface StoredRawExt extends StoredRaw { nonce?: number; ethBalanceWei?: string; basename?: boolean }
+  interface StoredRawExt extends StoredRaw {
+    nonce?: number
+    ethBalanceWei?: string
+    basename?: boolean
+  }
   const rawExt = raw as StoredRawExt
 
   const zeroDimensions: ScoreDimensions = {
     reliability: {
       score: cached.reliability_score,
-      data: { txCount, nonce: rawExt.nonce ?? 0, successRate: txCount > 0 ? 1 : 0, lastTxTimestamp: null, failedTxCount: 0, uptimeEstimate: 0 },
+      data: {
+        txCount,
+        nonce: rawExt.nonce ?? 0,
+        successRate: txCount > 0 ? 1 : 0,
+        lastTxTimestamp: null,
+        failedTxCount: 0,
+        uptimeEstimate: 0,
+      },
     },
     viability: {
       score: cached.viability_score,
       data: {
         usdcBalance: fmt(bal),
         ethBalance: rawExt.ethBalanceWei ? (Number(rawExt.ethBalanceWei) / 1e18).toFixed(6) : '0.000000',
-        inflows30d:  fmt(ud.inflows30d),
+        inflows30d: fmt(ud.inflows30d),
         outflows30d: fmt(ud.outflows30d),
-        inflows7d:   fmt(ud.inflows7d),
-        outflows7d:  fmt(ud.outflows7d),
+        inflows7d: fmt(ud.inflows7d),
+        outflows7d: fmt(ud.outflows7d),
         totalInflows: fmt(ud.totalInflows),
         walletAgedays: walletAgeDays,
         everZeroBalance,
@@ -124,7 +146,14 @@ export function buildFullResponseFromCache(
     },
     identity: {
       score: cached.identity_score,
-      data: { erc8004Registered: false, hasBasename: rawExt.basename ?? false, walletAgeDays, creatorScore: null, generationDepth: 0, constitutionHashVerified: false },
+      data: {
+        erc8004Registered: false,
+        hasBasename: rawExt.basename ?? false,
+        walletAgeDays,
+        creatorScore: null,
+        generationDepth: 0,
+        constitutionHashVerified: false,
+      },
     },
     capability: {
       score: cached.capability_score,
@@ -184,7 +213,14 @@ export function buildZeroScore(wallet: Address, calculatedAt: string): FullScore
     },
     identity: {
       score: 0,
-      data: { erc8004Registered: false, hasBasename: false, walletAgeDays: 0, creatorScore: null, generationDepth: 0, constitutionHashVerified: false },
+      data: {
+        erc8004Registered: false,
+        hasBasename: false,
+        walletAgeDays: 0,
+        creatorScore: null,
+        generationDepth: 0,
+        constitutionHashVerified: false,
+      },
     },
     capability: {
       score: 0,

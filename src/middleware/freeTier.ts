@@ -12,8 +12,8 @@ import { createHash } from 'node:crypto'
 import type { MiddlewareHandler } from 'hono'
 import { countFreeTierUsesToday } from '../db.js'
 import { getOrCalculateScore, MODEL_VERSION } from '../scoring/engine.js'
-import { isValidAddress } from '../types.js'
 import type { Address } from '../types.js'
+import { isValidAddress } from '../types.js'
 
 const FREE_DAILY_LIMIT = 10
 
@@ -27,32 +27,33 @@ const FREE_DAILY_LIMIT = 10
  * Wallet-based rate limiting requires EIP-4361 (SIWE) or similar — future work.
  */
 function requesterKey(c: Parameters<MiddlewareHandler>[0]): string {
-  const ip =
-    c.req.header('fly-client-ip') ??
-    c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  const ip = c.req.header('fly-client-ip') ?? c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
   return `ip:${createHash('sha256').update(ip).digest('hex').slice(0, 32)}`
 }
 
-export const freeTierMiddleware: MiddlewareHandler = async (c, next) => {
+export const freeTierMiddleware: MiddlewareHandler = async (c, _next) => {
   const key = requesterKey(c)
   const usesToday = countFreeTierUsesToday(key)
 
   if (usesToday >= FREE_DAILY_LIMIT) {
     c.header('Retry-After', '86400')
-    return c.json({
-      error: 'free_tier_quota_exhausted',
-      message: 'Daily free quota exhausted (10/day). Upgrade to paid endpoints for unlimited access.',
-      upgrade: {
-        docs: '/docs',
-        endpoints: {
-          '/v1/score/full': { price: '$0.10', description: 'Full score with dimension breakdown' },
-          '/v1/score/refresh': { price: '$0.25', description: 'Force live recalculation' },
+    return c.json(
+      {
+        error: 'free_tier_quota_exhausted',
+        message: 'Daily free quota exhausted (10/day). Upgrade to paid endpoints for unlimited access.',
+        upgrade: {
+          docs: '/docs',
+          endpoints: {
+            '/v1/score/full': { price: '$0.10', description: 'Full score with dimension breakdown' },
+            '/v1/score/refresh': { price: '$0.25', description: 'Force live recalculation' },
+          },
+          protocol: 'x402',
+          network: 'base',
+          paymentInfo: 'Send x402 USDC payment header on Base. See /docs for integration guide.',
         },
-        protocol: 'x402',
-        network: 'base',
-        paymentInfo: 'Send x402 USDC payment header on Base. See /docs for integration guide.',
       },
-    }, 429)
+      429,
+    )
   }
 
   // Still within free quota — serve directly

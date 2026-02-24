@@ -96,23 +96,17 @@ export function detectSybil(wallet: string, db: Database): SybilResult {
   // ── CHECK 3: Coordinated creation ─────────────────────────────────────────
   // This wallet and its top partner were both first seen within the same 24 hr window.
   const walletRow = db
-    .prepare<[string], WalletIndexRow>(
-      'SELECT first_seen, total_tx_count FROM wallet_index WHERE wallet = ?',
-    )
+    .prepare<[string], WalletIndexRow>('SELECT first_seen, total_tx_count FROM wallet_index WHERE wallet = ?')
     .get(w)
 
   if (walletRow?.first_seen && uniquePartnerCount > 0) {
     const topPartner = partners[0].partner
     const partnerRow = db
-      .prepare<[string], { first_seen: string }>(
-        'SELECT first_seen FROM wallet_index WHERE wallet = ?',
-      )
+      .prepare<[string], { first_seen: string }>('SELECT first_seen FROM wallet_index WHERE wallet = ?')
       .get(topPartner)
 
     if (partnerRow?.first_seen) {
-      const diff = Math.abs(
-        new Date(walletRow.first_seen).getTime() - new Date(partnerRow.first_seen).getTime(),
-      )
+      const diff = Math.abs(new Date(walletRow.first_seen).getTime() - new Date(partnerRow.first_seen).getTime())
       if (diff <= 24 * 60 * 60 * 1000) {
         indicators.push('coordinated_creation')
         capIdentity(50)

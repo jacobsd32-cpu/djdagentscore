@@ -1,6 +1,6 @@
-import { Hono } from 'hono'
 import crypto from 'node:crypto'
-import { db, getRevenueSummary, getTopPayers, getRevenueByHour } from '../db.js'
+import { Hono } from 'hono'
+import { db, getRevenueByHour, getRevenueSummary, getTopPayers } from '../db.js'
 import { generateCalibrationReport } from '../scoring/calibrationReport.js'
 import { MODEL_VERSION } from '../scoring/responseBuilders.js'
 
@@ -20,9 +20,9 @@ admin.use('*', async (c, next) => {
 
 admin.get('/calibration', (c) => {
   // Return latest report or generate a new one
-  const latest = db.prepare(
-    'SELECT * FROM calibration_reports ORDER BY id DESC LIMIT 1',
-  ).get() as Record<string, unknown> | undefined
+  const latest = db.prepare('SELECT * FROM calibration_reports ORDER BY id DESC LIMIT 1').get() as
+    | Record<string, unknown>
+    | undefined
 
   if (latest) {
     return c.json({

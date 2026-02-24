@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const VALID_WALLET = '0x1234567890abcdef1234567890abcdef12345678'
 const VALID_WALLET_LOWER = VALID_WALLET.toLowerCase()
@@ -72,39 +72,49 @@ function createApp() {
 
 function seedGoodScore(wallet: string) {
   const futureDate = new Date(Date.now() + 86400000).toISOString()
-  testDb.prepare(`
+  testDb
+    .prepare(`
     INSERT INTO scores (wallet, composite_score, reliability_score, viability_score, identity_score, capability_score, tier, raw_data, calculated_at, expires_at, confidence)
     VALUES (?, 82, 80, 75, 85, 78, 'Trusted', '{}', datetime('now'), ?, 0.85)
-  `).run(wallet, futureDate)
+  `)
+    .run(wallet, futureDate)
 }
 
 function seedLowScore(wallet: string) {
   const futureDate = new Date(Date.now() + 86400000).toISOString()
-  testDb.prepare(`
+  testDb
+    .prepare(`
     INSERT INTO scores (wallet, composite_score, reliability_score, viability_score, identity_score, capability_score, tier, raw_data, calculated_at, expires_at, confidence)
     VALUES (?, 60, 55, 50, 65, 60, 'Emerging', '{}', datetime('now'), ?, 0.70)
-  `).run(wallet, futureDate)
+  `)
+    .run(wallet, futureDate)
 }
 
 function seedExpiredScore(wallet: string) {
   const pastDate = new Date(Date.now() - 86400000).toISOString()
-  testDb.prepare(`
+  testDb
+    .prepare(`
     INSERT INTO scores (wallet, composite_score, reliability_score, viability_score, identity_score, capability_score, tier, raw_data, calculated_at, expires_at, confidence)
     VALUES (?, 82, 80, 75, 85, 78, 'Trusted', '{}', datetime('now', '-30 days'), ?, 0.85)
-  `).run(wallet, pastDate)
+  `)
+    .run(wallet, pastDate)
 }
 
 function seedRegistration(wallet: string) {
-  testDb.prepare(`
+  testDb
+    .prepare(`
     INSERT INTO agent_registrations (wallet, name) VALUES (?, ?)
-  `).run(wallet, 'Test Agent')
+  `)
+    .run(wallet, 'Test Agent')
 }
 
 function seedCertification(wallet: string) {
-  testDb.prepare(`
+  testDb
+    .prepare(`
     INSERT INTO certifications (wallet, tier, score_at_certification, expires_at)
     VALUES (?, 'Trusted', 82, datetime('now', '+1 year'))
-  `).run(wallet)
+  `)
+    .run(wallet)
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────────
@@ -131,7 +141,7 @@ describe('Certification routes', () => {
       })
 
       expect(res.status).toBe(201)
-      const body = await res.json() as Record<string, unknown>
+      const body = (await res.json()) as Record<string, unknown>
       expect(body.wallet).toBe(VALID_WALLET_LOWER)
       expect(body.tier).toBe('Trusted')
       expect(body.score_at_certification).toBe(82)
@@ -152,7 +162,7 @@ describe('Certification routes', () => {
       })
 
       expect(res.status).toBe(400)
-      const body = await res.json() as { error: { code: string; details?: Record<string, unknown> } }
+      const body = (await res.json()) as { error: { code: string; details?: Record<string, unknown> } }
       expect(body.error.code).toBe('cert_score_too_low')
       expect(body.error.details?.current_score).toBe(60)
     })
@@ -168,7 +178,7 @@ describe('Certification routes', () => {
       })
 
       expect(res.status).toBe(400)
-      const body = await res.json() as { error: { code: string } }
+      const body = (await res.json()) as { error: { code: string } }
       expect(body.error.code).toBe('cert_not_registered')
     })
 
@@ -184,7 +194,7 @@ describe('Certification routes', () => {
       })
 
       expect(res.status).toBe(409)
-      const body = await res.json() as { error: { code: string } }
+      const body = (await res.json()) as { error: { code: string } }
       expect(body.error.code).toBe('cert_already_active')
     })
 
@@ -199,7 +209,7 @@ describe('Certification routes', () => {
       })
 
       expect(res.status).toBe(400)
-      const body = await res.json() as { error: { code: string } }
+      const body = (await res.json()) as { error: { code: string } }
       expect(body.error.code).toBe('cert_requirements_not_met')
     })
   })
@@ -214,7 +224,7 @@ describe('Certification routes', () => {
       const res = await app.request(`/v1/certification/${VALID_WALLET}`)
 
       expect(res.status).toBe(200)
-      const body = await res.json() as Record<string, unknown>
+      const body = (await res.json()) as Record<string, unknown>
       expect(body.wallet).toBe(VALID_WALLET_LOWER)
       expect(body.tier).toBe('Trusted')
       expect(body.score_at_certification).toBe(82)
@@ -228,7 +238,7 @@ describe('Certification routes', () => {
       const res = await app.request(`/v1/certification/${VALID_WALLET}`)
 
       expect(res.status).toBe(404)
-      const body = await res.json() as { error: { code: string } }
+      const body = (await res.json()) as { error: { code: string } }
       expect(body.error.code).toBe('cert_not_found')
     })
   })
@@ -247,7 +257,7 @@ describe('Certification routes', () => {
       expect(res.headers.get('cache-control')).toBe('public, max-age=3600')
 
       const svg = await res.text()
-      expect(svg).toContain('#16a34a')      // green color
+      expect(svg).toContain('#16a34a') // green color
       expect(svg).toContain('Score 82')
     })
 
@@ -259,7 +269,7 @@ describe('Certification routes', () => {
       expect(res.headers.get('content-type')).toBe('image/svg+xml')
 
       const svg = await res.text()
-      expect(svg).toContain('#6b7280')          // gray color
+      expect(svg).toContain('#6b7280') // gray color
       expect(svg).toContain('not certified')
     })
   })
@@ -283,7 +293,7 @@ describe('Certification routes', () => {
       })
 
       expect(res.status).toBe(200)
-      const body = await res.json() as { certifications: unknown[]; count: number }
+      const body = (await res.json()) as { certifications: unknown[]; count: number }
       expect(body.count).toBe(1)
       expect(body.certifications).toHaveLength(1)
     })
@@ -294,7 +304,9 @@ describe('Certification routes', () => {
       seedCertification(VALID_WALLET_LOWER)
 
       // Get the cert ID
-      const cert = testDb.prepare('SELECT id FROM certifications WHERE wallet = ?').get(VALID_WALLET_LOWER) as { id: number }
+      const cert = testDb.prepare('SELECT id FROM certifications WHERE wallet = ?').get(VALID_WALLET_LOWER) as {
+        id: number
+      }
 
       const app = createApp()
 
@@ -309,14 +321,14 @@ describe('Certification routes', () => {
       })
 
       expect(revokeRes.status).toBe(200)
-      const revokeBody = await revokeRes.json() as Record<string, unknown>
+      const revokeBody = (await revokeRes.json()) as Record<string, unknown>
       expect(revokeBody.success).toBe(true)
       expect(revokeBody.reason).toBe('Fraudulent activity detected')
 
       // Verify cert is no longer valid
       const checkRes = await app.request(`/v1/certification/${VALID_WALLET}`)
       expect(checkRes.status).toBe(404)
-      const checkBody = await checkRes.json() as { error: { code: string } }
+      const checkBody = (await checkRes.json()) as { error: { code: string } }
       expect(checkBody.error.code).toBe('cert_not_found')
     })
   })

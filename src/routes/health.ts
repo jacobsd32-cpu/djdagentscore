@@ -1,15 +1,16 @@
 import { Hono } from 'hono'
 import {
   countCachedScores,
-  countIndexedWallets,
+  countFraudReports,
   countIndexedTransactions,
+  countIndexedWallets,
   countScoreOutcomes,
   countTotalQueryLogs,
-  countFraudReports,
 } from '../db.js'
 import { getIndexerStatus } from '../jobs/blockchainIndexer.js'
 import { jobStats } from '../jobs/jobStats.js'
 import { MODEL_VERSION } from '../scoring/responseBuilders.js'
+
 const startTime = Date.now()
 
 const health = new Hono()

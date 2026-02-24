@@ -1,4 +1,4 @@
-import type { BehaviorData, BehaviorClassification } from '../types.js'
+import type { BehaviorClassification, BehaviorData } from '../types.js'
 
 export interface BehaviorResult {
   score: number
@@ -43,7 +43,7 @@ export function calcBehavior(timestamps: string[]): BehaviorResult {
 
   // CV < 0.1 = perfectly regular (bot-like) → 0 pts
   // CV > 1.5 = highly variable (organic) → 35 pts
-  const cvScore = Math.round(Math.min(35, Math.max(0, (cv - 0.1) / 1.4 * 35)))
+  const cvScore = Math.round(Math.min(35, Math.max(0, ((cv - 0.1) / 1.4) * 35)))
 
   // ── Signal 2: Hourly entropy (35 pts) ────────────────────────────
   const hourBuckets = new Array(24).fill(0)
@@ -61,14 +61,14 @@ export function calcBehavior(timestamps: string[]): BehaviorResult {
   // Max entropy for 24 bins = log2(24) ≈ 4.585
   // Low entropy (< 1.0) = concentrated in few hours → 0 pts
   // High entropy (> 3.5) = well-spread → 35 pts
-  const entropyScore = Math.round(Math.min(35, Math.max(0, (entropy - 1.0) / 2.5 * 35)))
+  const entropyScore = Math.round(Math.min(35, Math.max(0, ((entropy - 1.0) / 2.5) * 35)))
 
   // ── Signal 3: Max gap hours (30 pts) ──────────────────────────────
   const maxGapMs = Math.max(...gaps)
   const maxGapHours = maxGapMs / (1000 * 60 * 60)
   // No gap (< 1 hour) = suspicious constant activity → 0 pts
   // Multi-day gaps (> 48 hours) = organic downtime → 30 pts
-  const gapScore = Math.round(Math.min(30, Math.max(0, (maxGapHours - 1) / 47 * 30)))
+  const gapScore = Math.round(Math.min(30, Math.max(0, ((maxGapHours - 1) / 47) * 30)))
 
   const score = cvScore + entropyScore + gapScore
 

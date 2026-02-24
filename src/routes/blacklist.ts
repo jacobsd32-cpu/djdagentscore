@@ -4,8 +4,8 @@
  */
 import { Hono } from 'hono'
 import { db } from '../db.js'
+import { ErrorCodes, errorResponse } from '../errors.js'
 import { isValidAddress } from '../types.js'
-import { errorResponse, ErrorCodes } from '../errors.js'
 
 const blacklist = new Hono()
 

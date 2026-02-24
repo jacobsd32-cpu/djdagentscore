@@ -1,13 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { calcBehavior } from '../src/scoring/behavior.js'
 
 describe('calcBehavior', () => {
   it('returns insufficient_data for < 10 transactions', () => {
-    const timestamps = [
-      '2026-01-01T10:00:00Z',
-      '2026-01-01T14:00:00Z',
-      '2026-01-02T09:00:00Z',
-    ]
+    const timestamps = ['2026-01-01T10:00:00Z', '2026-01-01T14:00:00Z', '2026-01-02T09:00:00Z']
     const result = calcBehavior(timestamps)
     expect(result.score).toBe(50)
     expect(result.data.classification).toBe('insufficient_data')

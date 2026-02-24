@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 // computeIntegrityMultiplier is a pure function — no mocks needed!
-import { computeIntegrityMultiplier, SYBIL_FACTORS, GAMING_FACTORS } from '../src/scoring/integrity.js'
+import { computeIntegrityMultiplier, GAMING_FACTORS, SYBIL_FACTORS } from '../src/scoring/integrity.js'
 
 describe('computeIntegrityMultiplier', () => {
   it('returns 1.0 with no indicators', () => {
@@ -20,11 +20,7 @@ describe('computeIntegrityMultiplier', () => {
   })
 
   it('multiplies multiple factors together', () => {
-    const result = computeIntegrityMultiplier(
-      ['coordinated_creation', 'single_source_funding'],
-      ['burst_and_stop'],
-      0,
-    )
+    const result = computeIntegrityMultiplier(['coordinated_creation', 'single_source_funding'], ['burst_and_stop'], 0)
     // 0.65 * 0.75 * 0.80 = 0.39
     expect(result).toBeCloseTo(0.39, 1)
   })
@@ -41,7 +37,7 @@ describe('computeIntegrityMultiplier', () => {
       ['nonce_inflation', 'artificial_partner_diversity', 'wash_trading'],
       5,
     )
-    expect(result).toBeGreaterThanOrEqual(0.10)
+    expect(result).toBeGreaterThanOrEqual(0.1)
   })
 })
 
@@ -52,12 +48,12 @@ describe('factor lookup tables', () => {
 
   it('GAMING_FACTORS contains wash_trading', () => {
     expect(GAMING_FACTORS).toHaveProperty('wash_trading')
-    expect(GAMING_FACTORS.wash_trading).toBe(0.50)
+    expect(GAMING_FACTORS.wash_trading).toBe(0.5)
   })
 
   it('unknown indicators use default fallback', () => {
     // Unknown sybil → 0.80, unknown gaming → 0.85
     const result = computeIntegrityMultiplier(['unknown_sybil'], ['unknown_gaming'], 0)
-    expect(result).toBeCloseTo(0.80 * 0.85) // 0.68
+    expect(result).toBeCloseTo(0.8 * 0.85) // 0.68
   })
 })

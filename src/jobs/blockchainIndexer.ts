@@ -28,16 +28,14 @@
  * On RPC error, waits 30 seconds before retrying.
  */
 import { parseAbiItem } from 'viem'
-import { log } from '../logger.js'
 import { getPublicClient, USDC_ADDRESS } from '../blockchain.js'
-import { getIndexerState, setIndexerState, indexTransferBatch } from '../db.js'
 import type { IndexedTransfer } from '../db.js'
+import { getIndexerState, indexTransferBatch, setIndexerState } from '../db.js'
+import { log } from '../logger.js'
 
 // ---------- Constants ----------
 
-const TRANSFER_EVENT = parseAbiItem(
-  'event Transfer(address indexed from, address indexed to, uint256 value)',
-)
+const TRANSFER_EVENT = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)')
 
 // AuthorizationUsed is emitted exclusively by transferWithAuthorization / receiveWithAuthorization
 // (EIP-3009). Regular transfer/transferFrom do NOT emit this event.
@@ -69,9 +67,9 @@ const FACILITATOR_ADDRESS = (
 const BASE_GENESIS_BLOCK = 1n
 const BASE_GENESIS_TS_MS = 1677177203_000n
 
-const POLL_INTERVAL_MS = 12_000   // 12 s between polls
-const RETRY_DELAY_MS = 30_000     // 30 s on RPC error
-const LOG_CHUNK_SIZE = 10_000n    // getLogs block-range cap
+const POLL_INTERVAL_MS = 12_000 // 12 s between polls
+const RETRY_DELAY_MS = 30_000 // 30 s on RPC error
+const LOG_CHUNK_SIZE = 10_000n // getLogs block-range cap
 
 const STATE_KEY = 'last_indexed_block'
 
@@ -83,11 +81,7 @@ const STATE_KEY = 'last_indexed_block'
  * @param anchorBlock - a block whose real timestamp we know (chunk start)
  * @param anchorTsMs  - that block's real timestamp in milliseconds
  */
-function blockToIsoTimestamp(
-  blockNumber: bigint,
-  anchorBlock: bigint,
-  anchorTsMs: bigint,
-): string {
+function blockToIsoTimestamp(blockNumber: bigint, anchorBlock: bigint, anchorTsMs: bigint): string {
   // Interpolate ±2s/block from the real anchor
   const ms = anchorTsMs + (blockNumber - anchorBlock) * 2000n
   return new Date(Number(ms)).toISOString()
@@ -114,7 +108,9 @@ async function fetchAndIndexChunk(start: bigint, end: bigint): Promise<number> {
     }),
     // Graceful fallback: if the block fetch fails we still index with the
     // genesis-based approximation (less accurate but non-fatal).
-    getPublicClient().getBlock({ blockNumber: start }).catch(() => null),
+    getPublicClient()
+      .getBlock({ blockNumber: start })
+      .catch(() => null),
   ])
 
   // No x402 settlements in this range
@@ -148,7 +144,9 @@ async function fetchAndIndexChunk(start: bigint, end: bigint): Promise<number> {
       const batch = hashes.slice(i, i + BATCH_SIZE)
       const txs = await Promise.all(
         batch.map((h) =>
-          getPublicClient().getTransaction({ hash: h as `0x${string}` }).catch(() => null),
+          getPublicClient()
+            .getTransaction({ hash: h as `0x${string}` })
+            .catch(() => null),
         ),
       )
       for (let j = 0; j < batch.length; j++) {
@@ -205,9 +203,8 @@ async function fetchAndIndexChunk(start: bigint, end: bigint): Promise<number> {
  * Error message format: "query exceeds max results 20000, retry with the range START-END"
  */
 function parseSuggestedEnd(err: unknown): bigint | null {
-  const msg = (err as { details?: string; message?: string })?.details
-    ?? (err as { message?: string })?.message
-    ?? String(err)
+  const msg =
+    (err as { details?: string; message?: string })?.details ?? (err as { message?: string })?.message ?? String(err)
   const m = msg.match(/retry with the range \d+-(\d+)/)
   return m ? BigInt(m[1]) : null
 }
@@ -271,7 +268,7 @@ export async function startBlockchainIndexer(): Promise<void> {
   // Max gap we're willing to index on startup: 1 day of blocks.
   // If the stored state is further behind than this, skip to current block
   // to avoid fetching months of ALL Base USDC transfers (OOM risk).
-  const MAX_CATCHUP_BLOCKS = 43_200n  // 1 day
+  const MAX_CATCHUP_BLOCKS = 43_200n // 1 day
 
   if (stored) {
     const storedBlock = BigInt(stored)
@@ -290,7 +287,10 @@ export async function startBlockchainIndexer(): Promise<void> {
     const backfillStart = currentBlock > BACKFILL_BLOCKS ? currentBlock - BACKFILL_BLOCKS : 0n
     lastBlockIndexed = backfillStart
     setIndexerState(STATE_KEY, backfillStart.toString())
-    log.info('indexer', `First run — backfilling from block ${backfillStart} (${BACKFILL_BLOCKS} blocks behind tip ${currentBlock})`)
+    log.info(
+      'indexer',
+      `First run — backfilling from block ${backfillStart} (${BACKFILL_BLOCKS} blocks behind tip ${currentBlock})`,
+    )
   }
 
   while (running) {

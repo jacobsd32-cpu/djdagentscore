@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 // Track all DB operations for assertions
 const mockDbRuns: Array<{ sql: string; params: unknown[] }> = []
@@ -54,7 +54,7 @@ describe('apiKeys admin routes', () => {
       method: 'GET',
     })
     expect(res.status).toBe(401)
-    const body = await res.json() as Record<string, unknown>
+    const body = (await res.json()) as Record<string, unknown>
     expect(body.error).toBe('Unauthorized')
   })
 
@@ -116,7 +116,7 @@ describe('apiKeys admin routes', () => {
     })
 
     expect(res.status).toBe(201)
-    const body = await res.json() as Record<string, unknown>
+    const body = (await res.json()) as Record<string, unknown>
     // The raw key is returned
     expect(typeof body.key).toBe('string')
     expect((body.key as string).startsWith('djd_live_')).toBe(true)
@@ -150,7 +150,7 @@ describe('apiKeys admin routes', () => {
     })
 
     expect(res.status).toBe(400)
-    const body = await res.json() as { error: { code: string } }
+    const body = (await res.json()) as { error: { code: string } }
     expect(body.error.code).toBe('invalid_request')
   })
 
@@ -187,7 +187,7 @@ describe('apiKeys admin routes', () => {
     })
 
     expect(res.status).toBe(200)
-    const body = await res.json() as { keys: Record<string, unknown>[]; count: number }
+    const body = (await res.json()) as { keys: Record<string, unknown>[]; count: number }
     expect(body.count).toBe(1)
     expect(body.keys[0]!.key_prefix).toBe('djd_live_abc123...')
     // The raw key or hash should NOT be in the listing
@@ -212,7 +212,7 @@ describe('apiKeys admin routes', () => {
     })
 
     expect(res.status).toBe(200)
-    const body = await res.json() as Record<string, unknown>
+    const body = (await res.json()) as Record<string, unknown>
     expect(body.success).toBe(true)
     expect(body.message).toBe('API key revoked')
   })
@@ -251,7 +251,7 @@ describe('apiKeys admin routes', () => {
     })
 
     expect(res.status).toBe(200)
-    const body = await res.json() as Record<string, unknown>
+    const body = (await res.json()) as Record<string, unknown>
     expect(body.success).toBe(true)
     expect(body.message).toBe('Usage counter reset')
   })

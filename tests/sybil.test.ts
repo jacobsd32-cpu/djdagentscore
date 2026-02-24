@@ -5,8 +5,9 @@
  * with the exact data patterns each check looks for. Because detectSybil() accepts
  * a Database parameter (DI), we don't need to mock anything — just real SQLite.
  */
-import { describe, it, expect } from 'vitest'
+
 import Database from 'better-sqlite3'
+import { describe, expect, it } from 'vitest'
 import { detectSybil } from '../src/scoring/sybil.js'
 
 // Minimal schema — only the 3 tables sybil.ts queries
@@ -155,9 +156,11 @@ describe('detectSybil', () => {
   // ── CHECK 4: Single-partner dependency ──────────────────────────────────
   it('detects single_partner when wallet has exactly 1 partner', () => {
     const db = createSybilDb()
-    db.prepare(
-      `INSERT INTO wallet_index (wallet, first_seen, total_tx_count) VALUES (?, ?, ?)`,
-    ).run(WALLET, '2025-01-01T00:00:00Z', 10)
+    db.prepare(`INSERT INTO wallet_index (wallet, first_seen, total_tx_count) VALUES (?, ?, ?)`).run(
+      WALLET,
+      '2025-01-01T00:00:00Z',
+      10,
+    )
     db.prepare(
       `INSERT INTO relationship_graph (wallet_a, wallet_b, total_volume_a_to_b, total_volume_b_to_a) VALUES (?, ?, ?, ?)`,
     ).run(WALLET, '0xonly', 1000, 50)

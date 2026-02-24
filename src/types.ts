@@ -22,14 +22,22 @@ export function isValidWebhookUrl(url: string): boolean {
       hostname === '0.0.0.0' ||
       hostname === '::1' ||
       hostname.startsWith('10.') ||
-      hostname.startsWith('172.16.') || hostname.startsWith('172.17.') ||
-      hostname.startsWith('172.18.') || hostname.startsWith('172.19.') ||
-      hostname.startsWith('172.20.') || hostname.startsWith('172.21.') ||
-      hostname.startsWith('172.22.') || hostname.startsWith('172.23.') ||
-      hostname.startsWith('172.24.') || hostname.startsWith('172.25.') ||
-      hostname.startsWith('172.26.') || hostname.startsWith('172.27.') ||
-      hostname.startsWith('172.28.') || hostname.startsWith('172.29.') ||
-      hostname.startsWith('172.30.') || hostname.startsWith('172.31.') ||
+      hostname.startsWith('172.16.') ||
+      hostname.startsWith('172.17.') ||
+      hostname.startsWith('172.18.') ||
+      hostname.startsWith('172.19.') ||
+      hostname.startsWith('172.20.') ||
+      hostname.startsWith('172.21.') ||
+      hostname.startsWith('172.22.') ||
+      hostname.startsWith('172.23.') ||
+      hostname.startsWith('172.24.') ||
+      hostname.startsWith('172.25.') ||
+      hostname.startsWith('172.26.') ||
+      hostname.startsWith('172.27.') ||
+      hostname.startsWith('172.28.') ||
+      hostname.startsWith('172.29.') ||
+      hostname.startsWith('172.30.') ||
+      hostname.startsWith('172.31.') ||
       hostname.startsWith('192.168.') ||
       hostname === '169.254.169.254' ||
       hostname.endsWith('.internal') ||
@@ -45,12 +53,7 @@ export function isValidWebhookUrl(url: string): boolean {
 
 export type Tier = 'Elite' | 'Trusted' | 'Established' | 'Emerging' | 'Unverified'
 
-export type ReportReason =
-  | 'failed_delivery'
-  | 'payment_fraud'
-  | 'impersonation'
-  | 'malicious_behavior'
-  | 'other'
+export type ReportReason = 'failed_delivery' | 'payment_fraud' | 'impersonation' | 'malicious_behavior' | 'other'
 
 export const REPORT_REASONS: ReportReason[] = [
   'failed_delivery',
@@ -224,7 +227,7 @@ export interface AgentRegistrationRow {
   registered_at: string
   updated_at: string
   // GitHub verification (populated async after registration)
-  github_verified: number        // 0 | 1
+  github_verified: number // 0 | 1
   github_stars: number | null
   github_pushed_at: string | null
   github_verified_at: string | null
@@ -262,7 +265,7 @@ export interface ReportResponse {
 // ---------- Leaderboard ----------
 
 export interface LeaderboardRow extends ScoreRow {
-  is_registered: number        // 0 | 1
+  is_registered: number // 0 | 1
   github_verified_badge: number // 0 | 1
 }
 
