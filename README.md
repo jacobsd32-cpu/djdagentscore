@@ -1,39 +1,162 @@
 # DJD Agent Score
 
-On-chain reputation scoring for AI agent wallets, monetised via [x402](https://github.com/coinbase/x402) micropayments on Base.
+Know if the agent wallet you're interacting with is trustworthy. On-chain reputation scoring for AI agent wallets, monetized via [x402](https://github.com/coinbase/x402) micropayments on Base.
 
-**Live API:** https://djd-agent-score.fly.dev
-**OpenAPI spec:** https://djd-agent-score.fly.dev/openapi.json
+One API call. No keys. No signup. Free tier included.
+
+[Live API](https://djd-agent-score.fly.dev) · [OpenAPI Spec](https://djd-agent-score.fly.dev/openapi.json) · [Leaderboard](https://djd-agent-score.fly.dev/v1/leaderboard)
 
 ---
 
-## What it does
+## Try it now
 
-As AI agents proliferate and start transacting autonomously, there's no standard way to assess their trustworthiness. DJD Agent Score produces a **0–100 reputation score** for any wallet by analysing its USDC on-chain history across five dimensions:
+Score any wallet. No API key, no signup, no payment. 10 free calls per day.
+
+```bash
+curl "https://djd-agent-score.fly.dev/v1/score/basic?wallet=0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528"
+```
+
+Returns:
+
+```json
+{
+  "wallet": "0x3E4Ef1f…",
+  "score": 49,
+  "tier": "Emerging",
+  "confidence": 0.35,
+  "recommendation": "Low activity. Build transaction history to improve score.",
+  "modelVersion": "2.0.0",
+  "lastUpdated": "2025-02-23T12:00:00.000Z",
+  "computedAt": "2025-02-23T11:45:00.000Z",
+  "scoreFreshness": 0.75,
+  "freeTier": true,
+  "freeQueriesRemainingToday": 9
+}
+```
+
+`score` is 0–100. `confidence` reflects how much on-chain data backs the score. Wallets with more USDC transaction history and verified identity score higher.
+
+Embed a live score badge in your own README:
+
+```markdown
+![Agent Score](https://djd-agent-score.fly.dev/v1/badge/0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528.svg)
+```
+
+View any wallet's profile page: [djd-agent-score.fly.dev/agent/{wallet}](https://djd-agent-score.fly.dev/agent/0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528)
+
+---
+
+## Built for
+
+**AI agent developers on Base** — Check a wallet's reputation before your agent sends payment, accepts a request, or enters a contract.
+
+**DeFi protocols** — Gate agent access or set risk parameters. Call the API before allowing an agent to interact with your lending pool, DEX, or yield vault.
+
+**x402 builders** — A real-world example of an API monetized natively through the x402 payment standard.
+
+---
+
+## Integrate in 3 lines
+
+### JavaScript
+
+```js
+// Free tier: 10 calls/day, no payment needed
+const response = await fetch(
+  "https://djd-agent-score.fly.dev/v1/score/basic?wallet=" + agentWallet
+);
+const { score, tier, confidence } = await response.json();
+
+// Gate interactions based on trust
+if (score < 50 || confidence < 0.3) {
+  console.log("Wallet has insufficient reputation. Declining interaction.");
+  return;
+}
+
+// Proceed with transaction
+```
+
+### Python
+
+```python
+import requests
+
+resp = requests.get(
+    "https://djd-agent-score.fly.dev/v1/score/basic",
+    params={"wallet": agent_wallet}
+)
+data = resp.json()
+
+if data["score"] >= 75 and data["confidence"] >= 0.5:
+    # Trusted wallet, proceed
+    execute_transaction(agent_wallet)
+else:
+    # Require additional verification
+    flag_for_review(agent_wallet)
+```
+
+### curl (paid endpoint with x402)
+
+```bash
+# Full score breakdown — $0.10 USDC via x402
+# x402-compatible clients handle the payment header automatically
+curl "https://djd-agent-score.fly.dev/v1/score/full?wallet=0x…" \
+  -H "X-PAYMENT: <payment_proof>"
+```
+
+---
+
+## How scoring works
+
+Every wallet is evaluated across five weighted dimensions based on its USDC transaction history on Base:
 
 | Dimension | Weight | What it measures |
 |---|---|---|
 | **Payment Reliability** | 30% | Transaction volume, consistency, counterparty diversity |
 | **Economic Viability** | 25% | USDC balance, inflow/outflow ratios, wallet age |
-| **Identity** | 20% | Wallet age, Basename, voluntary registration, GitHub verification |
+| **Identity** | 20% | Wallet age, Basename, registration, GitHub verification |
 | **Behavior** | 15% | Transaction patterns, consistency, anomaly signals |
 | **Capability** | 10% | x402 revenue earned, services operated |
 
 **Score tiers:** Elite (90+) · Trusted (75–89) · Established (50–74) · Emerging (25–49) · Unverified (0–24)
 
-The indexer also tracks x402 settlements on-chain using the EIP-3009 `AuthorizationUsed` event — so agents that *use* x402 to pay for services accumulate verifiable payment history that feeds directly into their reputation score. The more agents use x402, the more meaningful their scores become.
+The scoring engine indexes x402 settlements on-chain using the EIP-3009 `AuthorizationUsed` event. Agents that use x402 to pay for services accumulate verifiable payment history that feeds directly into their score. The more an agent transacts through x402, the more meaningful its reputation becomes.
+
+Additional integrity layers: Sybil detection heuristics, score gaming detection, fraud report penalties. Scores are cached for 1 hour with background refresh for active wallets.
 
 ---
 
-## API endpoints
+## API reference
 
 ### Free endpoints
 
-#### `POST /v1/agent/register`
+| Endpoint | Method | Description |
+|---|---|---|
+| `/v1/score/basic?wallet=0x…` | GET | Score, tier, confidence. 10 free calls/day. |
+| `/v1/agent/register` | POST | Register your wallet. +10 identity bonus. |
+| `/v1/score/compute` | POST | Queue background score computation. Returns jobId immediately. |
+| `/v1/score/job/:jobId` | GET | Poll async job status (pending → complete). |
+| `/v1/leaderboard` | GET | Top-ranked wallets by score. |
+| `/agent/{wallet}` | GET | Profile page (HTML). |
+| `/v1/badge/{wallet}.svg` | GET | Embeddable SVG score badge. |
+| `/health` | GET | Service health and indexer status. |
 
-Register your agent wallet with optional metadata. Free, no payment required.
-Registered wallets receive a **+10 point identity bonus**.
-Re-posting updates metadata (upsert — omitted fields are preserved).
+### Paid endpoints (x402 USDC on Base)
+
+| Endpoint | Method | Price | Description |
+|---|---|---|---|
+| `/v1/score/full?wallet=0x…` | GET | $0.10 | Per-dimension scores, raw data, history, fraud flags |
+| `/v1/score/refresh?wallet=0x…` | GET | $0.25 | Force live recalculation (bypasses 1hr cache) |
+| `/v1/report` | POST | $0.02 | Submit fraud/misconduct report against a wallet |
+| `/v1/data/fraud/blacklist?wallet=0x…` | GET | $0.05 | Check if a wallet is on the fraud blacklist |
+
+Paid endpoints return `402 Payment Required` without a valid payment proof. Include the proof in the `X-PAYMENT` header. Any x402-compatible client handles this automatically. [How x402 payments work →](#how-x402-payments-work)
+
+---
+
+## Register your agent
+
+Registered wallets get a +10 point identity bonus. Free, one call.
 
 ```bash
 curl -X POST https://djd-agent-score.fly.dev/v1/agent/register \
@@ -47,82 +170,31 @@ curl -X POST https://djd-agent-score.fly.dev/v1/agent/register \
   }'
 ```
 
-Only `wallet` is required. Returns `201` on first registration, `200` on update.
-
-#### `GET /health`
-
-Service health, uptime, and indexer status.
-
-#### `GET /v1/leaderboard`
-
-Top-ranked agent wallets by score. Free, no payment required.
-
-#### `GET /agent/{wallet}`
-
-Human-readable agent profile page (HTML).
-
-#### `GET /v1/badge/{wallet}.svg`
-
-SVG score badge you can embed in READMEs.
-
-```markdown
-![Agent Score](https://djd-agent-score.fly.dev/v1/badge/0xYourWallet.svg)
-```
+Only `wallet` is required. Returns `201` on first registration, `200` on update. Re-posting updates metadata (upsert, omitted fields preserved). Linking a valid GitHub repo enables verification for additional identity scoring.
 
 ---
 
-### Paid endpoints (x402 USDC on Base)
+## Report fraud
 
-All paid endpoints return `402 Payment Required` when no valid payment proof is supplied. Include the payment proof in the `X-PAYMENT` header — handled automatically by any x402-compatible client.
+Submit reports against wallets engaged in misconduct. $0.02 per report to prevent spam. Verified reports apply a score penalty.
 
-The first **10 requests/day** to `/v1/score/basic` are free (no payment needed).
-
-#### `GET /v1/score/basic?wallet=0x…` — Free (10/day)
-
-```json
-{
-  "wallet": "0x…",
-  "score": 72,
-  "tier": "Established",
-  "confidence": 0.85,
-  "recommendation": "Moderate activity with verified identity.",
-  "modelVersion": "2.0.0",
-  "lastUpdated": "2026-02-22T12:00:00.000Z",
-  "computedAt": "2026-02-22T12:00:00.000Z",
-  "scoreFreshness": 0.95
-}
+```bash
+curl -X POST https://djd-agent-score.fly.dev/v1/report \
+  -H 'Content-Type: application/json' \
+  -H 'X-PAYMENT: <payment_proof>' \
+  -d '{
+    "target": "0xSuspiciousWallet",
+    "reporter": "0xYourWallet",
+    "reason": "payment_fraud",
+    "details": "Agent accepted payment but never delivered the service."
+  }'
 ```
 
-#### `GET /v1/score/full?wallet=0x…` — $0.10
-
-Full breakdown including per-dimension scores (reliability, viability, identity, behavior, capability), raw dimension data, score history, recommendations, and fraud flags.
-
-#### `GET /v1/score/refresh?wallet=0x…` — $0.25
-
-Forces a live recalculation from on-chain data, bypassing the 1-hour cache.
-
-#### `POST /v1/report` — $0.02
-
-Submit a fraud or misconduct report against a wallet. Verified reports apply a score penalty.
-
-```json
-{
-  "target": "0x…",
-  "reporter": "0x…",
-  "reason": "payment_fraud",
-  "details": "Agent accepted payment but never delivered the service."
-}
-```
-
-`reason`: `failed_delivery` · `payment_fraud` · `impersonation` · `malicious_behavior` · `other`
-
-#### `GET /v1/data/fraud/blacklist?wallet=0x…` — $0.05
-
-Check whether a wallet appears on the fraud blacklist.
+Reasons: `failed_delivery` · `payment_fraud` · `impersonation` · `malicious_behavior` · `other`
 
 ---
 
-## Quick start (local dev)
+## Local development
 
 ```bash
 git clone https://github.com/jacobsd32-cpu/djdagentscore
@@ -131,7 +203,7 @@ npm install
 npm run dev
 ```
 
-Requires Node.js ≥ 20. Server starts on `http://localhost:3000`.
+Requires Node.js >= 20. Starts on `http://localhost:3000`.
 
 ### Environment variables
 
@@ -144,76 +216,32 @@ Requires Node.js ≥ 20. Server starts on `http://localhost:3000`.
 
 ---
 
-## Architecture
+## Technical notes
 
-```
-src/
-├── index.ts                        # Hono app, x402 middleware, background jobs
-├── types.ts                        # TypeScript interfaces
-├── types/
-│   └── hono-env.ts                 # Hono environment type bindings
-├── logger.ts                       # Structured logging
-├── blockchain.ts                   # viem public client, chunked getLogs
-├── db.ts                           # Legacy DB entry point
-├── db/
-│   ├── connection.ts               # SQLite connection (DELETE journal mode)
-│   ├── schema.ts                   # 20-table schema, migrations
-│   └── queries.ts                  # Parameterised query helpers
-├── middleware/
-│   ├── freeTier.ts                 # 10 free requests/day for /v1/score/basic
-│   ├── queryLogger.ts              # Per-request query logging
-│   └── responseHeaders.ts          # Standard response headers
-├── routes/
-│   ├── register.ts                 # POST /v1/agent/register
-│   ├── score.ts                    # GET /v1/score/*
-│   ├── report.ts                   # POST /v1/report
-│   ├── leaderboard.ts              # GET /v1/leaderboard
-│   ├── badge.ts                    # GET /v1/badge/*.svg
-│   ├── agent.ts                    # GET /agent/{wallet} (HTML)
-│   ├── blacklist.ts                # GET /v1/data/fraud/blacklist
-│   ├── health.ts                   # GET /health
-│   ├── admin.ts                    # Admin/debug endpoints
-│   ├── legal.ts                    # Terms & privacy
-│   └── openapi.ts                  # GET /openapi.json
-├── scoring/
-│   ├── dimensions.ts               # Reliability, Viability, Identity, Capability
-│   ├── behavior.ts                 # Behavior dimension (transaction patterns)
-│   ├── engine.ts                   # Orchestration, caching, fraud penalties
-│   ├── integrity.ts                # Sybil + gaming integrity modifier
-│   ├── sybil.ts                    # Sybil detection heuristics
-│   ├── gaming.ts                   # Score gaming detection
-│   ├── confidence.ts               # Confidence scoring
-│   ├── dataAvailability.ts         # Data sufficiency checks
-│   ├── responseBuilders.ts         # BasicScoreResponse / FullScoreResponse builders
-│   ├── calibrationReport.ts        # Scoring model calibration
-│   └── recommendation.ts           # Score improvement recommendations
-└── jobs/
-    ├── blockchainIndexer.ts        # x402 settlement indexer (EIP-3009 AuthorizationUsed)
-    ├── usdcTransferIndexer.ts      # USDC Transfer event indexer
-    ├── usdcTransferHelpers.ts      # Transfer parsing utilities
-    ├── scoreRefresh.ts             # Hourly background score refresh
-    ├── scoreQueue.ts               # Score computation queue
-    ├── anomalyDetector.ts          # Anomaly and Sybil monitoring
-    ├── intentMatcher.ts            # Pre/post payment intent matching
-    ├── outcomeMatcher.ts           # Payment outcome reconciliation
-    ├── dailyAggregator.ts          # Daily wallet metrics aggregation
-    ├── jobStats.ts                 # Background job statistics
-    └── githubReverify.ts           # Periodic GitHub verification refresh
-```
+**Stack:** Hono + SQLite + viem, deployed on Fly.io. Full architecture docs at [docs/architecture.md](docs/architecture.md).
 
-**Blockchain indexer:** Polls Base USDC every 12 seconds for `AuthorizationUsed` + `Transfer` events. Uses a two-layer filter (EIP-3009 event + $1 USDC amount cap) to isolate x402 settlements from regular DeFi activity. Adaptive chunk sizing handles BlastAPI's 20k result cap gracefully.
+**Blockchain indexer:** Polls Base USDC every 12 seconds for `AuthorizationUsed` and `Transfer` events. Two-layer filter (EIP-3009 event + $1 USDC amount cap) isolates x402 settlements from regular DeFi activity. Adaptive chunk sizing handles BlastAPI's 20k result cap.
 
-**Database:** SQLite with DELETE journal mode (chosen over WAL for compatibility with Fly.io network-attached volumes). 20 tables covering scores, history, fraud reports, agent registrations, query logs, indexer state, and job stats.
+**Database:** SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached volume compatibility). 20 tables covering scores, history, fraud reports, registrations, query logs, indexer state, and job stats.
+
+**RPC provider:** Default is BlastAPI public Base endpoint. For heavy indexing, use a dedicated provider via `BASE_RPC_URL`. Avoid `publicnode.com` (rejects 10k-block `eth_getLogs` ranges).
+
+**ERC-8004:** [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) (AI Agent Registry) check is disabled until a registry contract deploys on Base. Identity points redistributed to Basename (+5), GitHub verification (+5), wallet age (+5).
+
+**Score caching:** 1 hour cache. Background refresh for up to 10 expired scores/hour. Force recalculation with `/v1/score/refresh` ($0.25).
+
+### How x402 payments work
+
+[x402](https://github.com/coinbase/x402) is an open payment protocol built on HTTP 402. When you hit a paid endpoint without payment, you get back a `402` response with payment instructions (amount, recipient, network). Your x402 client signs a USDC payment on Base, attaches the proof to `X-PAYMENT`, and resends the request. One additional round-trip, handled automatically by client libraries.
+
+No API keys. No subscriptions. No accounts. Micropayments per request.
 
 ---
 
-## Notes
+## License
 
-### RPC provider
-The default RPC is BlastAPI's public Base endpoint. For heavy indexing, use a dedicated provider (Alchemy, QuickNode) via the `BASE_RPC_URL` env var. `publicnode.com` rejects 10k-block `eth_getLogs` ranges — use BlastAPI or similar.
+[MIT](./LICENSE)
 
-### ERC-8004 Registry
-[ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) (AI Agent Registry) is a proposed standard. No registry contract is deployed on Base yet, so the ERC-8004 check is disabled in the scoring model. The 20 identity points previously allocated to ERC-8004 have been redistributed across Basename (+5), GitHub verification (+5), and wallet age (+5). When a registry deploys, the scoring model will re-integrate it.
+---
 
-### Score cache
-Scores are cached for 1 hour. The background job refreshes up to 10 expired scores per hour. Use `/v1/score/refresh` ($0.25) to force an immediate recalculation.
+Built by DJD · Powered by [x402](https://github.com/coinbase/x402) · Running on [Base](https://base.org)
