@@ -10,16 +10,29 @@ import { log } from '../logger.js'
 import { incHttpRequest } from '../metrics.js'
 
 const ENDPOINT_PRICES: Record<string, number> = {
-  '/v1/score/basic': 0.03,
   '/v1/score/full': 0.10,
   '/v1/score/refresh': 0.25,
   '/v1/report': 0.02,
   '/v1/data/fraud/blacklist': 0.05,
   '/v1/score/history': 0.15,
   '/v1/score/batch': 0.50,
+  '/v1/certification/apply': 99.00,
 }
 
-const FREE_ENDPOINTS = new Set(['/health', '/v1/leaderboard'])
+const FREE_ENDPOINTS = new Set([
+  '/health',
+  '/v1/leaderboard',
+  '/v1/score/basic',
+  '/v1/badge',
+  '/v1/agent/register',
+  '/v1/data/economy',
+  '/docs',
+  '/metrics',
+  '/openapi.json',
+  '/v1/certification',        // GET check is free
+  '/v1/certification/badge',  // SVG badge is free
+  '/v1/webhooks',             // webhook management is free (paid via subscription)
+])
 
 /**
  * Attempt to extract the payer wallet from the x402 X-PAYMENT header.
@@ -45,6 +58,11 @@ function tierFromEndpoint(endpoint: string): string {
   if (endpoint.includes('/score/basic')) return 'basic'
   if (endpoint.includes('/score/full')) return 'full'
   if (endpoint.includes('/score/refresh')) return 'refresh'
+  if (endpoint.includes('/score/batch')) return 'batch'
+  if (endpoint.includes('/score/history')) return 'history'
+  if (endpoint.includes('/certification/apply')) return 'certification'
+  if (endpoint.includes('/report')) return 'report'
+  if (endpoint.includes('/blacklist')) return 'fraud'
   return 'free'
 }
 
