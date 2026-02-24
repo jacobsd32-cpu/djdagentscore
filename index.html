@@ -343,7 +343,7 @@ footer{border-top:1px solid var(--border);padding:28px 0 36px;margin-top:60px}
   <div class="code"><div class="code-l">JavaScript</div><pre><span class="c">// Before sending USDC, check the recipient's reputation</span>
 <span class="k">const</span> wallet = <span class="s">"0xRecipientAddress"</span>;
 <span class="k">const</span> { score, confidence, recommendation } = <span class="k">await</span> (
-  <span class="k">await</span> <span class="f">fetch</span>(<span class="s">`https://djdagentscore.xyz/v1/score/basic?wallet=</span><span class="k">${</span>wallet<span class="k">}</span><span class="s">`</span>)
+  <span class="k">await</span> <span class="f">fetch</span>(<span class="s">`https://djd-agent-score.fly.dev/v1/score/basic?wallet=</span><span class="k">${</span>wallet<span class="k">}</span><span class="s">`</span>)
 ).<span class="f">json</span>();
 
 <span class="c">// Gate the transaction on the recommendation</span>
@@ -355,7 +355,7 @@ footer{border-top:1px solid var(--border);padding:28px 0 36px;margin-top:60px}
   <span class="f">log</span>(<span class="s">`Blocked: ${recommendation}`</span>);
 }</pre></div>
   <div class="code" style="margin-top:12px"><div class="code-l">cURL</div><pre><span class="c"># Free basic lookup</span>
-curl <span class="s">"https://djdagentscore.xyz/v1/score/basic?wallet=0x..."</span>
+curl <span class="s">"https://djd-agent-score.fly.dev/v1/score/basic?wallet=0x..."</span>
 
 <span class="c"># Sample response:</span>
 <span class="c"># {</span>
@@ -522,8 +522,8 @@ function submitFeedback(){
   const entry={type,wallet,details,contact,ts:new Date().toISOString()};
   const subject=encodeURIComponent('[DJD Feedback] '+type);
   const body=encodeURIComponent('Type: '+type+'\nWallet: '+(wallet||'N/A')+'\nContact: '+(contact||'N/A')+'\nTimestamp: '+entry.ts+'\n\nDetails:\n'+details);
-  window.open('mailto:feedback@djdagentscore.xyz?subject='+subject+'&body='+body,'_blank');
-  msg.innerHTML='Feedback recorded. A compose window should open. If not, email <strong>feedback@djdagentscore.xyz</strong> directly.';
+  window.open('mailto:feedback@djd-agent-score.fly.dev?subject='+subject+'&body='+body,'_blank');
+  msg.innerHTML='Feedback recorded. A compose window should open. If not, email <strong>feedback@djd-agent-score.fly.dev</strong> directly.';
   msg.className='fb-msg vis ok';
   document.getElementById('fbType').value='';document.getElementById('fbWallet').value='';
   document.getElementById('fbDetails').value='';document.getElementById('fbContact').value='';
@@ -536,10 +536,10 @@ loadStats();loadLB();setInterval(loadStats,30000);
 const qw=new URLSearchParams(location.search).get('wallet');
 if(qw){document.getElementById('wI').value=qw;doScore(false);}
 
-// Replace hardcoded domain in code examples with actual current origin
-if(window.location.hostname!=='djdagentscore.xyz'){
+// Replace code-example domain with actual current origin for local dev
+if(window.location.hostname==='localhost'){
   document.querySelectorAll('pre .s').forEach(el=>{
-    el.textContent=el.textContent.replace(/https:\/\/djdagentscore\.xyz/g,A);
+    el.textContent=el.textContent.replace(/https:\/\/djd-agent-score\.fly\.dev/g,A);
   });
 }
 </script>

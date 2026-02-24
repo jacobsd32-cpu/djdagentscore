@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { getScore, getScoreHistory, getRegistration, scoreToTier } from '../db.js'
-import type { ScoreRow, ScoreHistoryRow, AgentRegistrationRow } from '../types.js'
+import { getOrCalculateScore } from '../scoring/engine.js'
+import type { ScoreRow, ScoreHistoryRow, AgentRegistrationRow, Address } from '../types.js'
 
 // ---------- Helpers ----------
 
@@ -63,8 +64,10 @@ function renderPage(
   reg: AgentRegistrationRow | undefined,
   origin: string,
 ): string {
-  const badgeUrl = `${origin}/v1/badge/${wallet}.svg`
-  const pageUrl  = `${origin}/agent/${wallet}`
+  // Force HTTPS in URLs — behind Fly.io's proxy, origin can report http://
+  const safeOrigin = origin.replace(/^http:/, 'https:')
+  const badgeUrl = `${safeOrigin}/v1/badge/${wallet}.svg`
+  const pageUrl  = `${safeOrigin}/agent/${wallet}`
   const s   = score?.composite_score ?? 0
   const tier = score?.tier ?? 'Unverified'
   const conf = score?.confidence ?? 0
@@ -72,6 +75,7 @@ function renderPage(
   const rel  = score?.reliability_score ?? 0
   const via  = score?.viability_score   ?? 0
   const idn  = score?.identity_score    ?? 0
+  const beh  = score?.behavior_score    ?? 0
   const cap  = score?.capability_score  ?? 0
   const sybil = score ? (score.sybil_flag ?? 0) === 1 : false
   const calcAt = score?.calculated_at ?? ''
@@ -246,6 +250,7 @@ ${!score ? `
       ${dimBar('Reliability', rel, scoreColor(rel))}
       ${dimBar('Viability',   via, scoreColor(via))}
       ${dimBar('Identity',    idn, scoreColor(idn))}
+      ${dimBar('Behavior',    beh, scoreColor(beh))}
       ${dimBar('Capability',  cap, scoreColor(cap))}
     </div>
 
@@ -314,7 +319,7 @@ function copyShare(){
 
 const agentRoute = new Hono()
 
-agentRoute.get('/:wallet', (c) => {
+agentRoute.get('/:wallet', async (c) => {
   const raw = c.req.param('wallet').toLowerCase()
   if (!/^0x[0-9a-f]{40}$/.test(raw)) {
     return c.text('Invalid wallet address', 400)
@@ -322,7 +327,17 @@ agentRoute.get('/:wallet', (c) => {
 
   const origin = new URL(c.req.url).origin
 
-  const score   = getScore(raw)
+  // Try cache first; if missing, compute the score (populates cache as side-effect)
+  let score = getScore(raw)
+  if (!score) {
+    try {
+      await getOrCalculateScore(raw as Address, false)
+      score = getScore(raw)   // re-read from cache after computation
+    } catch {
+      // computation failed — score stays undefined, page renders unscored state
+    }
+  }
+
   const history = getScoreHistory(raw)
   const reg     = getRegistration(raw)
 
