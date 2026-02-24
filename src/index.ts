@@ -117,50 +117,59 @@ app.route('/metrics', metricsRoute)             // free — Prometheus metrics
 
 // ---------- x402 Payment Middleware ----------
 // Protects paid endpoints. Free endpoints (leaderboard, health) are not listed so they pass through.
+// Wrapped to skip x402 for valid API key authenticated requests (C2 fix).
 
-app.use(
-  paymentMiddleware(
-    PAY_TO,
-    {
-      '/v1/score/full': {
-        price: '$0.10',
-        network: NETWORK,
-        config: { description: 'Full agent score with dimension breakdown ($0.10 USDC)' },
-      },
-      '/v1/score/refresh': {
-        price: '$0.25',
-        network: NETWORK,
-        config: { description: 'Force live recalculation of agent score ($0.25 USDC)' },
-      },
-      '/v1/report': {
-        price: '$0.02',
-        network: NETWORK,
-        config: { description: 'Submit a fraud/misconduct report ($0.02 USDC)' },
-      },
-      '/v1/data/fraud/blacklist': {
-        price: '$0.05',
-        network: NETWORK,
-        config: { description: 'Fraud report check ($0.05 USDC)' },
-      },
-      '/v1/score/batch': {
-        price: '$0.50',
-        network: NETWORK,
-        config: { description: 'Batch score up to 20 wallets ($0.50 USDC)' },
-      },
-      '/v1/score/history': {
-        price: '$0.15',
-        network: NETWORK,
-        config: { description: 'Historical score data with trend analysis ($0.15 USDC)' },
-      },
-      '/v1/certification/apply': {
-        price: '$99.00',
-        network: NETWORK,
-        config: { description: 'Annual agent certification ($99 USDC)' },
-      },
+const x402Middleware = paymentMiddleware(
+  PAY_TO,
+  {
+    '/v1/score/full': {
+      price: '$0.10',
+      network: NETWORK,
+      config: { description: 'Full agent score with dimension breakdown ($0.10 USDC)' },
     },
-    { url: FACILITATOR_URL },
-  ),
+    '/v1/score/refresh': {
+      price: '$0.25',
+      network: NETWORK,
+      config: { description: 'Force live recalculation of agent score ($0.25 USDC)' },
+    },
+    '/v1/report': {
+      price: '$0.02',
+      network: NETWORK,
+      config: { description: 'Submit a fraud/misconduct report ($0.02 USDC)' },
+    },
+    '/v1/data/fraud/blacklist': {
+      price: '$0.05',
+      network: NETWORK,
+      config: { description: 'Fraud report check ($0.05 USDC)' },
+    },
+    '/v1/score/batch': {
+      price: '$0.50',
+      network: NETWORK,
+      config: { description: 'Batch score up to 20 wallets ($0.50 USDC)' },
+    },
+    '/v1/score/history': {
+      price: '$0.15',
+      network: NETWORK,
+      config: { description: 'Historical score data with trend analysis ($0.15 USDC)' },
+    },
+    '/v1/certification/apply': {
+      price: '$99.00',
+      network: NETWORK,
+      config: { description: 'Annual agent certification ($99 USDC)' },
+    },
+  },
+  { url: FACILITATOR_URL },
 )
+
+app.use(async (c, next) => {
+  // Skip x402 for API key authenticated requests
+  if (c.get('apiKeyId')) {
+    await next()
+    return
+  }
+  // Otherwise apply x402 payment middleware
+  await x402Middleware(c, next)
+})
 
 // ---------- Paid Rate Limiting ----------
 // 120 requests/hour per payer wallet on paid endpoints.

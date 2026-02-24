@@ -5,6 +5,44 @@ export function isValidAddress(addr: string): addr is Address {
   return /^0x[0-9a-fA-F]{40}$/.test(addr)
 }
 
+/**
+ * Validates a webhook URL is safe to fetch (SSRF prevention — H1 fix).
+ * Requires HTTPS and blocks internal/private network addresses.
+ */
+export function isValidWebhookUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    // Must be HTTPS
+    if (parsed.protocol !== 'https:') return false
+    // Block internal/private IPs and hostnames
+    const hostname = parsed.hostname.toLowerCase()
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '0.0.0.0' ||
+      hostname === '::1' ||
+      hostname.startsWith('10.') ||
+      hostname.startsWith('172.16.') || hostname.startsWith('172.17.') ||
+      hostname.startsWith('172.18.') || hostname.startsWith('172.19.') ||
+      hostname.startsWith('172.20.') || hostname.startsWith('172.21.') ||
+      hostname.startsWith('172.22.') || hostname.startsWith('172.23.') ||
+      hostname.startsWith('172.24.') || hostname.startsWith('172.25.') ||
+      hostname.startsWith('172.26.') || hostname.startsWith('172.27.') ||
+      hostname.startsWith('172.28.') || hostname.startsWith('172.29.') ||
+      hostname.startsWith('172.30.') || hostname.startsWith('172.31.') ||
+      hostname.startsWith('192.168.') ||
+      hostname === '169.254.169.254' ||
+      hostname.endsWith('.internal') ||
+      hostname.endsWith('.local')
+    ) {
+      return false
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
 export type Tier = 'Elite' | 'Trusted' | 'Established' | 'Emerging' | 'Unverified'
 
 export type ReportReason =

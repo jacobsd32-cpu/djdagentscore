@@ -7,6 +7,7 @@
 import crypto from 'node:crypto'
 import { db } from '../db.js'
 import { log } from '../logger.js'
+import { isValidWebhookUrl } from '../types.js'
 
 const MAX_ATTEMPTS = 3
 const RETRY_DELAYS_MS = [60_000, 300_000, 1_800_000] // 1min, 5min, 30min
@@ -95,6 +96,13 @@ export async function processWebhookQueue(): Promise<void> {
 
   for (const delivery of pending) {
     try {
+      // SSRF prevention: validate URL before fetching (H1 fix)
+      if (!isValidWebhookUrl(delivery.url)) {
+        log.warn('webhooks', `Delivery ${delivery.id} blocked — unsafe URL: ${delivery.url}`)
+        handleFailure(delivery, null)
+        continue
+      }
+
       const signature = crypto
         .createHmac('sha256', delivery.secret)
         .update(delivery.payload)

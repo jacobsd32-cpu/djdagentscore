@@ -74,7 +74,7 @@ describe('apiKeyAuthMiddleware', () => {
     expect(body.passedThrough).toBe(true)
   })
 
-  it('passes through when key is not found in database', async () => {
+  it('returns 401 when djd_live_ key is not found in database', async () => {
     mockRow = undefined
 
     const { Hono } = await import('hono')
@@ -87,9 +87,9 @@ describe('apiKeyAuthMiddleware', () => {
     const res = await app.request('/test', {
       headers: { authorization: `Bearer ${TEST_KEY}` },
     })
-    expect(res.status).toBe(200)
-    const body = await res.json() as Record<string, unknown>
-    expect(body.passedThrough).toBe(true)
+    expect(res.status).toBe(401)
+    const body = await res.json() as { error: { code: string } }
+    expect(body.error.code).toBe('api_key_invalid')
   })
 
   it('returns 401 for a revoked key', async () => {
