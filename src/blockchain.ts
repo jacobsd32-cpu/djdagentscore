@@ -21,6 +21,7 @@ export function getPublicClient(): Client {
     // viem's fallback transport includes a built-in circuit breaker: after
     // `retryCount` consecutive failures on a transport it is skipped for
     // subsequent requests until the next ranking interval (default 10s).
+    // @ts-expect-error — Base chain PublicClient includes OP Stack deposit tx types not present in generic ReturnType
     _publicClient = createPublicClient({
       chain: base,
       transport: fallback([
@@ -40,6 +41,7 @@ export function getPublicClient(): Client {
       }),
     })
   }
+  // @ts-expect-error — dual viem type copies (direct + x402-hono transitive) create nominal mismatch
   return _publicClient
 }
 
