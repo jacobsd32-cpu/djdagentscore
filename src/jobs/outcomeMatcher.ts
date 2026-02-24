@@ -54,7 +54,12 @@ export async function runOutcomeMatcher(db: DatabaseType): Promise<void> {
     let frauds = 0
     let noActivity = 0
 
-    for (const lookup of unmatched) {
+    for (let i = 0; i < unmatched.length; i++) {
+      const lookup = unmatched[i]
+      // Yield event loop every 25 iterations so health checks can be served
+      if (i > 0 && i % 25 === 0) {
+        await new Promise((r) => setTimeout(r, 10))
+      }
       if (!lookup.target_wallet) continue
 
       const queryTs = lookup.timestamp

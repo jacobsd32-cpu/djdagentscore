@@ -48,7 +48,12 @@ export async function runIntentMatcher(db: DatabaseType): Promise<void> {
     let processed = 0
     let conversions = 0
 
-    for (const query of unmatched) {
+    for (let i = 0; i < unmatched.length; i++) {
+      const query = unmatched[i]
+      // Yield event loop every 25 iterations so health checks can be served
+      if (i > 0 && i % 25 === 0) {
+        await new Promise((r) => setTimeout(r, 10))
+      }
       const queryTs = query.timestamp
       const windowEnd = new Date(new Date(queryTs).getTime() + 24 * 60 * 60 * 1000).toISOString()
       const isOldEnough = new Date(queryTs) < new Date(Date.now() - 24 * 60 * 60 * 1000)

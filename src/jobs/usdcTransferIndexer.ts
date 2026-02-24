@@ -17,8 +17,16 @@ const TRANSFER_EVENT = parseAbiItem('event Transfer(address indexed from, addres
 const STATE_KEY = 'usdc_last_indexed_block'
 const POLL_INTERVAL_MS = 15_000
 const RETRY_DELAY_MS = 30_000
-const LOG_CHUNK_SIZE = 2_000n // Smaller chunks to stay within rate limits
+const LOG_CHUNK_SIZE = 500n // Small chunks to avoid event loop blocking on Base's high-volume USDC
 const RATE_LIMIT_DELAY_MS = 200 // ~5 getLogs/sec
+
+// Max gap we'll index on startup. If stored state is further behind, skip to current.
+// Base USDC is extremely high-volume — catching up too far blocks the event loop.
+const MAX_CATCHUP_BLOCKS = 21_600n // ~12 hours at 2s/block
+
+// Max wallets to refresh stats for per chunk. Prevents event loop blocking
+// when a chunk contains thousands of unique wallets (common on Base).
+const MAX_WALLET_REFRESH_PER_CHUNK = 50
 
 let running = false
 let lastBlockIndexed = 0n
@@ -76,13 +84,19 @@ async function fetchAndIndexChunk(start: bigint, end: bigint): Promise<number> {
   if (transfers.length > 0) {
     const inserted = indexUsdcTransferBatch(db, transfers)
 
-    // Refresh stats for affected wallets
+    // Refresh stats for affected wallets (capped to prevent event loop blocking)
     const affectedWallets = new Set<string>()
     for (const t of transfers) {
       affectedWallets.add(t.fromWallet.toLowerCase())
       affectedWallets.add(t.toWallet.toLowerCase())
     }
-    refreshWalletTransferStats(db, Array.from(affectedWallets))
+    const walletsToRefresh = Array.from(affectedWallets).slice(0, MAX_WALLET_REFRESH_PER_CHUNK)
+    if (walletsToRefresh.length > 0) {
+      refreshWalletTransferStats(db, walletsToRefresh)
+    }
+    if (affectedWallets.size > MAX_WALLET_REFRESH_PER_CHUNK) {
+      log.info('usdc-indexer', `Capped wallet refresh to ${MAX_WALLET_REFRESH_PER_CHUNK}/${affectedWallets.size} wallets`)
+    }
 
     return inserted
   }
@@ -103,8 +117,16 @@ export async function startUsdcTransferIndexer(): Promise<void> {
   const currentBlock = await getPublicClient().getBlockNumber()
 
   if (stored) {
-    lastBlockIndexed = BigInt(stored)
-    log.info('usdc-indexer', `Resuming from block ${lastBlockIndexed}`)
+    const storedBlock = BigInt(stored)
+    const minBlock = currentBlock > MAX_CATCHUP_BLOCKS ? currentBlock - MAX_CATCHUP_BLOCKS : 0n
+    if (storedBlock < minBlock) {
+      lastBlockIndexed = currentBlock
+      setIndexerState(STATE_KEY, currentBlock.toString())
+      log.warn('usdc-indexer', `Stored state too old (${storedBlock}) — skipping to current block ${currentBlock}`)
+    } else {
+      lastBlockIndexed = storedBlock
+      log.info('usdc-indexer', `Resuming from block ${lastBlockIndexed}`)
+    }
   } else {
     lastBlockIndexed = currentBlock
     setIndexerState(STATE_KEY, currentBlock.toString())
@@ -130,7 +152,8 @@ export async function startUsdcTransferIndexer(): Promise<void> {
             if (chunkSize < LOG_CHUNK_SIZE) {
               chunkSize = chunkSize * 2n > LOG_CHUNK_SIZE ? LOG_CHUNK_SIZE : chunkSize * 2n
             }
-            await new Promise((r) => setTimeout(r, RATE_LIMIT_DELAY_MS))
+            // Yield the event loop so HTTP health checks can be served
+            await new Promise((r) => setTimeout(r, Math.max(RATE_LIMIT_DELAY_MS, 50)))
           } catch (err) {
             const suggestedEnd = parseSuggestedEnd(err)
             if (suggestedEnd !== null && suggestedEnd > start) {
