@@ -1,4 +1,4 @@
-import { createPublicClient, http, fallback, parseAbiItem, namehash } from 'viem'
+import { createPublicClient, fallback, http, namehash, parseAbiItem } from 'viem'
 import { base } from 'viem/chains'
 import type { WalletUSDCData } from './types.js'
 
@@ -24,21 +24,24 @@ export function getPublicClient(): Client {
     // @ts-expect-error — Base chain PublicClient includes OP Stack deposit tx types not present in generic ReturnType
     _publicClient = createPublicClient({
       chain: base,
-      transport: fallback([
-        http(BASE_RPC_URL, {
-          timeout: 30_000,
-          retryCount: 2,
-          retryDelay: 1_500,
-        }),
-        http(BASE_RPC_FALLBACK_URL, {
-          timeout: 30_000,
-          retryCount: 2,
-          retryDelay: 2_000,
-        }),
-      ], {
-        // Re-rank transports every 15 seconds based on latency
-        rank: { interval: 15_000, sampleCount: 5, timeout: 3_000, weights: { latency: 0.4, stability: 0.6 } },
-      }),
+      transport: fallback(
+        [
+          http(BASE_RPC_URL, {
+            timeout: 30_000,
+            retryCount: 2,
+            retryDelay: 1_500,
+          }),
+          http(BASE_RPC_FALLBACK_URL, {
+            timeout: 30_000,
+            retryCount: 2,
+            retryDelay: 2_000,
+          }),
+        ],
+        {
+          // Re-rank transports every 15 seconds based on latency
+          rank: { interval: 15_000, sampleCount: 5, timeout: 3_000, weights: { latency: 0.4, stability: 0.6 } },
+        },
+      ),
     })
   }
   // @ts-expect-error — dual viem type copies (direct + x402-hono transitive) create nominal mismatch
@@ -55,23 +58,15 @@ const ERC8004_REGISTRY = '0x0000000000000000000000000000000000000000' as const
 // Basenames — ENS infrastructure deployed on Base mainnet
 const BASE_ENS_REGISTRY = '0xb94704422c2a1e396835a571837aa5ae53285a95' as const
 
-const ENS_REGISTRY_ABI = [
-  parseAbiItem('function resolver(bytes32 node) view returns (address)'),
-] as const
+const ENS_REGISTRY_ABI = [parseAbiItem('function resolver(bytes32 node) view returns (address)')] as const
 
-const ENS_RESOLVER_NAME_ABI = [
-  parseAbiItem('function name(bytes32 node) view returns (string)'),
-] as const
+const ENS_RESOLVER_NAME_ABI = [parseAbiItem('function name(bytes32 node) view returns (string)')] as const
 
-const TRANSFER_EVENT = parseAbiItem(
-  'event Transfer(address indexed from, address indexed to, uint256 value)',
-)
+const TRANSFER_EVENT = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)')
 
 const BALANCE_OF_ABI = [parseAbiItem('function balanceOf(address) view returns (uint256)')] as const
 
-const ERC8004_ABI = [
-  parseAbiItem('function isRegistered(address) view returns (bool)'),
-] as const
+const ERC8004_ABI = [parseAbiItem('function isRegistered(address) view returns (bool)')] as const
 
 // Base produces ~1 block every 2 seconds → ~43,200 blocks/day
 const BLOCKS_PER_DAY = 43_200n
@@ -174,16 +169,9 @@ export async function getUSDCBalance(wallet: `0x${string}`): Promise<bigint> {
  * Fetch USDC transfer data for a wallet over the past `windowDays` days.
  * Queries run in parallel for inflows and outflows.
  */
-export async function getWalletUSDCData(
-  wallet: `0x${string}`,
-  windowDays = 14,
-): Promise<WalletUSDCData> {
+export async function getWalletUSDCData(wallet: `0x${string}`, windowDays = 14): Promise<WalletUSDCData> {
   const currentBlock = await getPublicClient().getBlockNumber()
-  const fromBlock = clamp(
-    currentBlock - BLOCKS_PER_DAY * BigInt(windowDays),
-    0n,
-    currentBlock,
-  )
+  const fromBlock = clamp(currentBlock - BLOCKS_PER_DAY * BigInt(windowDays), 0n, currentBlock)
 
   const block7dAgo = currentBlock - BLOCKS_PER_DAY * 7n
   const block30dAgo = currentBlock - BLOCKS_PER_DAY * 30n
@@ -220,7 +208,7 @@ export async function getWalletUSDCData(
  * Returns null when no transaction history is available.
  */
 export async function estimateWalletAgeDays(
-  wallet: `0x${string}`,
+  _wallet: `0x${string}`,
   currentBlock: bigint,
   firstBlockSeen: bigint | null,
 ): Promise<number | null> {
@@ -294,21 +282,21 @@ export async function hasBasename(wallet: `0x${string}`): Promise<boolean> {
     const addrHex = wallet.slice(2).toLowerCase()
     const node = namehash(`${addrHex}.addr.reverse`)
 
-    const resolverAddr = await getPublicClient().readContract({
+    const resolverAddr = (await getPublicClient().readContract({
       address: BASE_ENS_REGISTRY,
       abi: ENS_REGISTRY_ABI,
       functionName: 'resolver',
       args: [node],
-    }) as `0x${string}`
+    })) as `0x${string}`
 
     if (resolverAddr === '0x0000000000000000000000000000000000000000') return false
 
-    const name = await getPublicClient().readContract({
+    const name = (await getPublicClient().readContract({
       address: resolverAddr,
       abi: ENS_RESOLVER_NAME_ABI,
       functionName: 'name',
       args: [node],
-    }) as string
+    })) as string
 
     return typeof name === 'string' && name.length > 0
   } catch {

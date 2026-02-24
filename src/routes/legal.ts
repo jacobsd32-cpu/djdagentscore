@@ -1,12 +1,12 @@
-import { Hono } from 'hono';
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { Hono } from 'hono'
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const indexHtml = readFileSync(join(__dirname, '../../index.html'), 'utf8');
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const indexHtml = readFileSync(join(__dirname, '../../index.html'), 'utf8')
 
-const legal = new Hono();
+const legal = new Hono()
 
 const wrapHtml = (title: string, content: string) => `<!DOCTYPE html>
 <html lang="en">
@@ -33,7 +33,7 @@ const wrapHtml = (title: string, content: string) => `<!DOCTYPE html>
 <body>${content}
 <div class="footer">DJD Agent Score &middot; Trust infrastructure for the agent economy</div>
 </body>
-</html>`;
+</html>`
 
 // ─── TERMS OF SERVICE ───
 
@@ -123,7 +123,7 @@ const tosContent = `
 
 <h1>18. Contact</h1>
 <p>For questions regarding these Terms, contact: feedback@djd-agent-score.fly.dev</p>
-`;
+`
 
 // ─── PRIVACY POLICY ───
 
@@ -210,7 +210,7 @@ const privacyContent = `
 <h1>12. Contact</h1>
 <p>For questions, concerns, or data subject requests regarding this Privacy Policy, contact:</p>
 <p>DJD Agent Score<br>feedback@djd-agent-score.fly.dev</p>
-`;
+`
 
 const leaderboardHtml = `<!DOCTYPE html>
 <html lang="en">
@@ -353,18 +353,18 @@ const leaderboardHtml = `<!DOCTYPE html>
     load();
   </script>
 </body>
-</html>`;
+</html>`
 
-legal.get('/', (c) => c.html(indexHtml));
+legal.get('/', (c) => c.html(indexHtml))
 
-legal.get('/leaderboard', (c) => c.html(leaderboardHtml));
+legal.get('/leaderboard', (c) => c.html(leaderboardHtml))
 
 legal.get('/terms', (c) => {
-  return c.html(wrapHtml('Terms of Service', tosContent));
-});
+  return c.html(wrapHtml('Terms of Service', tosContent))
+})
 
 legal.get('/privacy', (c) => {
-  return c.html(wrapHtml('Privacy Policy', privacyContent));
-});
+  return c.html(wrapHtml('Privacy Policy', privacyContent))
+})
 
-export default legal;
+export default legal

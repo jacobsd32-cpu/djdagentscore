@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 // Mock blockchain.js to avoid loading viem (which hangs the vitest process).
 // dimensions.ts only uses the pure helper usdcToFloat from blockchain.js.
@@ -8,18 +8,22 @@ vi.mock('../src/blockchain.js', () => ({
   getPublicClient: vi.fn(),
 }))
 
-import { calcReliability, calcViability, calcCapability, calcIdentity } from '../src/scoring/dimensions.js'
+import { calcCapability, calcIdentity, calcReliability, calcViability } from '../src/scoring/dimensions.js'
 
 describe('dimension signal breakdowns', () => {
   it('calcReliability returns score and signals', () => {
     const result = calcReliability(
       {
         balance: 0n,
-        inflows30d: 0n, outflows30d: 0n,
-        inflows7d: 0n, outflows7d: 0n,
-        totalInflows: 0n, totalOutflows: 0n,
+        inflows30d: 0n,
+        outflows30d: 0n,
+        inflows7d: 0n,
+        outflows7d: 0n,
+        totalInflows: 0n,
+        totalOutflows: 0n,
         transferCount: 0,
-        firstBlockSeen: null, lastBlockSeen: null,
+        firstBlockSeen: null,
+        lastBlockSeen: null,
       },
       100000n,
       0,
@@ -37,11 +41,15 @@ describe('dimension signal breakdowns', () => {
     const result = calcViability(
       {
         balance: 10_000_000n, // 10 USDC
-        inflows30d: 50_000_000n, outflows30d: 20_000_000n,
-        inflows7d: 10_000_000n, outflows7d: 5_000_000n,
-        totalInflows: 100_000_000n, totalOutflows: 50_000_000n,
+        inflows30d: 50_000_000n,
+        outflows30d: 20_000_000n,
+        inflows7d: 10_000_000n,
+        outflows7d: 5_000_000n,
+        totalInflows: 100_000_000n,
+        totalOutflows: 50_000_000n,
         transferCount: 10,
-        firstBlockSeen: 1000n, lastBlockSeen: 99000n,
+        firstBlockSeen: 1000n,
+        lastBlockSeen: 99000n,
       },
       30,
       BigInt(1e16), // 0.01 ETH
@@ -56,11 +64,15 @@ describe('dimension signal breakdowns', () => {
     const result = calcCapability(
       {
         balance: 0n,
-        inflows30d: 0n, outflows30d: 0n,
-        inflows7d: 0n, outflows7d: 0n,
-        totalInflows: 1_000_000n, totalOutflows: 0n,
+        inflows30d: 0n,
+        outflows30d: 0n,
+        inflows7d: 0n,
+        outflows7d: 0n,
+        totalInflows: 1_000_000n,
+        totalOutflows: 0n,
         transferCount: 10,
-        firstBlockSeen: null, lastBlockSeen: null,
+        firstBlockSeen: null,
+        lastBlockSeen: null,
       },
       { x402TxCount: 25, x402InflowsUsd: 100, x402OutflowsUsd: 10, x402FirstSeen: undefined as unknown as string },
     )
@@ -73,7 +85,13 @@ describe('dimension signal breakdowns', () => {
   it('calcIdentity returns score and signals', async () => {
     const result = await calcIdentity(
       '0x0000000000000000000000000000000000000001',
-      90, null, true, true, 10, new Date().toISOString(), true,
+      90,
+      null,
+      true,
+      true,
+      10,
+      new Date().toISOString(),
+      true,
     )
     expect(result.score).toBeGreaterThan(0)
     expect(result.signals).toBeDefined()
@@ -90,13 +108,13 @@ describe('calcIdentity DRY helpers', () => {
   it('signal breakdown sums to total raw score', async () => {
     const result = await calcIdentity(
       ZERO_WALLET,
-      200,   // walletAgeDays
-      null,  // creatorScore
-      true,  // isRegistered
-      true,  // githubVerified
-      10,    // githubStars
+      200, // walletAgeDays
+      null, // creatorScore
+      true, // isRegistered
+      true, // githubVerified
+      10, // githubStars
       new Date().toISOString(), // githubPushedAt (recent)
-      true,  // basename
+      true, // basename
     )
 
     const signalSum = Object.values(result.signals).reduce((a, b) => a + b, 0)
@@ -104,9 +122,7 @@ describe('calcIdentity DRY helpers', () => {
   })
 
   it('gives zero github activity when not verified', async () => {
-    const result = await calcIdentity(
-      ZERO_WALLET, 0, null, false, false, 100, new Date().toISOString(),
-    )
+    const result = await calcIdentity(ZERO_WALLET, 0, null, false, false, 100, new Date().toISOString())
     expect(result.signals.githubActivity).toBe(0)
   })
 

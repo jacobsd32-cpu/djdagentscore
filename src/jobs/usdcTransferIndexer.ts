@@ -6,22 +6,19 @@
  * Uses separate state key: 'usdc_last_indexed_block'.
  */
 import { parseAbiItem } from 'viem'
-import { log } from '../logger.js'
 import { getPublicClient, USDC_ADDRESS } from '../blockchain.js'
-import { db } from '../db.js'
-import { getIndexerState, setIndexerState } from '../db.js'
-import { indexUsdcTransferBatch, refreshWalletTransferStats } from './usdcTransferHelpers.js'
+import { db, getIndexerState, setIndexerState } from '../db.js'
+import { log } from '../logger.js'
 import type { UsdcTransfer } from './usdcTransferHelpers.js'
+import { indexUsdcTransferBatch, refreshWalletTransferStats } from './usdcTransferHelpers.js'
 
-const TRANSFER_EVENT = parseAbiItem(
-  'event Transfer(address indexed from, address indexed to, uint256 value)',
-)
+const TRANSFER_EVENT = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)')
 
 const STATE_KEY = 'usdc_last_indexed_block'
 const POLL_INTERVAL_MS = 15_000
 const RETRY_DELAY_MS = 30_000
-const LOG_CHUNK_SIZE = 2_000n  // Smaller chunks to stay within rate limits
-const RATE_LIMIT_DELAY_MS = 200  // ~5 getLogs/sec
+const LOG_CHUNK_SIZE = 2_000n // Smaller chunks to stay within rate limits
+const RATE_LIMIT_DELAY_MS = 200 // ~5 getLogs/sec
 
 let running = false
 let lastBlockIndexed = 0n
@@ -43,15 +40,15 @@ async function fetchAndIndexChunk(start: bigint, end: bigint): Promise<number> {
       fromBlock: start,
       toBlock: end,
     }),
-    getPublicClient().getBlock({ blockNumber: start }).catch(() => null),
+    getPublicClient()
+      .getBlock({ blockNumber: start })
+      .catch(() => null),
   ])
 
   if (transferLogs.length === 0) return 0
 
   const chunkAnchorBlock = anchorBlockData?.number ?? start
-  const chunkAnchorTsMs = anchorBlockData
-    ? anchorBlockData.timestamp * 1000n
-    : 1677177203_000n + (start - 1n) * 2000n
+  const chunkAnchorTsMs = anchorBlockData ? anchorBlockData.timestamp * 1000n : 1677177203_000n + (start - 1n) * 2000n
 
   const transfers: UsdcTransfer[] = []
   for (const logEntry of transferLogs) {
@@ -61,7 +58,8 @@ async function fetchAndIndexChunk(start: bigint, end: bigint): Promise<number> {
       logEntry.args.value === undefined ||
       logEntry.blockNumber === null ||
       logEntry.transactionHash === null
-    ) continue
+    )
+      continue
 
     const amountUsdc = Number(logEntry.args.value) / 1_000_000
 
@@ -92,9 +90,8 @@ async function fetchAndIndexChunk(start: bigint, end: bigint): Promise<number> {
 }
 
 function parseSuggestedEnd(err: unknown): bigint | null {
-  const msg = (err as { details?: string; message?: string })?.details
-    ?? (err as { message?: string })?.message
-    ?? String(err)
+  const msg =
+    (err as { details?: string; message?: string })?.details ?? (err as { message?: string })?.message ?? String(err)
   const m = msg.match(/retry with the range \d+-(\d+)/)
   return m ? BigInt(m[1]) : null
 }

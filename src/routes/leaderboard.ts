@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { getLeaderboard, countCachedScores, countRegisteredAgents } from '../db.js'
+import { countCachedScores, countRegisteredAgents, getLeaderboard } from '../db.js'
 import type { LeaderboardEntry, LeaderboardResponse, Tier } from '../types.js'
 
 const leaderboard = new Hono()

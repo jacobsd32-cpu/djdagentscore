@@ -88,12 +88,7 @@ export function calcConfidence(inputs: ConfidenceInputs): number {
     querySignal = 1.0
   }
 
-  const confidence =
-    txSignal * 0.25 +
-    ageSignal * 0.25 +
-    partnerSignal * 0.20 +
-    ratingSignal * 0.15 +
-    querySignal * 0.15
+  const confidence = txSignal * 0.25 + ageSignal * 0.25 + partnerSignal * 0.2 + ratingSignal * 0.15 + querySignal * 0.15
 
   // Clamp and round to 2 decimal places
   return Math.round(Math.min(1.0, Math.max(0.0, confidence)) * 100) / 100

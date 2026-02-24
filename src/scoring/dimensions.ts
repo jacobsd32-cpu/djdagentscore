@@ -29,17 +29,8 @@
  *   or reputation-linked action — much harder to Sybil than raw tx counts.
  */
 
-import {
-  usdcToFloat,
-  estimateWalletAgeDays,
-} from '../blockchain.js'
-import type {
-  WalletUSDCData,
-  ReliabilityData,
-  ViabilityData,
-  IdentityData,
-  CapabilityData,
-} from '../types.js'
+import { usdcToFloat } from '../blockchain.js'
+import type { CapabilityData, IdentityData, ReliabilityData, ViabilityData, WalletUSDCData } from '../types.js'
 
 // ---------- helpers ----------
 
@@ -53,8 +44,7 @@ function piecewiseLog(
   breakpoints: Array<[number, number]>, // [input, output] sorted ascending
 ): number {
   if (value <= breakpoints[0][0]) return breakpoints[0][1]
-  if (value >= breakpoints[breakpoints.length - 1][0])
-    return breakpoints[breakpoints.length - 1][1]
+  if (value >= breakpoints[breakpoints.length - 1][0]) return breakpoints[breakpoints.length - 1][1]
 
   for (let i = 0; i < breakpoints.length - 1; i++) {
     const [x0, y0] = breakpoints[i]
@@ -69,7 +59,11 @@ function piecewiseLog(
 
 // ---------- Dimension 1: Transaction Reliability (35%) ----------
 
-export function calcReliability(data: WalletUSDCData, blockNow: bigint, nonce: number): ReliabilityData & { score: number; signals: Record<string, number> } {
+export function calcReliability(
+  data: WalletUSDCData,
+  blockNow: bigint,
+  nonce: number,
+): ReliabilityData & { score: number; signals: Record<string, number> } {
   let pts = 0
 
   // --- Payment success rate (up to 30 pts) ---
@@ -84,9 +78,15 @@ export function calcReliability(data: WalletUSDCData, blockNow: bigint, nonce: n
 
   // --- Total completed transactions log-scale (up to 25 pts) ---
   // Breakpoints: 0→0, 10→5, 100→15, 1000→25
-  const txPts = txCount === 0
-    ? 0
-    : piecewiseLog(txCount, [[0, 0], [10, 5], [100, 15], [1000, 25]])
+  const txPts =
+    txCount === 0
+      ? 0
+      : piecewiseLog(txCount, [
+          [0, 0],
+          [10, 5],
+          [100, 15],
+          [1000, 25],
+        ])
   pts += txPts
 
   // --- Nonce (total txs ever sent): up to 20 pts ---
@@ -135,17 +135,16 @@ export function calcReliability(data: WalletUSDCData, blockNow: bigint, nonce: n
   }
   pts += recencyPts
 
-  const lastTxTimestamp = data.lastBlockSeen !== null
-    ? Date.now() - Number(blockNow - data.lastBlockSeen) * 2_000 // ~2s per block
-    : null
+  const lastTxTimestamp =
+    data.lastBlockSeen !== null
+      ? Date.now() - Number(blockNow - data.lastBlockSeen) * 2_000 // ~2s per block
+      : null
 
   const signals: Record<string, number> = {
     txSuccessRate: successRatePts,
     txCountLog: Math.round(txPts),
     nonceAlignment: noncePts,
-    uptimeEstimate: data.firstBlockSeen !== null && data.lastBlockSeen !== null
-      ? Math.round(uptimeEstimate * 25)
-      : 0,
+    uptimeEstimate: data.firstBlockSeen !== null && data.lastBlockSeen !== null ? Math.round(uptimeEstimate * 25) : 0,
     recencyBonus: recencyPts,
   }
 
@@ -163,7 +162,11 @@ export function calcReliability(data: WalletUSDCData, blockNow: bigint, nonce: n
 
 // ---------- Dimension 2: Economic Viability (30%) ----------
 
-export function calcViability(data: WalletUSDCData, walletAgeDays: number | null, ethBalanceWei: bigint): ViabilityData & { score: number; signals: Record<string, number> } {
+export function calcViability(
+  data: WalletUSDCData,
+  walletAgeDays: number | null,
+  ethBalanceWei: bigint,
+): ViabilityData & { score: number; signals: Record<string, number> } {
   let pts = 0
 
   const balanceUsd = usdcToFloat(data.balance)
@@ -219,7 +222,15 @@ export function calcViability(data: WalletUSDCData, walletAgeDays: number | null
   // en masse. 90 days is the "established" threshold matching the scoring window.
   let agePts = 0
   if (walletAgeDays !== null && walletAgeDays > 0) {
-    agePts = Math.round(piecewiseLog(walletAgeDays, [[0, 0], [1, 5], [7, 15], [30, 25], [90, 30]]))
+    agePts = Math.round(
+      piecewiseLog(walletAgeDays, [
+        [0, 0],
+        [1, 5],
+        [7, 15],
+        [30, 25],
+        [90, 30],
+      ]),
+    )
   }
   pts += agePts
 
@@ -240,10 +251,13 @@ export function calcViability(data: WalletUSDCData, walletAgeDays: number | null
   let trendPts = 0
   const net7 = inflows7 - outflows7
   const net30 = inflows30 - outflows30
-  if (net7 > 0 && net7 >= net30 * 0.5) trendPts = 15       // rising
-  else if (Math.abs(net7) < 1) trendPts = 10               // stable
-  else if (net7 < 0 && net7 > -50) trendPts = 5            // declining
-  else trendPts = 0                                         // freefall
+  if (net7 > 0 && net7 >= net30 * 0.5)
+    trendPts = 15 // rising
+  else if (Math.abs(net7) < 1)
+    trendPts = 10 // stable
+  else if (net7 < 0 && net7 > -50)
+    trendPts = 5 // declining
+  else trendPts = 0 // freefall
   pts += trendPts
 
   const signals: Record<string, number> = {
@@ -299,7 +313,7 @@ function calcWalletAgePts(walletAgeDays: number | null | undefined): number {
 }
 
 export async function calcIdentity(
-  wallet: `0x${string}`,
+  _wallet: `0x${string}`,
   walletAgeDays: number | null,
   creatorScore: number | null = null,
   isRegistered = false,
@@ -385,7 +399,7 @@ export async function calcIdentity(
 
 export function calcCapability(
   data: WalletUSDCData,
-  x402Stats?: { x402TxCount: number; x402InflowsUsd: number; x402OutflowsUsd: number }
+  x402Stats?: { x402TxCount: number; x402InflowsUsd: number; x402OutflowsUsd: number },
 ): CapabilityData & { score: number; signals: Record<string, number> } {
   let pts = 0
 
@@ -410,9 +424,7 @@ export function calcCapability(
     activeX402Services = x402TxCount >= 50 ? 4 : x402TxCount >= 20 ? 3 : x402TxCount >= 5 ? 2 : 1
     x402ServicesPts = activeX402Services >= 4 ? 50 : activeX402Services === 3 ? 40 : activeX402Services === 2 ? 25 : 12
   } else {
-    const avgInflow = data.transferCount > 0
-      ? usdcToFloat(data.totalInflows) / data.transferCount
-      : 0
+    const avgInflow = data.transferCount > 0 ? usdcToFloat(data.totalInflows) / data.transferCount : 0
     if (avgInflow < 5 && data.transferCount > 5) {
       // Smooth ramp: 5 tx = 1, 15 = 1, 20 = 2, 40 = 2, 50 = 3, 80+ = 4
       activeX402Services = Math.min(4, Math.max(1, Math.floor(data.transferCount / 20) + 1))
@@ -420,11 +432,16 @@ export function calcCapability(
       activeX402Services = 1
     }
     // Smooth point curve instead of cliff jumps
-    x402ServicesPts = activeX402Services >= 4 ? 50
-      : activeX402Services === 3 ? 40
-      : activeX402Services === 2 ? 30
-      : activeX402Services === 1 ? 15
-      : 0
+    x402ServicesPts =
+      activeX402Services >= 4
+        ? 50
+        : activeX402Services === 3
+          ? 40
+          : activeX402Services === 2
+            ? 30
+            : activeX402Services === 1
+              ? 15
+              : 0
   }
   pts += x402ServicesPts
 
@@ -460,7 +477,7 @@ export function calcCapability(
     signals,
     activeX402Services,
     totalRevenue: totalRevenue.toFixed(6),
-    domainsOwned: 0,            // not yet implemented
-    successfulReplications: 0,   // not yet implemented
+    domainsOwned: 0, // not yet implemented
+    successfulReplications: 0, // not yet implemented
   }
 }

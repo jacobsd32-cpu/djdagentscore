@@ -5,11 +5,11 @@ import type { Address } from '../types.js'
 // ---------- Design tokens ----------
 
 const TIER_COLORS: Record<string, string> = {
-  Elite:       '#d97706',
-  Trusted:     '#2563eb',
+  Elite: '#d97706',
+  Trusted: '#2563eb',
   Established: '#059669',
-  Emerging:    '#7c3aed',
-  Unverified:  '#6b7280',
+  Emerging: '#7c3aed',
+  Unverified: '#6b7280',
 }
 
 // Approximate character width for DejaVu Sans 11px
@@ -69,8 +69,8 @@ badge.get('/:filename', (c) => {
   const svg = makeBadge(score, tier)
 
   c.header('Content-Type', 'image/svg+xml')
-  c.header('Cache-Control', 'public, max-age=600')   // 10-min cache; scores refresh hourly
-  c.header('X-Content-Type-Options', 'nosniff')      // prevent SVG script injection in old browsers
+  c.header('Cache-Control', 'public, max-age=600') // 10-min cache; scores refresh hourly
+  c.header('X-Content-Type-Options', 'nosniff') // prevent SVG script injection in old browsers
   return c.body(svg)
 })
 

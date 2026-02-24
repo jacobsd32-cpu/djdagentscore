@@ -6,9 +6,9 @@
  * for model validation.
  */
 import type { Database as DatabaseType } from 'better-sqlite3'
-import { jobStats } from './jobStats.js'
 import { log } from '../logger.js'
 import { MODEL_VERSION } from '../scoring/responseBuilders.js'
+import { jobStats } from './jobStats.js'
 
 interface UnmatchedLookup {
   id: number
@@ -72,11 +72,7 @@ export async function runOutcomeMatcher(db: DatabaseType): Promise<void> {
                WHERE ((from_wallet = ? AND to_wallet = ?) OR (from_wallet = ? AND to_wallet = ?))
                  AND timestamp > ?`,
             )
-            .get(
-              lookup.requester_wallet, lookup.target_wallet,
-              lookup.target_wallet,   lookup.requester_wallet,
-              queryTs,
-            )
+            .get(lookup.requester_wallet, lookup.target_wallet, lookup.target_wallet, lookup.requester_wallet, queryTs)
         : null
 
       // ── Check for fraud reports against target ────────────────────────────
@@ -114,9 +110,7 @@ export async function runOutcomeMatcher(db: DatabaseType): Promise<void> {
       }
 
       const daysToOutcome = outcomeAt
-        ? Math.round(
-            (new Date(outcomeAt).getTime() - queryDate.getTime()) / (1000 * 60 * 60 * 24),
-          )
+        ? Math.round((new Date(outcomeAt).getTime() - queryDate.getTime()) / (1000 * 60 * 60 * 24))
         : null
 
       db.prepare(
@@ -144,7 +138,10 @@ export async function runOutcomeMatcher(db: DatabaseType): Promise<void> {
 
     jobStats.outcomeMatcher.lastRun = new Date().toISOString()
     jobStats.outcomeMatcher.outcomesRecorded = processed
-    log.info('outcome', `Processed ${processed} queries: ${successful} successful, ${frauds} fraud, ${noActivity} no_activity`)
+    log.info(
+      'outcome',
+      `Processed ${processed} queries: ${successful} successful, ${frauds} fraud, ${noActivity} no_activity`,
+    )
   } catch (err) {
     log.error('outcome', 'Outcome matcher error', err)
   }

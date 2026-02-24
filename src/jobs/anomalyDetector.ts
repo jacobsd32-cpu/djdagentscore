@@ -10,8 +10,8 @@
  * TODO: Add webhook notification when monitoring_subscriptions is implemented.
  */
 import type { Database as DatabaseType } from 'better-sqlite3'
-import { jobStats } from './jobStats.js'
 import { log } from '../logger.js'
+import { jobStats } from './jobStats.js'
 
 interface Anomaly {
   wallet: string
@@ -51,9 +51,7 @@ export async function runAnomalyDetector(db: DatabaseType): Promise<void> {
     // ── CHECK 1: Score changes > 10 points ─────────────────────────────────
     // Wallets with a new score_decay entry in the last 15 min
     const recentlyScored = db
-      .prepare<[string], { wallet: string }>(
-        `SELECT DISTINCT wallet FROM score_decay WHERE recorded_at > ?`,
-      )
+      .prepare<[string], { wallet: string }>(`SELECT DISTINCT wallet FROM score_decay WHERE recorded_at > ?`)
       .all(fifteenMinAgo)
       .map((r) => r.wallet)
 
@@ -103,9 +101,7 @@ export async function runAnomalyDetector(db: DatabaseType): Promise<void> {
     // ── CHECK 3: Balance freefall ───────────────────────────────────────────
     // Wallets with a new snapshot in last 15 min — compare to previous snapshot
     const recentSnaps = db
-      .prepare<[string], { wallet: string }>(
-        `SELECT DISTINCT wallet FROM wallet_snapshots WHERE snapshot_at > ?`,
-      )
+      .prepare<[string], { wallet: string }>(`SELECT DISTINCT wallet FROM wallet_snapshots WHERE snapshot_at > ?`)
       .all(fifteenMinAgo)
       .map((r) => r.wallet)
 
@@ -134,9 +130,7 @@ export async function runAnomalyDetector(db: DatabaseType): Promise<void> {
 
     // ── CHECK 4: Newly Sybil-flagged wallets ───────────────────────────────
     const newSybil = db
-      .prepare<[string], { wallet: string }>(
-        `SELECT wallet FROM scores WHERE sybil_flag = 1 AND calculated_at > ?`,
-      )
+      .prepare<[string], { wallet: string }>(`SELECT wallet FROM scores WHERE sybil_flag = 1 AND calculated_at > ?`)
       .all(fifteenMinAgo)
 
     for (const row of newSybil) {
@@ -172,9 +166,7 @@ export async function runSybilMonitor(db: DatabaseType): Promise<void> {
 
     // Re-check sybil-flagged wallets for new transactions since last check
     const flaggedWallets = db
-      .prepare<[], { wallet: string }>(
-        `SELECT wallet FROM scores WHERE sybil_flag = 1 LIMIT 500`,
-      )
+      .prepare<[], { wallet: string }>(`SELECT wallet FROM scores WHERE sybil_flag = 1 LIMIT 500`)
       .all()
       .map((r) => r.wallet)
 

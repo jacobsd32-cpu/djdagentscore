@@ -18,7 +18,10 @@ function parseGithubUrl(url: string): { owner: string; repo: string } | null {
   try {
     const u = new URL(url)
     if (u.hostname !== 'github.com') return null
-    const parts = u.pathname.replace(/\.git$/, '').split('/').filter(Boolean)
+    const parts = u.pathname
+      .replace(/\.git$/, '')
+      .split('/')
+      .filter(Boolean)
     if (parts.length < 2) return null
     return { owner: parts[0]!, repo: parts[1]! }
   } catch {
@@ -36,7 +39,7 @@ async function fetchGithubRepo(
       'User-Agent': 'djd-agent-score/1.0',
     }
     if (process.env.GITHUB_TOKEN) {
-      headers['Authorization'] = `Bearer ${process.env.GITHUB_TOKEN}`
+      headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
     }
     const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
       headers,
@@ -44,7 +47,7 @@ async function fetchGithubRepo(
     })
     if (resp.status === 404 || resp.status === 451) return 'not_found'
     if (!resp.ok) return null
-    const data = await resp.json() as { private: boolean; stargazers_count: number; pushed_at: string }
+    const data = (await resp.json()) as { private: boolean; stargazers_count: number; pushed_at: string }
     if (data.private) return 'not_found'
     return { stars: data.stargazers_count ?? 0, pushedAt: data.pushed_at }
   } catch {

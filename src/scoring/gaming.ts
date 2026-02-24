@@ -42,11 +42,7 @@ export function getAvgBalance24h(wallet: string, db: Database): number | null {
   return val != null && val > 0 ? val : null
 }
 
-export function detectGaming(
-  wallet: string,
-  currentBalanceUsdc: number,
-  db: Database,
-): GamingResult {
+export function detectGaming(wallet: string, currentBalanceUsdc: number, db: Database): GamingResult {
   const w = wallet.toLowerCase()
   const indicators: string[] = []
   const penalties = { composite: 0, reliability: 0, viability: 0 }
@@ -55,9 +51,7 @@ export function detectGaming(
   // ── CHECK 1: Transaction velocity spike ───────────────────────────────────
   // >10x increase in tx count vs 7-day average within 24hrs → -10 composite.
   const metricsRow = db
-    .prepare<[string], MetricsRow>(
-      `SELECT tx_count_24h, tx_count_7d FROM wallet_metrics WHERE wallet = ?`,
-    )
+    .prepare<[string], MetricsRow>(`SELECT tx_count_24h, tx_count_7d FROM wallet_metrics WHERE wallet = ?`)
     .get(w)
 
   if (metricsRow && metricsRow.tx_count_7d > 0) {
@@ -71,8 +65,7 @@ export function detectGaming(
   // ── CHECK 2: Deposit-and-score pattern ────────────────────────────────────
   // Current balance >5x 24hr avg AND score was queried within last 1hr → -5 viability.
   const avgBalance = getAvgBalance24h(w, db)
-  const balanceWindowDressing =
-    avgBalance !== null && avgBalance > 0 && currentBalanceUsdc > avgBalance * 5
+  const balanceWindowDressing = avgBalance !== null && avgBalance > 0 && currentBalanceUsdc > avgBalance * 5
 
   if (balanceWindowDressing) {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()

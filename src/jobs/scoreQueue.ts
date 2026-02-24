@@ -6,7 +6,7 @@
 import { getOrCalculateScore } from '../scoring/engine.js'
 import type { Address, FullScoreResponse } from '../types.js'
 
-const JOB_TTL_MS = 10 * 60 * 1000  // 10 min
+const JOB_TTL_MS = 10 * 60 * 1000 // 10 min
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000
 
 export interface ScoringJob {
@@ -80,7 +80,7 @@ export function submitJob(wallet: Address): string {
       const result = await getOrCalculateScore(wallet, true, 0)
       job.status = 'complete'
       job.result = result
-    } catch (err: unknown) {
+    } catch (_err: unknown) {
       job.status = 'error'
       job.error = 'Score computation failed'
     }

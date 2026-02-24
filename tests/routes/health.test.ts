@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { MODEL_VERSION } from '../../src/scoring/responseBuilders.js'
 
 vi.mock('../../src/db.js', () => ({

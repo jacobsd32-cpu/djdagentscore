@@ -13,10 +13,7 @@ export const responseHeadersMiddleware: MiddlewareHandler = async (c, next) => {
   // ── DJD custom headers ──
   c.res.headers.set('X-DJD-Status', 'experimental')
   c.res.headers.set('X-DJD-Model-Version', MODEL_VERSION)
-  c.res.headers.set(
-    'X-DJD-Disclaimer',
-    'Scores are informational and experimental. Not financial advice.',
-  )
+  c.res.headers.set('X-DJD-Disclaimer', 'Scores are informational and experimental. Not financial advice.')
 
   // ── Security headers ──
   c.res.headers.set('X-Content-Type-Options', 'nosniff')
@@ -33,9 +30,6 @@ export const responseHeadersMiddleware: MiddlewareHandler = async (c, next) => {
       "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data:; font-src 'self' https://unpkg.com; frame-ancestors 'none'",
     )
   } else {
-    c.res.headers.set(
-      'Content-Security-Policy',
-      "default-src 'none'; frame-ancestors 'none'",
-    )
+    c.res.headers.set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'")
   }
 }

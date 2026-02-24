@@ -8,60 +8,49 @@
  */
 
 import {
-  getWalletUSDCData,
-  getCurrentBlock,
   estimateWalletAgeDays,
-  getTransactionCount,
+  getCurrentBlock,
   getETHBalance,
+  getTransactionCount,
+  getWalletUSDCData,
   hasBasename,
 } from '../blockchain.js'
 import {
-  calcReliability,
-  calcViability,
-  calcIdentity,
-  calcCapability,
-} from './dimensions.js'
-import { calcBehavior } from './behavior.js'
-import { detectSybil } from './sybil.js'
-import { detectGaming, getAvgBalance24h } from './gaming.js'
-import { calcConfidence } from './confidence.js'
-import { determineRecommendation } from './recommendation.js'
-import { buildDataAvailability, buildImprovementPath } from './dataAvailability.js'
-import { log } from '../logger.js'
-import {
+  countPriorQueries,
+  countReportsAfterDate,
+  countReportsByTarget,
+  countUniquePartners,
   db,
-  upsertScore,
+  getRegistration,
   getScore,
   getScoreHistory,
-  scoreToTier,
-  countReportsByTarget,
-  countReportsAfterDate,
-  countUniquePartners,
-  countPriorQueries,
-  getRegistration,
-  getWalletX402Stats,
-  getWalletIndexFirstSeen,
   getTransferTimestamps,
+  getWalletIndexFirstSeen,
+  getWalletX402Stats,
+  scoreToTier,
+  upsertScore,
 } from '../db.js'
-import type {
-  Address,
-  BasicScoreResponse,
-  FullScoreResponse,
-  ScoreDimensions,
-  DataAvailability,
-} from '../types.js'
+import { log } from '../logger.js'
+import type { Address, BasicScoreResponse, DataAvailability, FullScoreResponse, ScoreDimensions } from '../types.js'
+import { calcBehavior } from './behavior.js'
+import { calcConfidence } from './confidence.js'
+import { buildDataAvailability, buildImprovementPath } from './dataAvailability.js'
+import { calcCapability, calcIdentity, calcReliability, calcViability } from './dimensions.js'
+import { detectGaming, getAvgBalance24h } from './gaming.js'
+import { determineRecommendation } from './recommendation.js'
+import { detectSybil } from './sybil.js'
 
-// Re-exported so existing `import { MODEL_VERSION } from engine.js` keeps working.
-export { MODEL_VERSION } from './responseBuilders.js'
 // Re-exported for tests that import from engine.js (will migrate to integrity.js over time).
 export { computeIntegrityMultiplier } from './integrity.js'
+// Re-exported so existing `import { MODEL_VERSION } from engine.js` keeps working.
+export { MODEL_VERSION } from './responseBuilders.js'
 
-import { MODEL_VERSION } from './responseBuilders.js'
 import { computeIntegrityMultiplier } from './integrity.js'
 import {
-  buildFullResponseFromDimensions,
   buildFullResponseFromCache,
+  buildFullResponseFromDimensions,
   buildZeroScore,
+  MODEL_VERSION,
 } from './responseBuilders.js'
 
 // Max time to wait for RPC computation before falling back to identity-only score.
@@ -126,9 +115,7 @@ async function computeScore(wallet: Address): Promise<{
   const effectiveBalanceRaw = BigInt(Math.round(effectiveBalance * 1_000_000))
 
   // Override balance in usdcData so calcViability scores the adjusted amount
-  const usdcDataForViability = gaming.overrides.useAvgBalance
-    ? { ...usdcData, balance: effectiveBalanceRaw }
-    : usdcData
+  const usdcDataForViability = gaming.overrides.useAvgBalance ? { ...usdcData, balance: effectiveBalanceRaw } : usdcData
 
   // ── STEP 4: Calculate 4 dimensions ────────────────────────────────────────
   const reg = getRegistration(wallet.toLowerCase())
@@ -143,7 +130,7 @@ async function computeScore(wallet: Address): Promise<{
   const candidates = [x402FirstSeen, walletIndexFirstSeen].filter(Boolean) as string[]
   let walletAgeDays = walletAgeDaysRaw ?? 0
   if (candidates.length > 0) {
-    const earliestMs = Math.min(...candidates.map(d => new Date(d).getTime()))
+    const earliestMs = Math.min(...candidates.map((d) => new Date(d).getTime()))
     const fromIndexDays = (Date.now() - earliestMs) / 86_400_000
     walletAgeDays = Math.max(walletAgeDays, Math.round(fromIndexDays))
   }
@@ -194,18 +181,12 @@ async function computeScore(wallet: Address): Promise<{
   viaScore = Math.max(0, viaScore - gaming.penalties.viability)
 
   // ── STEP 6: Calculate raw composite ─────────────────────────────────────
-  const rawComposite = Math.round(
-    relScore * 0.30 + viaScore * 0.25 + idnScore * 0.20 + behScore * 0.15 + capScore * 0.10,
-  )
+  const rawComposite = Math.round(relScore * 0.3 + viaScore * 0.25 + idnScore * 0.2 + behScore * 0.15 + capScore * 0.1)
   const compositeDeduction = gaming.penalties.composite
 
   // ── STEP 7: P4 — Multiplicative integrity modifier ──────────────────────
   const reportCount = countReportsByTarget(wallet)
-  const integrityMultiplier = computeIntegrityMultiplier(
-    sybil.indicators,
-    gaming.indicators,
-    reportCount,
-  )
+  const integrityMultiplier = computeIntegrityMultiplier(sybil.indicators, gaming.indicators, reportCount)
   const penalizedComposite = Math.max(0, rawComposite - compositeDeduction)
   const composite = Math.min(100, Math.max(0, Math.round(penalizedComposite * integrityMultiplier)))
 
@@ -344,16 +325,16 @@ async function computeScore(wallet: Address): Promise<{
     topDetractors,
     rawData: {
       usdcData: {
-        balance:       String(usdcData.balance),
-        inflows30d:    String(usdcData.inflows30d),
-        outflows30d:   String(usdcData.outflows30d),
-        inflows7d:     String(usdcData.inflows7d),
-        outflows7d:    String(usdcData.outflows7d),
-        totalInflows:  String(usdcData.totalInflows),
+        balance: String(usdcData.balance),
+        inflows30d: String(usdcData.inflows30d),
+        outflows30d: String(usdcData.outflows30d),
+        inflows7d: String(usdcData.inflows7d),
+        outflows7d: String(usdcData.outflows7d),
+        totalInflows: String(usdcData.totalInflows),
         totalOutflows: String(usdcData.totalOutflows),
         transferCount: usdcData.transferCount,
         firstBlockSeen: usdcData.firstBlockSeen !== null ? String(usdcData.firstBlockSeen) : null,
-        lastBlockSeen:  usdcData.lastBlockSeen  !== null ? String(usdcData.lastBlockSeen)  : null,
+        lastBlockSeen: usdcData.lastBlockSeen !== null ? String(usdcData.lastBlockSeen) : null,
       },
       walletAgeDays,
       nonce,
@@ -396,7 +377,7 @@ export async function getOrCalculateScore(
     // + reports) from compute time — reapplying all factors would double-penalize.
     const newReports = countReportsAfterDate(wallet, cached.calculated_at)
     if (newReports > 0) {
-      const fraudMult = Math.pow(0.90, newReports)
+      const fraudMult = 0.9 ** newReports
       result.score = Math.round(result.score * fraudMult)
       result.tier = scoreToTier(result.score) as FullScoreResponse['tier']
     }
@@ -411,7 +392,7 @@ export async function getOrCalculateScore(
     // Apply fraud-report dampening ONLY for reports filed AFTER this score was cached.
     const newReports = countReportsAfterDate(wallet, cached.calculated_at)
     if (newReports > 0) {
-      const fraudMult = Math.pow(0.90, newReports)
+      const fraudMult = 0.9 ** newReports
       staleResult.score = Math.round(staleResult.score * fraudMult)
       staleResult.tier = scoreToTier(staleResult.score) as FullScoreResponse['tier']
     }
@@ -421,16 +402,31 @@ export async function getOrCalculateScore(
     const wKey = wallet.toLowerCase()
     if (!_bgRefreshingWallets.has(wKey) && _bgRefreshingWallets.size < MAX_CONCURRENT_BG_REFRESHES) {
       _bgRefreshingWallets.add(wKey)
-      computeScore(wallet).then(result => {
-        upsertScore(wallet, result.composite, result.reliability, result.viability, result.identity, result.capability, result.behavior, result.rawData, {
-          confidence: result.confidence,
-          recommendation: result.recommendation,
-          modelVersion: MODEL_VERSION,
-          sybilFlag: result.sybilFlag,
+      computeScore(wallet)
+        .then((result) => {
+          upsertScore(
+            wallet,
+            result.composite,
+            result.reliability,
+            result.viability,
+            result.identity,
+            result.capability,
+            result.behavior,
+            result.rawData,
+            {
+              confidence: result.confidence,
+              recommendation: result.recommendation,
+              modelVersion: MODEL_VERSION,
+              sybilFlag: result.sybilFlag,
+            },
+          )
         })
-      }).catch(() => { /* ignore background refresh errors */ }).finally(() => {
-        _bgRefreshingWallets.delete(wKey)
-      })
+        .catch(() => {
+          /* ignore background refresh errors */
+        })
+        .finally(() => {
+          _bgRefreshingWallets.delete(wKey)
+        })
     }
     return { ...staleResult, stale: true }
   }
@@ -440,9 +436,7 @@ export async function getOrCalculateScore(
     const result = await (timeoutMs > 0
       ? Promise.race([
           scorePromise,
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('rpc_timeout')), timeoutMs),
-          ),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('rpc_timeout')), timeoutMs)),
         ])
       : scorePromise)
     // Integrity multiplier already applied inside computeScore — just persist
@@ -469,27 +463,19 @@ export async function getOrCalculateScore(
 
     const history = getScoreHistory(wallet)
     const calculatedAt = new Date().toISOString()
-    return buildFullResponseFromDimensions(
-      wallet,
-      result.composite,
-      tier,
-      calculatedAt,
-      result.dimensions,
-      history,
-      {
-        confidence: result.confidence,
-        recommendation: result.recommendation,
-        sybilFlag: result.sybilFlag,
-        gamingIndicators: result.gamingIndicators,
-        dataAvailability: result.dataAvailability,
-        improvementPath: result.improvementPath,
-        integrityMultiplier: result.integrityMultiplier,
-        breakdown: result.breakdown,
-        scoreRange: result.scoreRange,
-        topContributors: result.topContributors,
-        topDetractors: result.topDetractors,
-      },
-    )
+    return buildFullResponseFromDimensions(wallet, result.composite, tier, calculatedAt, result.dimensions, history, {
+      confidence: result.confidence,
+      recommendation: result.recommendation,
+      sybilFlag: result.sybilFlag,
+      gamingIndicators: result.gamingIndicators,
+      dataAvailability: result.dataAvailability,
+      improvementPath: result.improvementPath,
+      integrityMultiplier: result.integrityMultiplier,
+      breakdown: result.breakdown,
+      scoreRange: result.scoreRange,
+      topContributors: result.topContributors,
+      topDetractors: result.topDetractors,
+    })
   } catch (err) {
     log.error('engine', `RPC error for ${wallet}`, err)
 
@@ -506,17 +492,21 @@ export async function getOrCalculateScore(
     try {
       const reg = getRegistration(wallet.toLowerCase())
       const idn = await calcIdentity(
-        wallet, 0, null,
+        wallet,
+        0,
+        null,
         !!reg,
         reg?.github_verified === 1,
         reg?.github_stars ?? null,
         reg?.github_pushed_at ?? null,
       )
       idnScore = idn.score
-    } catch (_) { /* ignore — best effort */ }
+    } catch (_) {
+      /* ignore — best effort */
+    }
 
     // Composite is identity-only; other dimensions require RPC
-    const partial = Math.round(idnScore * 0.20)
+    const partial = Math.round(idnScore * 0.2)
     const calculatedAt = new Date().toISOString()
 
     // Only cache if there's a meaningful partial score — don't cache hard zeros,
@@ -524,7 +514,9 @@ export async function getOrCalculateScore(
     if (partial > 0) {
       try {
         upsertScore(wallet, partial, 0, 0, idnScore, 0, null, {}, { recommendation: 'rpc_unavailable', confidence: 0 })
-      } catch (_) { /* ignore */ }
+      } catch (_) {
+        /* ignore */
+      }
     }
 
     // Return the identity-only partial score rather than a hard zero so the
@@ -544,10 +536,39 @@ export async function getOrCalculateScore(
         computedAt: calculatedAt,
         scoreFreshness: 1.0,
         dimensions: {
-          reliability: { score: 0, data: { txCount: 0, nonce: 0, successRate: 0, lastTxTimestamp: null, failedTxCount: 0, uptimeEstimate: 0 } },
-          viability:   { score: 0, data: { usdcBalance: '0', ethBalance: '0', inflows30d: '0', outflows30d: '0', inflows7d: '0', outflows7d: '0', totalInflows: '0', walletAgedays: 0, everZeroBalance: false } },
-          identity:    { score: idnScore, data: { erc8004Registered: false, hasBasename: false, walletAgeDays: 0, creatorScore: null, generationDepth: 0, constitutionHashVerified: false } },
-          capability:  { score: 0, data: { activeX402Services: 0, totalRevenue: '0', domainsOwned: 0, successfulReplications: 0 } },
+          reliability: {
+            score: 0,
+            data: { txCount: 0, nonce: 0, successRate: 0, lastTxTimestamp: null, failedTxCount: 0, uptimeEstimate: 0 },
+          },
+          viability: {
+            score: 0,
+            data: {
+              usdcBalance: '0',
+              ethBalance: '0',
+              inflows30d: '0',
+              outflows30d: '0',
+              inflows7d: '0',
+              outflows7d: '0',
+              totalInflows: '0',
+              walletAgedays: 0,
+              everZeroBalance: false,
+            },
+          },
+          identity: {
+            score: idnScore,
+            data: {
+              erc8004Registered: false,
+              hasBasename: false,
+              walletAgeDays: 0,
+              creatorScore: null,
+              generationDepth: 0,
+              constitutionHashVerified: false,
+            },
+          },
+          capability: {
+            score: 0,
+            data: { activeX402Services: 0, totalRevenue: '0', domainsOwned: 0, successfulReplications: 0 },
+          },
         },
         dataAvailability: {
           transactionHistory: 'none (rpc unavailable)',

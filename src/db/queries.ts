@@ -7,15 +7,8 @@
  */
 
 import type { Transaction } from 'better-sqlite3'
+import type { AgentRegistrationRow, FraudReportRow, LeaderboardRow, ScoreHistoryRow, ScoreRow, Tier } from '../types.js'
 import { db } from './connection.js'
-import type {
-  ScoreRow,
-  ScoreHistoryRow,
-  FraudReportRow,
-  AgentRegistrationRow,
-  LeaderboardRow,
-  Tier,
-} from '../types.js'
 
 // ---------- Prepared statements ----------
 
@@ -60,12 +53,8 @@ const stmtGetHistory = db.prepare<[string], ScoreHistoryRow>(`
   SELECT * FROM score_history WHERE wallet = ? ORDER BY calculated_at DESC LIMIT 10
 `)
 
-const stmtInsertDecay = db.prepare(
-  `INSERT INTO score_decay (wallet, composite_score) VALUES (?, ?)`,
-)
-const stmtUpdateWalletIndex = db.prepare(
-  `UPDATE wallet_index SET is_scored = 1, last_seen = ? WHERE wallet = ?`,
-)
+const stmtInsertDecay = db.prepare(`INSERT INTO score_decay (wallet, composite_score) VALUES (?, ?)`)
+const stmtUpdateWalletIndex = db.prepare(`UPDATE wallet_index SET is_scored = 1, last_seen = ? WHERE wallet = ?`)
 const stmtPruneHistory = db.prepare(
   `DELETE FROM score_history WHERE wallet = ? AND id NOT IN
    (SELECT id FROM score_history WHERE wallet = ? ORDER BY calculated_at DESC LIMIT 50)`,
@@ -74,13 +63,13 @@ const stmtPruneHistory = db.prepare(
 const stmtPruneDecay = db.prepare(
   `DELETE FROM score_decay WHERE wallet = ? AND rowid NOT IN (
     SELECT rowid FROM score_decay WHERE wallet = ? ORDER BY recorded_at DESC LIMIT 50
-  )`
+  )`,
 )
 
 const stmtPruneSnapshots = db.prepare(
   `DELETE FROM wallet_snapshots WHERE wallet = ? AND rowid NOT IN (
     SELECT rowid FROM wallet_snapshots WHERE wallet = ? ORDER BY snapshot_at DESC LIMIT 50
-  )`
+  )`,
 )
 
 const stmtGetExpired = db.prepare<[], { wallet: string }>(`
@@ -406,19 +395,13 @@ export function countFreeTierUsesToday(requesterKey: string): number {
 }
 
 export function countTotalQueryLogs(): number {
-  return (
-    db.prepare<[], { count: number }>('SELECT COUNT(*) as count FROM query_log').get()?.count ?? 0
-  )
+  return db.prepare<[], { count: number }>('SELECT COUNT(*) as count FROM query_log').get()?.count ?? 0
 }
 
 // ---------- wallet_index helpers ----------
 
 export function countIndexedWallets(): number {
-  return (
-    db
-      .prepare<[], { count: number }>('SELECT COUNT(*) as count FROM wallet_index')
-      .get()?.count ?? 0
-  )
+  return db.prepare<[], { count: number }>('SELECT COUNT(*) as count FROM wallet_index').get()?.count ?? 0
 }
 
 // ---------- raw_transactions helpers ----------
@@ -431,13 +414,17 @@ export function getWalletX402Stats(wallet: string): {
   x402LastSeen: string | null
 } {
   const w = wallet.toLowerCase()
-  const row = db.prepare<[string, string, string, string], {
-    tx_count: number
-    inflows: number
-    outflows: number
-    first_seen: string | null
-    last_seen: string | null
-  }>(`
+  const row = db
+    .prepare<
+      [string, string, string, string],
+      {
+        tx_count: number
+        inflows: number
+        outflows: number
+        first_seen: string | null
+        last_seen: string | null
+      }
+    >(`
     SELECT
       COUNT(*) as tx_count,
       COALESCE(SUM(CASE WHEN to_wallet = ? THEN amount_usdc ELSE 0 END), 0) as inflows,
@@ -446,7 +433,8 @@ export function getWalletX402Stats(wallet: string): {
       MAX(timestamp) as last_seen
     FROM raw_transactions
     WHERE from_wallet = ? OR to_wallet = ?
-  `).get(w, w, w, w)
+  `)
+    .get(w, w, w, w)
 
   return {
     x402TxCount: row?.tx_count ?? 0,
@@ -459,52 +447,42 @@ export function getWalletX402Stats(wallet: string): {
 
 export function getWalletFirstX402Seen(wallet: string): string | null {
   const w = wallet.toLowerCase()
-  const row = db.prepare<[string, string], { first_seen: string | null }>(
-    `SELECT MIN(timestamp) as first_seen FROM raw_transactions WHERE from_wallet = ? OR to_wallet = ?`
-  ).get(w, w)
+  const row = db
+    .prepare<[string, string], { first_seen: string | null }>(
+      `SELECT MIN(timestamp) as first_seen FROM raw_transactions WHERE from_wallet = ? OR to_wallet = ?`,
+    )
+    .get(w, w)
   return row?.first_seen ?? null
 }
 
 export function getWalletIndexFirstSeen(wallet: string): string | null {
   const w = wallet.toLowerCase()
   try {
-    const row = db.prepare<[string], { first_seen: string | null }>(
-      `SELECT first_seen FROM wallet_index WHERE wallet = ?`
-    ).get(w)
+    const row = db
+      .prepare<[string], { first_seen: string | null }>(`SELECT first_seen FROM wallet_index WHERE wallet = ?`)
+      .get(w)
     return row?.first_seen ?? null
-  } catch { return null }
+  } catch {
+    return null
+  }
 }
 
 export function countIndexedTransactions(): number {
-  return (
-    db
-      .prepare<[], { count: number }>('SELECT COUNT(*) as count FROM raw_transactions')
-      .get()?.count ?? 0
-  )
+  return db.prepare<[], { count: number }>('SELECT COUNT(*) as count FROM raw_transactions').get()?.count ?? 0
 }
 
 export function countScoreOutcomes(): number {
-  return (
-    db
-      .prepare<[], { count: number }>('SELECT COUNT(*) as count FROM score_outcomes')
-      .get()?.count ?? 0
-  )
+  return db.prepare<[], { count: number }>('SELECT COUNT(*) as count FROM score_outcomes').get()?.count ?? 0
 }
 
 export function countFraudReports(): number {
-  return (
-    db
-      .prepare<[], { count: number }>('SELECT COUNT(*) as count FROM fraud_reports')
-      .get()?.count ?? 0
-  )
+  return db.prepare<[], { count: number }>('SELECT COUNT(*) as count FROM fraud_reports').get()?.count ?? 0
 }
 
 // ---------- indexer_state helpers ----------
 
 export function getIndexerState(key: string): string | null {
-  const row = db
-    .prepare<[string], { value: string }>('SELECT value FROM indexer_state WHERE key = ?')
-    .get(key)
+  const row = db.prepare<[string], { value: string }>('SELECT value FROM indexer_state WHERE key = ?').get(key)
   return row?.value ?? null
 }
 
@@ -578,9 +556,7 @@ export function countUniquePartners(wallet: string): number {
 
 export function countPriorQueries(wallet: string): number {
   const row = db
-    .prepare<[string], { count: number }>(
-      `SELECT COUNT(*) as count FROM query_log WHERE target_wallet = ?`,
-    )
+    .prepare<[string], { count: number }>(`SELECT COUNT(*) as count FROM query_log WHERE target_wallet = ?`)
     .get(wallet.toLowerCase())
   return row?.count ?? 0
 }
@@ -596,14 +572,14 @@ export function getTransferTimestamps(wallet: string): string[] {
       `SELECT timestamp FROM usdc_transfers WHERE from_wallet = ? OR to_wallet = ? ORDER BY timestamp`,
     )
     .all(w, w)
-  if (rows.length >= 10) return rows.map(r => r.timestamp)
+  if (rows.length >= 10) return rows.map((r) => r.timestamp)
   // Fallback to raw_transactions (x402 indexer data)
   rows = db
     .prepare<[string, string], { timestamp: string }>(
       `SELECT timestamp FROM raw_transactions WHERE from_wallet = ? OR to_wallet = ? ORDER BY timestamp`,
     )
     .all(w, w)
-  return rows.map(r => r.timestamp)
+  return rows.map((r) => r.timestamp)
 }
 
 // ---------- Revenue analytics ----------
@@ -619,25 +595,31 @@ export interface RevenueSummary {
 export function getRevenueSummary(days: number): RevenueSummary {
   const since = new Date(Date.now() - days * 86_400_000).toISOString()
 
-  const totals = db.prepare<[string], { revenue: number; paid: number; free: number }>(`
+  const totals = db
+    .prepare<[string], { revenue: number; paid: number; free: number }>(`
     SELECT
       COALESCE(SUM(price_paid), 0) as revenue,
       SUM(CASE WHEN is_free_tier = 0 AND price_paid > 0 THEN 1 ELSE 0 END) as paid,
       SUM(CASE WHEN is_free_tier = 1 THEN 1 ELSE 0 END) as free
     FROM query_log WHERE timestamp >= ?
-  `).get(since)!
+  `)
+    .get(since)!
 
-  const byEndpoint = db.prepare<[string], { endpoint: string; revenue: number; count: number }>(`
+  const byEndpoint = db
+    .prepare<[string], { endpoint: string; revenue: number; count: number }>(`
     SELECT endpoint, COALESCE(SUM(price_paid), 0) as revenue, COUNT(*) as count
     FROM query_log WHERE timestamp >= ? AND price_paid > 0
     GROUP BY endpoint ORDER BY revenue DESC
-  `).all(since)
+  `)
+    .all(since)
 
-  const byDay = db.prepare<[string], { date: string; revenue: number; count: number }>(`
+  const byDay = db
+    .prepare<[string], { date: string; revenue: number; count: number }>(`
     SELECT DATE(timestamp) as date, COALESCE(SUM(price_paid), 0) as revenue, COUNT(*) as count
     FROM query_log WHERE timestamp >= ? AND price_paid > 0
     GROUP BY DATE(timestamp) ORDER BY date DESC
-  `).all(since)
+  `)
+    .all(since)
 
   return {
     totalRevenue: totals.revenue,
@@ -654,7 +636,8 @@ export function getTopPayers(limit: number): Array<{
   queryCount: number
   lastSeen: string
 }> {
-  return db.prepare<[number], { wallet: string; totalSpent: number; queryCount: number; lastSeen: string }>(`
+  return db
+    .prepare<[number], { wallet: string; totalSpent: number; queryCount: number; lastSeen: string }>(`
     SELECT requester_wallet as wallet,
            COALESCE(SUM(price_paid), 0) as totalSpent,
            COUNT(*) as queryCount,
@@ -664,7 +647,8 @@ export function getTopPayers(limit: number): Array<{
     GROUP BY requester_wallet
     ORDER BY totalSpent DESC
     LIMIT ?
-  `).all(limit)
+  `)
+    .all(limit)
 }
 
 export function getRevenueByHour(): Array<{
@@ -672,7 +656,8 @@ export function getRevenueByHour(): Array<{
   revenue: number
   count: number
 }> {
-  return db.prepare<[], { hour: string; revenue: number; count: number }>(`
+  return db
+    .prepare<[], { hour: string; revenue: number; count: number }>(`
     SELECT strftime('%Y-%m-%dT%H:00:00Z', timestamp) as hour,
            COALESCE(SUM(price_paid), 0) as revenue,
            COUNT(*) as count
@@ -680,7 +665,8 @@ export function getRevenueByHour(): Array<{
     WHERE timestamp >= datetime('now', '-24 hours') AND price_paid > 0
     GROUP BY strftime('%Y-%m-%dT%H:00:00Z', timestamp)
     ORDER BY hour DESC
-  `).all()
+  `)
+    .all()
 }
 
 // ---------- Economy metrics ----------
@@ -708,43 +694,47 @@ export interface EconomyMetricsRow {
 }
 
 export function getEconomyMetrics(periodType: string, limit: number): EconomyMetricsRow[] {
-  return db.prepare<[string, number], EconomyMetricsRow>(`
+  return db
+    .prepare<[string, number], EconomyMetricsRow>(`
     SELECT * FROM economy_metrics
     WHERE period_type = ?
     ORDER BY period_start DESC
     LIMIT ?
-  `).all(periodType, limit)
+  `)
+    .all(periodType, limit)
 }
 
-export const indexTransferBatch: Transaction<(transfers: IndexedTransfer[]) => void> = db.transaction((transfers: IndexedTransfer[]) => {
-  for (const t of transfers) {
-    const from = t.fromWallet.toLowerCase()
-    const to = t.toWallet.toLowerCase()
+export const indexTransferBatch: Transaction<(transfers: IndexedTransfer[]) => void> = db.transaction(
+  (transfers: IndexedTransfer[]) => {
+    for (const t of transfers) {
+      const from = t.fromWallet.toLowerCase()
+      const to = t.toWallet.toLowerCase()
 
-    stmtInsertRawTx.run({
-      tx_hash: t.txHash,
-      block_number: t.blockNumber,
-      from_wallet: from,
-      to_wallet: to,
-      amount_usdc: t.amountUsdc,
-      timestamp: t.timestamp,
-    })
+      stmtInsertRawTx.run({
+        tx_hash: t.txHash,
+        block_number: t.blockNumber,
+        from_wallet: from,
+        to_wallet: to,
+        amount_usdc: t.amountUsdc,
+        timestamp: t.timestamp,
+      })
 
-    stmtUpsertWalletFrom.run({ wallet: from, ts: t.timestamp, vol: t.amountUsdc })
-    stmtUpsertWalletTo.run({ wallet: to, ts: t.timestamp, vol: t.amountUsdc })
+      stmtUpsertWalletFrom.run({ wallet: from, ts: t.timestamp, vol: t.amountUsdc })
+      stmtUpsertWalletTo.run({ wallet: to, ts: t.timestamp, vol: t.amountUsdc })
 
-    // Normalize: lexically smaller address = wallet_a
-    const [wallet_a, wallet_b] = from < to ? [from, to] : [to, from]
-    const isAtoB = from < to
+      // Normalize: lexically smaller address = wallet_a
+      const [wallet_a, wallet_b] = from < to ? [from, to] : [to, from]
+      const isAtoB = from < to
 
-    stmtUpsertRelationship.run({
-      wallet_a,
-      wallet_b,
-      cnt_atob: isAtoB ? 1 : 0,
-      cnt_btoa: isAtoB ? 0 : 1,
-      vol_atob: isAtoB ? t.amountUsdc : 0,
-      vol_btoa: isAtoB ? 0 : t.amountUsdc,
-      ts: t.timestamp,
-    })
-  }
-})
+      stmtUpsertRelationship.run({
+        wallet_a,
+        wallet_b,
+        cnt_atob: isAtoB ? 1 : 0,
+        cnt_btoa: isAtoB ? 0 : 1,
+        vol_atob: isAtoB ? t.amountUsdc : 0,
+        vol_btoa: isAtoB ? 0 : t.amountUsdc,
+        ts: t.timestamp,
+      })
+    }
+  },
+)

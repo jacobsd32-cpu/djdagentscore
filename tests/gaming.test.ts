@@ -7,8 +7,9 @@
  *
  * Time-sensitive checks use data timestamped relative to "now" to avoid mocking Date.
  */
-import { describe, it, expect } from 'vitest'
+
 import Database from 'better-sqlite3'
+import { describe, expect, it } from 'vitest'
 import { detectGaming, getAvgBalance24h } from '../src/scoring/gaming.js'
 
 // Minimal schema — only the 4 tables gaming.ts queries
@@ -65,13 +66,19 @@ describe('getAvgBalance24h', () => {
     const db = createGamingDb()
     // 3 snapshots in last 24h: 100, 200, 300 -> avg = 200
     db.prepare(`INSERT INTO wallet_snapshots (wallet, usdc_balance, snapshot_at) VALUES (?, ?, ?)`).run(
-      WALLET, 100, minutesAgo(60),
+      WALLET,
+      100,
+      minutesAgo(60),
     )
     db.prepare(`INSERT INTO wallet_snapshots (wallet, usdc_balance, snapshot_at) VALUES (?, ?, ?)`).run(
-      WALLET, 200, minutesAgo(120),
+      WALLET,
+      200,
+      minutesAgo(120),
     )
     db.prepare(`INSERT INTO wallet_snapshots (wallet, usdc_balance, snapshot_at) VALUES (?, ?, ?)`).run(
-      WALLET, 300, minutesAgo(180),
+      WALLET,
+      300,
+      minutesAgo(180),
     )
 
     const avg = getAvgBalance24h(WALLET, db)
@@ -96,9 +103,7 @@ describe('detectGaming', () => {
   it('detects velocity_spike when 24h tx count is >10x daily average', () => {
     const db = createGamingDb()
     // 7d count = 7 -> daily avg = 1, 24h count = 15 -> 15x the average
-    db.prepare(`INSERT INTO wallet_metrics (wallet, tx_count_24h, tx_count_7d) VALUES (?, ?, ?)`).run(
-      WALLET, 15, 7,
-    )
+    db.prepare(`INSERT INTO wallet_metrics (wallet, tx_count_24h, tx_count_7d) VALUES (?, ?, ?)`).run(WALLET, 15, 7)
 
     const result = detectGaming(WALLET, 100, db)
     expect(result.indicators).toContain('velocity_spike')
@@ -108,9 +113,7 @@ describe('detectGaming', () => {
   it('does NOT flag velocity_spike when increase is within normal range', () => {
     const db = createGamingDb()
     // 7d count = 70 -> daily avg = 10, 24h count = 50 -> 5x (below 10x threshold)
-    db.prepare(`INSERT INTO wallet_metrics (wallet, tx_count_24h, tx_count_7d) VALUES (?, ?, ?)`).run(
-      WALLET, 50, 70,
-    )
+    db.prepare(`INSERT INTO wallet_metrics (wallet, tx_count_24h, tx_count_7d) VALUES (?, ?, ?)`).run(WALLET, 50, 70)
 
     const result = detectGaming(WALLET, 100, db)
     expect(result.indicators).not.toContain('velocity_spike')
@@ -121,11 +124,15 @@ describe('detectGaming', () => {
     const db = createGamingDb()
     // Average balance over 24h = 100 (from snapshots)
     db.prepare(`INSERT INTO wallet_snapshots (wallet, usdc_balance, snapshot_at) VALUES (?, ?, ?)`).run(
-      WALLET, 100, minutesAgo(120),
+      WALLET,
+      100,
+      minutesAgo(120),
     )
     // Recent query within last hour
     db.prepare(`INSERT INTO query_log (target_wallet, endpoint, timestamp) VALUES (?, ?, ?)`).run(
-      WALLET, '/v1/score/basic', minutesAgo(30),
+      WALLET,
+      '/v1/score/basic',
+      minutesAgo(30),
     )
 
     // Current balance = 600 -> 6x avg (>5x threshold)
@@ -155,7 +162,9 @@ describe('detectGaming', () => {
     const db = createGamingDb()
     // Average = 100
     db.prepare(`INSERT INTO wallet_snapshots (wallet, usdc_balance, snapshot_at) VALUES (?, ?, ?)`).run(
-      WALLET, 100, minutesAgo(120),
+      WALLET,
+      100,
+      minutesAgo(120),
     )
     // No recent query -> so deposit_and_score won't fire, but window_dressing will
 

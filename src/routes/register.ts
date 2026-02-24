@@ -1,9 +1,9 @@
 import { Hono } from 'hono'
-import { upsertRegistration, getRegistration, updateGithubVerification } from '../db.js'
-import { isValidAddress } from '../types.js'
-import type { Address, AgentRegistrationBody, AgentRegistrationResponse } from '../types.js'
+import { getRegistration, updateGithubVerification, upsertRegistration } from '../db.js'
+import { ErrorCodes, errorResponse } from '../errors.js'
 import { log } from '../logger.js'
-import { errorResponse, ErrorCodes } from '../errors.js'
+import type { Address, AgentRegistrationBody, AgentRegistrationResponse } from '../types.js'
+import { isValidAddress } from '../types.js'
 
 function isValidUrl(url: string): boolean {
   try {
@@ -22,7 +22,10 @@ function parseGithubUrl(url: string): { owner: string; repo: string } | null {
   try {
     const u = new URL(url)
     if (u.hostname !== 'github.com') return null
-    const parts = u.pathname.replace(/\.git$/, '').split('/').filter(Boolean)
+    const parts = u.pathname
+      .replace(/\.git$/, '')
+      .split('/')
+      .filter(Boolean)
     if (parts.length < 2) return null
     return { owner: parts[0], repo: parts[1] }
   } catch {
@@ -34,17 +37,14 @@ function parseGithubUrl(url: string): { owner: string; repo: string } | null {
  * Verify a GitHub repo exists and is public.
  * Returns null if the repo doesn't exist or the request fails.
  */
-async function verifyGithubRepo(
-  owner: string,
-  repo: string,
-): Promise<{ stars: number; pushedAt: string } | null> {
+async function verifyGithubRepo(owner: string, repo: string): Promise<{ stars: number; pushedAt: string } | null> {
   try {
     const headers: Record<string, string> = {
-      'Accept': 'application/vnd.github+json',
+      Accept: 'application/vnd.github+json',
       'User-Agent': 'djd-agent-score/1.0',
     }
     if (process.env.GITHUB_TOKEN) {
-      headers['Authorization'] = `Bearer ${process.env.GITHUB_TOKEN}`
+      headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
     }
 
     const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
@@ -54,7 +54,7 @@ async function verifyGithubRepo(
 
     if (!resp.ok) return null // 404 = doesn't exist, 403 = private
 
-    const data = await resp.json() as {
+    const data = (await resp.json()) as {
       private: boolean
       stargazers_count: number
       pushed_at: string
@@ -160,10 +160,11 @@ register.post('/', async (c) => {
   // Merge: omitted fields retain existing values; explicit null/empty clears them
   upsertRegistration({
     wallet: normalizedWallet,
-    name:        name        !== undefined ? (name?.trim().slice(0, 100) ?? null)        : (existing?.name ?? null),
-    description: description !== undefined ? (description?.trim().slice(0, 500) ?? null) : (existing?.description ?? null),
-    github_url:  newGithubUrl,
-    website_url: website_url !== undefined ? (website_url?.slice(0, 200) ?? null)        : (existing?.website_url ?? null),
+    name: name !== undefined ? (name?.trim().slice(0, 100) ?? null) : (existing?.name ?? null),
+    description:
+      description !== undefined ? (description?.trim().slice(0, 500) ?? null) : (existing?.description ?? null),
+    github_url: newGithubUrl,
+    website_url: website_url !== undefined ? (website_url?.slice(0, 200) ?? null) : (existing?.website_url ?? null),
   })
 
   const row = getRegistration(normalizedWallet)!
@@ -172,7 +173,9 @@ register.post('/', async (c) => {
   // Trigger on: new registration, URL changed, or never verified yet.
   const neverVerified = !row.github_verified_at
   if (newGithubUrl && (isNew || githubUrlChanged || neverVerified)) {
-    verifyAndStoreGithub(normalizedWallet, newGithubUrl).catch(() => { /* ignore */ })
+    verifyAndStoreGithub(normalizedWallet, newGithubUrl).catch(() => {
+      /* ignore */
+    })
   }
 
   const response: AgentRegistrationResponse = {

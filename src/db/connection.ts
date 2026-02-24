@@ -5,10 +5,10 @@
  * The barrel `../db.ts` re-exports everything so existing import paths work.
  */
 
-import Database, { type Database as DatabaseType } from 'better-sqlite3'
-import path from 'node:path'
 import fs from 'node:fs'
+import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import Database, { type Database as DatabaseType } from 'better-sqlite3'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DB_PATH = path.join(__dirname, '..', '..', 'data', 'scores.db')

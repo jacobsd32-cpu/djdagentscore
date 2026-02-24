@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockInsertReport = vi.fn()
 const mockGetScore = vi.fn().mockReturnValue({ composite_score: 50 })
@@ -25,9 +25,9 @@ import reportRoute from '../../src/routes/report.js'
 const REPORTER_WALLET = '0x2222222222222222222222222222222222222222'
 
 // Simulate x402 payment header with payer wallet (H4 fix: reporter derived from payment)
-const PAYMENT_HEADER = Buffer.from(
-  JSON.stringify({ payload: { authorization: { from: REPORTER_WALLET } } }),
-).toString('base64')
+const PAYMENT_HEADER = Buffer.from(JSON.stringify({ payload: { authorization: { from: REPORTER_WALLET } } })).toString(
+  'base64',
+)
 
 function makeApp() {
   const app = new Hono()

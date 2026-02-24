@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
 import { Hono } from 'hono'
+import { describe, expect, it } from 'vitest'
 import { responseHeadersMiddleware } from '../../src/middleware/responseHeaders.js'
 import { MODEL_VERSION } from '../../src/scoring/responseBuilders.js'
 

@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    name: Typecheck & Test
+    name: Lint, Typecheck & Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,6 +17,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm run lint
       - run: npx tsc --noEmit
       - run: npm test
 

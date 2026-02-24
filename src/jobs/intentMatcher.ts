@@ -6,8 +6,8 @@
  * Populates intent_signals with conversion data.
  */
 import type { Database as DatabaseType } from 'better-sqlite3'
-import { jobStats } from './jobStats.js'
 import { log } from '../logger.js'
+import { jobStats } from './jobStats.js'
 
 interface UnmatchedQuery {
   id: number
@@ -65,9 +65,12 @@ export async function runIntentMatcher(db: DatabaseType): Promise<void> {
            LIMIT 1`,
         )
         .get(
-          query.requester_wallet, query.target_wallet,
-          query.target_wallet,   query.requester_wallet,
-          queryTs, windowEnd,
+          query.requester_wallet,
+          query.target_wallet,
+          query.target_wallet,
+          query.requester_wallet,
+          queryTs,
+          windowEnd,
         )
 
       if (tx) {
@@ -78,10 +81,7 @@ export async function runIntentMatcher(db: DatabaseType): Promise<void> {
              (requester_wallet, target_wallet, query_timestamp,
               followed_by_tx, tx_hash, tx_timestamp, time_to_tx_ms)
            VALUES (?, ?, ?, 1, ?, ?, ?)`,
-        ).run(
-          query.requester_wallet, query.target_wallet, queryTs,
-          tx.tx_hash, tx.timestamp, txTime - queryTime,
-        )
+        ).run(query.requester_wallet, query.target_wallet, queryTs, tx.tx_hash, tx.timestamp, txTime - queryTime)
         conversions++
       } else if (isOldEnough) {
         // Observation window closed with no transaction

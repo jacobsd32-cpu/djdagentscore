@@ -1,7 +1,7 @@
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { Hono } from 'hono'
-import { readFileSync } from 'fs'
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 // openapi.json sits at the repo root, two levels up from src/routes/

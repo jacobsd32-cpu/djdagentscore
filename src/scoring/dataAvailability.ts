@@ -22,8 +22,7 @@ export interface DataAvailabilityInputs {
 }
 
 export function buildDataAvailability(inputs: DataAvailabilityInputs): DataAvailability {
-  const { txCount, walletAgeDays, usdcBalance, ratingCount, uniquePartners } =
-    inputs
+  const { txCount, walletAgeDays, usdcBalance, ratingCount, uniquePartners } = inputs
 
   // Transaction history
   let transactionHistory: string
