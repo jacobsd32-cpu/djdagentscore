@@ -4,7 +4,8 @@
  */
 import type { MiddlewareHandler } from 'hono'
 
-export const MODEL_VERSION = '1.0.0'
+import { MODEL_VERSION } from '../scoring/responseBuilders.js'
+export { MODEL_VERSION }
 
 export const responseHeadersMiddleware: MiddlewareHandler = async (c, next) => {
   await next()
