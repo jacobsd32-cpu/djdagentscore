@@ -20,6 +20,7 @@ import economyRoute from './routes/economy.js'
 import docsRoute from './routes/docs.js'
 import metricsRoute from './routes/metrics.js'
 import historyRoute from './routes/history.js'
+import certificationRoute from './routes/certification.js'
 import { adminWebhooks, publicWebhooks } from './routes/webhooks.js'
 import { requestIdMiddleware } from './middleware/requestId.js'
 import { paidRateLimitMiddleware } from './middleware/paidRateLimit.js'
@@ -151,6 +152,11 @@ app.use(
         network: NETWORK,
         config: { description: 'Historical score data with trend analysis ($0.15 USDC)' },
       },
+      '/v1/certification/apply': {
+        price: '$99.00',
+        network: NETWORK,
+        config: { description: 'Annual agent certification ($99 USDC)' },
+      },
     },
     { url: FACILITATOR_URL },
   ),
@@ -171,6 +177,7 @@ app.route('/v1/report', reportRoute)
 app.route('/v1/leaderboard', leaderboardRoute)
 app.route('/v1/data/fraud/blacklist', blacklistRoute)
 app.route('/v1/webhooks', publicWebhooks)
+app.route('/v1/certification', certificationRoute)
 app.route('/admin', admin)
 app.route('/admin/api-keys', apiKeysRoute)
 app.route('/admin/webhooks', adminWebhooks)

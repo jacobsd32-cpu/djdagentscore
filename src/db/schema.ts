@@ -386,3 +386,23 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_wh_deliveries_retry ON webhook_deliveries(next_retry_at)
     WHERE status_code IS NULL OR status_code >= 400;
 `)
+
+// ── Agent Certification ──────────────────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS certifications (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    wallet      TEXT NOT NULL,
+    tier        TEXT NOT NULL,
+    score_at_certification INTEGER NOT NULL,
+    granted_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    expires_at  TEXT NOT NULL,
+    is_active   INTEGER NOT NULL DEFAULT 1,
+    tx_hash     TEXT,
+    revoked_at  TEXT,
+    revocation_reason TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_certs_wallet ON certifications(wallet);
+  CREATE INDEX IF NOT EXISTS idx_certs_active ON certifications(is_active, expires_at);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_certs_wallet_active ON certifications(wallet)
+    WHERE is_active = 1;
+`)
