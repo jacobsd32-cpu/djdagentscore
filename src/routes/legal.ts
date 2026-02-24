@@ -122,7 +122,7 @@ const tosContent = `
 <p>These Terms constitute the entire agreement between you and the Company regarding the Service and supersede all prior agreements and understandings.</p>
 
 <h1>18. Contact</h1>
-<p>For questions regarding these Terms, contact: feedback@djdagentscore.xyz</p>
+<p>For questions regarding these Terms, contact: feedback@djd-agent-score.fly.dev</p>
 `;
 
 // ─── PRIVACY POLICY ───
@@ -209,7 +209,7 @@ const privacyContent = `
 
 <h1>12. Contact</h1>
 <p>For questions, concerns, or data subject requests regarding this Privacy Policy, contact:</p>
-<p>DJD Agent Score<br>feedback@djdagentscore.xyz</p>
+<p>DJD Agent Score<br>feedback@djd-agent-score.fly.dev</p>
 `;
 
 const leaderboardHtml = `<!DOCTYPE html>
