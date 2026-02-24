@@ -4,6 +4,7 @@ import { insertReport, getScore, applyReportPenalty, scoreToTier, countReporterR
 import { isValidAddress, REPORT_REASONS } from '../types.js'
 import type { Address, ReportReason, ReportBody } from '../types.js'
 import { errorResponse, ErrorCodes } from '../errors.js'
+import type { AppEnv } from '../types/hono-env.js'
 
 const PENALTY_PER_REPORT = 5
 
@@ -18,14 +19,11 @@ report.post('/', async (c) => {
     return c.json(errorResponse(ErrorCodes.INVALID_JSON, 'Invalid JSON body'), 400)
   }
 
-  const { target, reporter, reason, details } = body
+  const { target, reason, details } = body
 
   // Validate fields
   if (!target || !isValidAddress(target)) {
     return c.json(errorResponse(ErrorCodes.INVALID_WALLET, 'Invalid or missing target address'), 400)
-  }
-  if (!reporter || !isValidAddress(reporter)) {
-    return c.json(errorResponse(ErrorCodes.INVALID_WALLET, 'Invalid or missing reporter address'), 400)
   }
   if (!reason || !(REPORT_REASONS as readonly string[]).includes(reason)) {
     return c.json(
@@ -36,13 +34,34 @@ report.post('/', async (c) => {
   if (typeof details !== 'string' || details.trim().length === 0) {
     return c.json(errorResponse(ErrorCodes.INVALID_REPORT, 'details is required'), 400)
   }
-  if (target.toLowerCase() === reporter.toLowerCase()) {
+
+  // H4 fix: Extract the actual payer identity — ignore body.reporter
+  const apiKeyWallet = (c as unknown as { get(key: 'apiKeyWallet'): string | null }).get('apiKeyWallet') ?? null
+  const paymentHeader = c.req.header('X-PAYMENT') ?? c.req.header('x-payment')
+  let actualReporter: string | undefined
+
+  if (apiKeyWallet) {
+    actualReporter = apiKeyWallet.toLowerCase()
+  } else if (paymentHeader) {
+    try {
+      const json = JSON.parse(Buffer.from(paymentHeader, 'base64').toString('utf8'))
+      actualReporter = (json?.payload?.authorization?.from ?? json?.payer ?? json?.from)?.toLowerCase()
+    } catch {
+      // ignore parse errors
+    }
+  }
+
+  if (!actualReporter || !isValidAddress(actualReporter)) {
+    return c.json(errorResponse(ErrorCodes.INVALID_WALLET, 'Could not determine reporter identity from payment'), 400)
+  }
+
+  if (target.toLowerCase() === actualReporter) {
     return c.json(errorResponse(ErrorCodes.SELF_REPORT, 'target and reporter must be different addresses'), 400)
   }
 
   // Rate limit: max 3 reports per reporter per target
   const existingReports = countReporterReportsForTarget(
-    reporter.toLowerCase(),
+    actualReporter,
     target.toLowerCase(),
   )
   if (existingReports >= 3) {
@@ -54,7 +73,7 @@ report.post('/', async (c) => {
   insertReport({
     id: reportId,
     target_wallet: target.toLowerCase(),
-    reporter_wallet: reporter.toLowerCase(),
+    reporter_wallet: actualReporter,
     reason: reason as ReportReason,
     details: details.trim().slice(0, 1000),
     penalty_applied: PENALTY_PER_REPORT,

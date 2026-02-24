@@ -22,6 +22,13 @@ vi.mock('uuid', () => ({
 import { Hono } from 'hono'
 import reportRoute from '../../src/routes/report.js'
 
+const REPORTER_WALLET = '0x2222222222222222222222222222222222222222'
+
+// Simulate x402 payment header with payer wallet (H4 fix: reporter derived from payment)
+const PAYMENT_HEADER = Buffer.from(
+  JSON.stringify({ payload: { authorization: { from: REPORTER_WALLET } } }),
+).toString('base64')
+
 function makeApp() {
   const app = new Hono()
   app.route('/v1/report', reportRoute)
@@ -46,7 +53,7 @@ describe('POST /v1/report', () => {
     const app = makeApp()
     const res = await app.request('/v1/report', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-PAYMENT': PAYMENT_HEADER },
       body: JSON.stringify(VALID_BODY),
     })
     expect(res.status).toBe(201)
@@ -63,7 +70,7 @@ describe('POST /v1/report', () => {
     const app = makeApp()
     const res = await app.request('/v1/report', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-PAYMENT': PAYMENT_HEADER },
       body: JSON.stringify(VALID_BODY),
     })
     expect(res.status).toBe(429)
@@ -83,12 +90,16 @@ describe('POST /v1/report', () => {
     expect(res.status).toBe(400)
   })
 
-  it('returns 400 when target equals reporter', async () => {
+  it('returns 400 when target equals reporter (payer wallet)', async () => {
+    // Payment header payer = target address => self-report
+    const selfReportPayment = Buffer.from(
+      JSON.stringify({ payload: { authorization: { from: VALID_BODY.target } } }),
+    ).toString('base64')
     const app = makeApp()
     const res = await app.request('/v1/report', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...VALID_BODY, reporter: VALID_BODY.target }),
+      headers: { 'Content-Type': 'application/json', 'X-PAYMENT': selfReportPayment },
+      body: JSON.stringify(VALID_BODY),
     })
     expect(res.status).toBe(400)
   })

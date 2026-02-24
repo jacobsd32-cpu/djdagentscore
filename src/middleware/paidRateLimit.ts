@@ -52,7 +52,9 @@ export function cleanupRateLimits(): void {
 export const paidRateLimitMiddleware: MiddlewareHandler = async (c, next) => {
   const paymentHeader =
     c.req.header('X-PAYMENT') ?? c.req.header('x-payment') ?? undefined
-  const wallet = extractPayerWallet(paymentHeader)
+  // Also check for API key wallet so API key users are rate-limited too (H8 fix)
+  const apiKeyWallet = (c.get('apiKeyWallet') as string | null) ?? null
+  const wallet = apiKeyWallet ?? extractPayerWallet(paymentHeader)
 
   // If no payer wallet identified, let through (free tier or other checks handle it)
   if (!wallet) {

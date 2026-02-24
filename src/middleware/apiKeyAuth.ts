@@ -50,8 +50,8 @@ export const apiKeyAuthMiddleware: MiddlewareHandler = async (c, next) => {
   const row = stmtFindKey.get(hash)
 
   if (!row) {
-    // Unknown key — fall through (might be some other Bearer token)
-    return next()
+    // Key looks like a DJD API key but is not in the DB — reject (H3 fix)
+    return c.json(errorResponse(ErrorCodes.API_KEY_INVALID, 'Invalid API key'), 401)
   }
 
   if (row.revoked_at) {
@@ -85,12 +85,15 @@ export const apiKeyAuthMiddleware: MiddlewareHandler = async (c, next) => {
     )
   }
 
-  // Valid key with quota remaining — increment and set context
-  stmtIncrementUsage.run(now.toISOString(), hash)
-
+  // Valid key with quota remaining — set context, then run handler
   c.set('apiKeyId', row.id)
   c.set('apiKeyWallet', row.wallet)
   c.set('apiKeyTier', row.tier)
 
   await next()
+
+  // Only increment usage on successful responses (H7 fix)
+  if (c.res.status >= 200 && c.res.status < 300) {
+    stmtIncrementUsage.run(now.toISOString(), hash)
+  }
 }

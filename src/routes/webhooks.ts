@@ -3,6 +3,7 @@ import type { Context } from 'hono'
 import crypto from 'node:crypto'
 import { db } from '../db.js'
 import { errorResponse } from '../errors.js'
+import { isValidWebhookUrl } from '../types.js'
 import type { AppEnv } from '../types/hono-env.js'
 
 /** Helper to read API key wallet from the context (set by apiKeyAuth middleware on the parent app). */
@@ -33,9 +34,9 @@ adminWebhooks.post('/', async (c) => {
     return c.json(errorResponse('webhook_invalid', 'wallet, url, and events[] are required'), 400)
   }
 
-  // Validate URL
-  try { new URL(body.url) } catch {
-    return c.json(errorResponse('webhook_url_invalid', 'Invalid webhook URL'), 400)
+  // Validate URL — must be HTTPS and not target internal networks (H1 SSRF fix)
+  if (!isValidWebhookUrl(body.url)) {
+    return c.json(errorResponse('webhook_url_invalid', 'Invalid webhook URL: must be HTTPS and not target internal networks'), 400)
   }
 
   // Validate events
@@ -110,6 +111,11 @@ adminWebhooks.post('/:id/test', async (c) => {
   const webhook = db.prepare('SELECT * FROM webhooks WHERE id = ?').get(id) as Record<string, unknown> | undefined
   if (!webhook) return c.json(errorResponse('webhook_not_found', 'Webhook not found'), 404)
 
+  // SSRF prevention on test delivery too (H1 fix)
+  if (!isValidWebhookUrl(webhook.url as string)) {
+    return c.json(errorResponse('webhook_url_invalid', 'Webhook URL is unsafe — must be HTTPS and not target internal networks'), 400)
+  }
+
   const testPayload = {
     event: 'test',
     timestamp: new Date().toISOString(),
@@ -167,8 +173,9 @@ publicWebhooks.post('/', async (c) => {
     return c.json(errorResponse('webhook_invalid', 'url and events[] are required'), 400)
   }
 
-  try { new URL(body.url) } catch {
-    return c.json(errorResponse('webhook_url_invalid', 'Invalid webhook URL'), 400)
+  // Validate URL — must be HTTPS and not target internal networks (H1 SSRF fix)
+  if (!isValidWebhookUrl(body.url)) {
+    return c.json(errorResponse('webhook_url_invalid', 'Invalid webhook URL: must be HTTPS and not target internal networks'), 400)
   }
 
   const events = body.events as string[]
