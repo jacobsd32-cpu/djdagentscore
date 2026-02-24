@@ -1,5 +1,12 @@
 # DJD Agent Score - Complete Product Specification v4.0
 
+> **HISTORICAL REFERENCE** — This is the original product vision spec from Feb 20, 2026.
+> It contains aspirational features and architectural choices that differ from the current
+> implementation. Key differences: the app is deployed on Fly.io (not Conway Cloud),
+> the scoring model uses 5 dimensions at 30/25/20/15/10 weights (not 4 at 35/30/20/15),
+> model version is 2.0.0, and many features described here have been implemented
+> differently or scoped down. See [architecture.md](architecture.md) for current state.
+
 **Trust Infrastructure for the Agent Economy**
 Prepared by Drew Jacobs | Jacobs Counsel LLC
 February 20, 2026 | CONFIDENTIAL

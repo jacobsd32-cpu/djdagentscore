@@ -1,10 +1,10 @@
 # DJD Agent Score
 
-Know if the agent wallet you're interacting with is trustworthy. On-chain reputation scoring for AI agent wallets, monetized via [x402](https://github.com/coinbase/x402) micropayments on Base.
+Trust scores for AI agent wallets. One API call, no signup.
 
-One API call. No keys. No signup. Free tier included.
+On-chain reputation scoring for autonomous AI agents on Base, monetized via [x402](https://github.com/coinbase/x402) micropayments.
 
-[Live API](https://djd-agent-score.fly.dev) · [OpenAPI Spec](https://djd-agent-score.fly.dev/openapi.json) · [Leaderboard](https://djd-agent-score.fly.dev/v1/leaderboard)
+[Live API](https://djd-agent-score.fly.dev) · [API Docs](https://djd-agent-score.fly.dev/docs) · [OpenAPI Spec](https://djd-agent-score.fly.dev/openapi.json) · [Leaderboard](https://djd-agent-score.fly.dev/v1/leaderboard)
 
 ---
 
@@ -20,17 +20,18 @@ Returns:
 
 ```json
 {
-  "wallet": "0x3E4Ef1f…",
-  "score": 49,
+  "wallet": "0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528",
+  "score": 39,
   "tier": "Emerging",
-  "confidence": 0.35,
-  "recommendation": "Low activity. Build transaction history to improve score.",
+  "confidence": 0.16,
+  "recommendation": "insufficient_history",
   "modelVersion": "2.0.0",
-  "lastUpdated": "2025-02-23T12:00:00.000Z",
-  "computedAt": "2025-02-23T11:45:00.000Z",
-  "scoreFreshness": 0.75,
+  "lastUpdated": "2026-02-24T02:10:47.830Z",
+  "computedAt": "2026-02-24T02:10:47.830Z",
+  "scoreFreshness": 0,
   "freeTier": true,
-  "freeQueriesRemainingToday": 9
+  "freeQueriesRemainingToday": 9,
+  "stale": true
 }
 ```
 
@@ -137,6 +138,7 @@ Additional integrity layers: Sybil detection heuristics, score gaming detection,
 | `/v1/score/compute` | POST | Queue background score computation. Returns jobId immediately. |
 | `/v1/score/job/:jobId` | GET | Poll async job status (pending → complete). |
 | `/v1/leaderboard` | GET | Top-ranked wallets by score. |
+| `/v1/certification/:wallet` | GET | Check certification status. |
 | `/agent/{wallet}` | GET | Profile page (HTML). |
 | `/v1/badge/{wallet}.svg` | GET | Embeddable SVG score badge. |
 | `/health` | GET | Service health and indexer status. |
@@ -147,10 +149,16 @@ Additional integrity layers: Sybil detection heuristics, score gaming detection,
 |---|---|---|---|
 | `/v1/score/full?wallet=0x…` | GET | $0.10 | Per-dimension scores, raw data, history, fraud flags |
 | `/v1/score/refresh?wallet=0x…` | GET | $0.25 | Force live recalculation (bypasses 1hr cache) |
+| `/v1/score/history?wallet=0x…` | GET | $0.15 | Historical score data with trend analysis |
 | `/v1/report` | POST | $0.02 | Submit fraud/misconduct report against a wallet |
 | `/v1/data/fraud/blacklist?wallet=0x…` | GET | $0.05 | Check if a wallet is on the fraud blacklist |
+| `/v1/certification/apply` | POST | $99.00 | Apply for Certified Agent Badge (annual) |
 
-Paid endpoints return `402 Payment Required` without a valid payment proof. Include the proof in the `X-PAYMENT` header. Any x402-compatible client handles this automatically. [How x402 payments work →](#how-x402-payments-work)
+### API key access
+
+For high-volume usage without per-request x402 payments, API keys are available. Authenticate with `Authorization: Bearer djd_live_…` — requests are counted against a monthly quota instead of requiring individual payments.
+
+Paid endpoints return `402 Payment Required` without a valid payment proof or API key. Include the proof in the `X-PAYMENT` header, or use an API key. Any x402-compatible client handles payment automatically. [How x402 payments work →](#how-x402-payments-work)
 
 ---
 
@@ -203,7 +211,7 @@ npm install
 npm run dev
 ```
 
-Requires Node.js >= 20. Starts on `http://localhost:3000`.
+Requires **Node.js v22**. Starts on `http://localhost:3000`.
 
 ### Environment variables
 
@@ -222,7 +230,7 @@ Requires Node.js >= 20. Starts on `http://localhost:3000`.
 
 **Blockchain indexer:** Polls Base USDC every 12 seconds for `AuthorizationUsed` and `Transfer` events. Two-layer filter (EIP-3009 event + $1 USDC amount cap) isolates x402 settlements from regular DeFi activity. Adaptive chunk sizing handles BlastAPI's 20k result cap.
 
-**Database:** SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached volume compatibility). 20 tables covering scores, history, fraud reports, registrations, query logs, indexer state, and job stats.
+**Database:** SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached volume compatibility). 25 tables covering scores, history, fraud reports, registrations, query logs, indexer state, API keys, webhooks, certifications, and job stats.
 
 **RPC provider:** Default is BlastAPI public Base endpoint. For heavy indexing, use a dedicated provider via `BASE_RPC_URL`. Avoid `publicnode.com` (rejects 10k-block `eth_getLogs` ranges).
 

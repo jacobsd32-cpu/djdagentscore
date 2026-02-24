@@ -1,5 +1,12 @@
 # DJD Agent Score — What You Built (and a Harsh Honest Assessment)
 
+> **HISTORICAL DOCUMENT** — This assessment was written on 2026-02-23 during early development.
+> Many issues described below have since been fixed, including: test coverage (now 164 tests
+> across 24 files), CI/CD (GitHub Actions), admin auth (X-ADMIN-KEY), structured logging,
+> rate limiting on paid endpoints, monitoring (Prometheus /metrics), and the addition of
+> API key auth, webhooks, historical score API, and certified agent badges.
+> See [architecture.md](architecture.md) for the current state of the codebase.
+
 > Written: 2026-02-23
 > Codebase: ~7,250 lines of TypeScript across 30+ source files
 > Tests: 9 test files, ~420 lines, 20 passing assertions

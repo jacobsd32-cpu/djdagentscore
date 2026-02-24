@@ -1,6 +1,6 @@
 # DJD Agent Score — Deployment Checklist
 
-Model version: **1.0.0**
+Model version: **2.0.0**
 Network: **Base Mainnet**
 Experimental status: **true** (scores are informational, not financial advice)
 
@@ -14,7 +14,8 @@ Experimental status: **true** (scores are informational, not financial advice)
 |---|---|---|
 | `PORT` | `3000` | HTTP listen port |
 | `PAY_TO` | `0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528` | Wallet that receives x402 payments |
-| `FACILITATOR_URL` | `https://facilitator.openx402.ai` | x402 payment facilitator |
+| `FACILITATOR_URL` | `https://x402.org/facilitator` | x402 payment facilitator |
+| `BASE_RPC_URL` | `https://base-mainnet.public.blastapi.io` | Base RPC endpoint |
 
 No `.env` file is required — all variables have working defaults. Set `PAY_TO` to your deployment wallet before going live.
 
@@ -37,7 +38,11 @@ The server creates `./data/scores.db` automatically on first start. No manual DB
 
 ---
 
-## Conway Deployment Steps
+## Fly.io Deployment
+
+The app is deployed on Fly.io with CI/CD via GitHub Actions (`fly-deploy.yml`). On merge to `main`, the pipeline runs tests, builds, and deploys automatically.
+
+### Manual deployment
 
 ```bash
 # 1. Pull latest code
@@ -49,12 +54,8 @@ npm install --production
 # 3. Build
 npm run build
 
-# 4. Set environment variables (if not using defaults)
-export PAY_TO=0xYourWallet
-export PORT=3000
-
-# 5. Start the server
-node dist/index.js
+# 4. Deploy to Fly.io
+fly deploy
 ```
 
 For process management (PM2, systemd, Docker) use `npm run start` (`node dist/index.js`). Do not use `npm run dev` (`tsx watch`) in production.
@@ -69,15 +70,15 @@ Run these checks immediately after the server starts:
 ```bash
 curl http://localhost:3000/health
 ```
-Expected: `{"status":"ok","version":"1.0.0","modelVersion":"1.0.0",...}`
+Expected: `{"status":"ok","version":"2.0.0","modelVersion":"2.0.0",...}`
 
 Key fields to verify:
 - `status` = `"ok"`
-- `modelVersion` = `"1.0.0"`
+- `modelVersion` = `"2.0.0"`
 - `database.indexedWallets` > 0 (after indexer runs)
 - `indexer.running` = `true`
 
-### Database Tables (21 core tables)
+### Database Tables (25 tables)
 ```bash
 node -e "
 const db = require('better-sqlite3')('./data/scores.db');
@@ -85,7 +86,7 @@ const t = db.prepare(\"SELECT name FROM sqlite_master WHERE type='table' ORDER B
 console.log(t.length, 'tables:', t.map(r=>r.name).join(', '));
 "
 ```
-Expected: 21+ tables including `scores`, `score_history`, `wallet_index`, `wallet_metrics`, `query_log`, `model_versions`.
+Expected: 25+ tables including `scores`, `score_history`, `wallet_index`, `wallet_metrics`, `query_log`, `model_versions`, `api_keys`, `webhooks`, `certifications`.
 
 ### model_versions Seed
 ```bash
@@ -94,7 +95,7 @@ const db = require('better-sqlite3')('./data/scores.db');
 console.log(db.prepare('SELECT version, notes FROM model_versions').all());
 "
 ```
-Expected: `[{ version: '1.0.0', notes: 'Initial launch model' }]`
+Expected: `[{ version: '2.0.0', notes: '...' }]`
 
 ### Endpoint Smoke Tests
 ```bash
@@ -116,7 +117,7 @@ curl -s -o /dev/null -w "%{http_code}" "http://localhost:3000/v1/data/fraud/blac
 Every response must include:
 ```
 x-djd-disclaimer: Scores are informational and experimental. Not financial advice.
-x-djd-model-version: 1.0.0
+x-djd-model-version: 2.0.0
 x-djd-status: experimental
 ```
 
@@ -145,7 +146,7 @@ Within 15 minutes: `anomalyDetector.lastRun` populated.
 If the server fails to start:
 
 1. Check `data/scores.db` is not locked by another process
-2. Confirm Node.js ≥ v22: `node --version`
+2. Confirm Node.js v22: `node --version`
 3. Rebuild: `npm run build`
 4. If DB is corrupt: delete `data/scores.db` — the server recreates it on next start (all on-chain data will be re-indexed from the genesis block)
 
@@ -157,4 +158,5 @@ If the server fails to start:
 - **Indexer lag**: `/health` → `indexer.lastBlockIndexed` vs current Base block number
 - **Query volume**: `/health` → `database.totalQueryLogEntries`
 - **Fraud activity**: `/health` → `database.totalFraudReports`
+- **Metrics**: `/metrics` → Prometheus-compatible endpoint for Grafana/Datadog
 - **Anomalies**: `jobs.anomalyDetector.anomaliesFound` increments when score drops >10pts, balance freefalls, or new sybil flags are detected — subscribers are notified via webhook
