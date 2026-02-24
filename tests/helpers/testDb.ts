@@ -145,6 +145,73 @@ export function createTestDb(): Database.Database {
       recommendations TEXT,
       model_version TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      key_hash TEXT UNIQUE NOT NULL,
+      key_prefix TEXT NOT NULL,
+      wallet TEXT NOT NULL,
+      name TEXT,
+      tier TEXT NOT NULL DEFAULT 'standard',
+      monthly_limit INTEGER NOT NULL DEFAULT 10000,
+      monthly_used INTEGER NOT NULL DEFAULT 0,
+      usage_reset_at TEXT NOT NULL,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      last_used_at TEXT,
+      revoked_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS score_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      wallet TEXT NOT NULL,
+      score INTEGER NOT NULL,
+      calculated_at TEXT NOT NULL,
+      confidence REAL DEFAULT 0.0,
+      model_version TEXT DEFAULT '1.0.0'
+    );
+    CREATE INDEX IF NOT EXISTS idx_history_wallet ON score_history(wallet, calculated_at DESC);
+
+    CREATE TABLE IF NOT EXISTS webhooks (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      wallet      TEXT NOT NULL,
+      url         TEXT NOT NULL,
+      secret      TEXT NOT NULL,
+      events      TEXT NOT NULL,
+      tier        TEXT NOT NULL DEFAULT 'basic',
+      is_active   INTEGER NOT NULL DEFAULT 1,
+      created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+      failure_count INTEGER NOT NULL DEFAULT 0,
+      last_delivery_at TEXT,
+      disabled_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_webhooks_wallet ON webhooks(wallet);
+    CREATE INDEX IF NOT EXISTS idx_webhooks_active ON webhooks(is_active, events);
+
+    CREATE TABLE IF NOT EXISTS webhook_deliveries (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      webhook_id  INTEGER NOT NULL REFERENCES webhooks(id),
+      event_type  TEXT NOT NULL,
+      payload     TEXT NOT NULL,
+      status_code INTEGER,
+      response_body TEXT,
+      attempt     INTEGER NOT NULL DEFAULT 1,
+      delivered_at TEXT,
+      next_retry_at TEXT,
+      created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_wh_deliveries_retry ON webhook_deliveries(next_retry_at)
+      WHERE status_code IS NULL OR status_code >= 400;
+
+    CREATE TABLE IF NOT EXISTS agent_registrations (
+      wallet        TEXT PRIMARY KEY,
+      name          TEXT,
+      description   TEXT,
+      github_url    TEXT,
+      website_url   TEXT,
+      registered_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `)
 
   return db
