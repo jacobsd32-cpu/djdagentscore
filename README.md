@@ -2,8 +2,8 @@
 
 On-chain reputation scoring for AI agent wallets, monetised via [x402](https://github.com/coinbase/x402) micropayments on Base.
 
-**Live API:** https://djdagentscore.xyz
-**OpenAPI spec:** https://djdagentscore.xyz/openapi.json
+**Live API:** https://djd-agent-score.fly.dev
+**OpenAPI spec:** https://djd-agent-score.fly.dev/openapi.json
 
 ---
 
@@ -36,7 +36,7 @@ Registered wallets receive a **+10 point identity bonus**.
 Re-posting updates metadata (upsert — omitted fields are preserved).
 
 ```bash
-curl -X POST https://djdagentscore.xyz/v1/agent/register \
+curl -X POST https://djd-agent-score.fly.dev/v1/agent/register \
   -H 'Content-Type: application/json' \
   -d '{
     "wallet": "0xYourAgentWallet",
@@ -66,7 +66,7 @@ Human-readable agent profile page (HTML).
 SVG score badge you can embed in READMEs.
 
 ```markdown
-![Agent Score](https://djdagentscore.xyz/v1/badge/0xYourWallet.svg)
+![Agent Score](https://djd-agent-score.fly.dev/v1/badge/0xYourWallet.svg)
 ```
 
 ---
@@ -148,36 +148,62 @@ Requires Node.js ≥ 20. Server starts on `http://localhost:3000`.
 
 ```
 src/
-├── index.ts                   # Hono app, x402 middleware, background jobs
-├── types.ts                   # TypeScript interfaces
-├── db.ts                      # SQLite (better-sqlite3) — WAL mode
-├── blockchain.ts              # viem public client, chunked getLogs
+├── index.ts                        # Hono app, x402 middleware, background jobs
+├── types.ts                        # TypeScript interfaces
+├── types/
+│   └── hono-env.ts                 # Hono environment type bindings
+├── logger.ts                       # Structured logging
+├── blockchain.ts                   # viem public client, chunked getLogs
+├── db.ts                           # Legacy DB entry point
+├── db/
+│   ├── connection.ts               # SQLite connection (DELETE journal mode)
+│   ├── schema.ts                   # 20-table schema, migrations
+│   └── queries.ts                  # Parameterised query helpers
+├── middleware/
+│   ├── freeTier.ts                 # 10 free requests/day for /v1/score/basic
+│   ├── queryLogger.ts              # Per-request query logging
+│   └── responseHeaders.ts          # Standard response headers
 ├── routes/
-│   ├── register.ts            # POST /v1/agent/register
-│   ├── score.ts               # GET /v1/score/*
-│   ├── report.ts              # POST /v1/report
-│   ├── leaderboard.ts         # GET /v1/leaderboard
-│   ├── badge.ts               # GET /v1/badge/*.svg
-│   └── agent.ts               # GET /agent/{wallet} (HTML)
+│   ├── register.ts                 # POST /v1/agent/register
+│   ├── score.ts                    # GET /v1/score/*
+│   ├── report.ts                   # POST /v1/report
+│   ├── leaderboard.ts              # GET /v1/leaderboard
+│   ├── badge.ts                    # GET /v1/badge/*.svg
+│   ├── agent.ts                    # GET /agent/{wallet} (HTML)
+│   ├── blacklist.ts                # GET /v1/data/fraud/blacklist
+│   ├── health.ts                   # GET /health
+│   ├── admin.ts                    # Admin/debug endpoints
+│   ├── legal.ts                    # Terms & privacy
+│   └── openapi.ts                  # GET /openapi.json
 ├── scoring/
-│   ├── dimensions.ts          # Reliability, Viability, Identity, Capability
-│   ├── behavior.ts            # Behavior dimension (transaction patterns)
-│   ├── engine.ts              # Orchestration, caching, fraud penalties
-│   ├── sybil.ts               # Sybil detection
-│   ├── gaming.ts              # Score gaming detection
-│   ├── confidence.ts          # Confidence scoring
-│   └── recommendation.ts     # Score improvement recommendations
+│   ├── dimensions.ts               # Reliability, Viability, Identity, Capability
+│   ├── behavior.ts                 # Behavior dimension (transaction patterns)
+│   ├── engine.ts                   # Orchestration, caching, fraud penalties
+│   ├── integrity.ts                # Sybil + gaming integrity modifier
+│   ├── sybil.ts                    # Sybil detection heuristics
+│   ├── gaming.ts                   # Score gaming detection
+│   ├── confidence.ts               # Confidence scoring
+│   ├── dataAvailability.ts         # Data sufficiency checks
+│   ├── responseBuilders.ts         # BasicScoreResponse / FullScoreResponse builders
+│   ├── calibrationReport.ts        # Scoring model calibration
+│   └── recommendation.ts           # Score improvement recommendations
 └── jobs/
-    ├── blockchainIndexer.ts   # Continuous x402 settlement indexer (EIP-3009)
-    ├── scoreRefresh.ts        # Hourly background score refresh
-    ├── anomalyDetector.ts     # Anomaly and Sybil monitoring
-    ├── intentMatcher.ts       # Pre/post payment intent matching
-    └── githubReverify.ts      # Periodic GitHub verification refresh
+    ├── blockchainIndexer.ts        # x402 settlement indexer (EIP-3009 AuthorizationUsed)
+    ├── usdcTransferIndexer.ts      # USDC Transfer event indexer
+    ├── usdcTransferHelpers.ts      # Transfer parsing utilities
+    ├── scoreRefresh.ts             # Hourly background score refresh
+    ├── scoreQueue.ts               # Score computation queue
+    ├── anomalyDetector.ts          # Anomaly and Sybil monitoring
+    ├── intentMatcher.ts            # Pre/post payment intent matching
+    ├── outcomeMatcher.ts           # Payment outcome reconciliation
+    ├── dailyAggregator.ts          # Daily wallet metrics aggregation
+    ├── jobStats.ts                 # Background job statistics
+    └── githubReverify.ts           # Periodic GitHub verification refresh
 ```
 
 **Blockchain indexer:** Polls Base USDC every 12 seconds for `AuthorizationUsed` + `Transfer` events. Uses a two-layer filter (EIP-3009 event + $1 USDC amount cap) to isolate x402 settlements from regular DeFi activity. Adaptive chunk sizing handles BlastAPI's 20k result cap gracefully.
 
-**Database:** SQLite with WAL mode. 22 tables covering scores, history, fraud reports, agent registrations, query logs, indexer state, and job stats.
+**Database:** SQLite with DELETE journal mode (chosen over WAL for compatibility with Fly.io network-attached volumes). 20 tables covering scores, history, fraud reports, agent registrations, query logs, indexer state, and job stats.
 
 ---
 
