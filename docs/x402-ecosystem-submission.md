@@ -13,9 +13,9 @@ Create this file in the coinbase/x402 repo:
 ```json
 {
   "name": "DJD Agent Score",
-  "description": "On-chain reputation scoring for autonomous AI agents. Agents pay per query via x402 USDC micropayments on Base. Scores reflect transaction reliability, economic viability, identity, and capability — giving x402 merchants a trust signal before accepting payment from an unknown agent.",
+  "description": "On-chain reputation scoring for autonomous AI agents on Base. Five-dimension trust scores (0–100) covering reliability, viability, identity, behavior, and capability. Free tier for basic lookups; paid endpoints via x402 USDC micropayments. API keys available for high-volume access.",
   "logoUrl": "/logos/djd-agent-score.png",
-  "websiteUrl": "https://djdagentscore.xyz",
+  "websiteUrl": "https://djd-agent-score.fly.dev",
   "category": "Services/Endpoints"
 }
 ```
@@ -38,7 +38,8 @@ feat(ecosystem): add DJD Agent Score — reputation scoring for AI agents
 ```markdown
 ## DJD Agent Score
 
-**URL:** https://djdagentscore.xyz
+**URL:** https://djd-agent-score.fly.dev
+**Docs:** https://djd-agent-score.fly.dev/docs
 **Category:** Services/Endpoints
 
 ### What it does
@@ -47,38 +48,49 @@ DJD Agent Score is an on-chain reputation API for autonomous AI agents.
 Merchants accepting x402 payments from unknown agents can query the API
 to get a trust score (0–100) before fulfilling a request.
 
-Every score query is itself paid via x402 micropayments on Base, making
-this a native x402 service — it eats its own dog food.
+Every paid score query is itself settled via x402 micropayments on Base,
+making this a native x402 service — it eats its own dog food.
 
 ### Scoring dimensions
 
 | Dimension | Weight | Signal |
 |---|---|---|
-| Transaction Reliability | 35% | x402 settlement history |
-| Economic Viability | 30% | USDC balance & flow |
-| Identity & Lineage | 20% | Wallet age, ERC-8004, self-registration |
-| Capability Signal | 15% | Revenue earned, active services |
+| Payment Reliability | 30% | x402 settlement history, transaction consistency |
+| Economic Viability | 25% | USDC balance, inflow/outflow ratios, wallet age |
+| Identity | 20% | Basename, GitHub verification, registration, wallet age |
+| Behavior | 15% | Temporal transaction patterns, anomaly signals |
+| Capability | 10% | x402 revenue earned, services operated |
 
 ### API (live on Base mainnet)
 
 ```
-# Free — check if an agent is registered
-POST https://djdagentscore.xyz/v1/agent/register
+# Free — 10 basic score lookups per day, no payment needed
+GET https://djd-agent-score.fly.dev/v1/score/basic?wallet=0x...
+
+# Free — register your agent (+10 identity bonus)
+POST https://djd-agent-score.fly.dev/v1/agent/register
 { "wallet": "0x...", "name": "My Agent", "github_url": "https://..." }
 
-# $0.03 USDC via x402 — basic score
-GET https://djdagentscore.xyz/v1/score/basic?wallet=0x...
-
 # $0.10 USDC via x402 — full breakdown with dimensions
-GET https://djdagentscore.xyz/v1/score/full?wallet=0x...
+GET https://djd-agent-score.fly.dev/v1/score/full?wallet=0x...
+
+# $0.25 USDC via x402 — force live recalculation
+GET https://djd-agent-score.fly.dev/v1/score/refresh?wallet=0x...
+
+# $0.15 USDC via x402 — historical scores with trend analysis
+GET https://djd-agent-score.fly.dev/v1/score/history?wallet=0x...
 ```
 
 ### Technical notes
 
-- Built with `x402-hono` on Hono + Node.js
+- Built with Hono + better-sqlite3 + viem on Node.js v22
 - Indexes x402 payment settlements on Base via EIP-3009 `AuthorizationUsed`
   events (distinguishes x402 from regular USDC transfers)
-- SQLite for score caching; scores refresh hourly in the background
+- Also indexes standard USDC `Transfer` events for broader transaction history
+- 25-table SQLite database with score caching, fraud reports, API keys, webhooks
+- Sybil detection heuristics and score gaming detection
+- Background jobs: blockchain indexer (12s), score refresh (hourly), anomaly detector (15min)
+- API key access available for high-volume usage without per-request x402 payments
 - Open source: https://github.com/jacobsd32-cpu/djdagentscore
 ```
 

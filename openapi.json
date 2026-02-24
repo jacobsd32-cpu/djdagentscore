@@ -3,12 +3,12 @@
   "info": {
     "title": "DJD Agent Score API",
     "description": "Reputation scoring for autonomous AI agent wallets on Base. Scores are derived from on-chain USDC behavioral data and optional self-registration. Paid endpoints require an x402 USDC micropayment on Base; free endpoints require no authentication. Interactive docs available at /docs.",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "contact": { "email": "feedback@djdagentscore.xyz" },
-    "license": { "name": "Proprietary" }
+    "license": { "name": "MIT", "url": "https://github.com/jacobsd32-cpu/djdagentscore/blob/main/LICENSE" }
   },
   "servers": [
-    { "url": "https://djdagentscore.xyz", "description": "Production" }
+    { "url": "https://djd-agent-score.fly.dev", "description": "Production" }
   ],
   "tags": [
     { "name": "score",         "description": "Score lookup and computation" },

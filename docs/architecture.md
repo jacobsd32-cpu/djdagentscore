@@ -8,28 +8,40 @@ src/
 ├── types.ts                        # TypeScript interfaces
 ├── types/
 │   └── hono-env.ts                 # Hono environment type bindings
+├── errors.ts                       # Structured error codes and responses
 ├── logger.ts                       # Structured logging
 ├── blockchain.ts                   # viem public client, chunked getLogs
+├── metrics.ts                      # Prometheus metrics
 ├── db.ts                           # Legacy DB entry point
 ├── db/
 │   ├── connection.ts               # SQLite connection (DELETE journal mode)
-│   ├── schema.ts                   # 20-table schema, migrations
+│   ├── schema.ts                   # 25-table schema, migrations
 │   └── queries.ts                  # Parameterised query helpers
 ├── middleware/
+│   ├── apiKeyAuth.ts               # API key authentication (Bearer token)
 │   ├── freeTier.ts                 # 10 free requests/day for /v1/score/basic
+│   ├── paidRateLimit.ts            # Rate limiting for paid endpoints
 │   ├── queryLogger.ts              # Per-request query logging
-│   └── responseHeaders.ts          # Standard response headers
+│   ├── requestId.ts                # X-Request-ID generation
+│   └── responseHeaders.ts          # Standard response + security headers
 ├── routes/
 │   ├── register.ts                 # POST /v1/agent/register
 │   ├── score.ts                    # GET /v1/score/*
+│   ├── history.ts                  # GET /v1/score/history (paid)
 │   ├── report.ts                   # POST /v1/report
 │   ├── leaderboard.ts              # GET /v1/leaderboard
 │   ├── badge.ts                    # GET /v1/badge/*.svg
 │   ├── agent.ts                    # GET /agent/{wallet} (HTML)
 │   ├── blacklist.ts                # GET /v1/data/fraud/blacklist
+│   ├── certification.ts            # /v1/certification/* (apply, status, badge)
+│   ├── webhooks.ts                 # /v1/webhooks + /admin/webhooks
+│   ├── apiKeys.ts                  # /admin/api-keys management
 │   ├── health.ts                   # GET /health
+│   ├── metrics.ts                  # GET /metrics (Prometheus)
+│   ├── economy.ts                  # Economy data endpoints
 │   ├── admin.ts                    # Admin/debug endpoints
 │   ├── legal.ts                    # Terms & privacy
+│   ├── docs.ts                     # Swagger UI at /docs
 │   └── openapi.ts                  # GET /openapi.json
 ├── scoring/
 │   ├── dimensions.ts               # Reliability, Viability, Identity, Capability
@@ -54,6 +66,7 @@ src/
     ├── outcomeMatcher.ts           # Payment outcome reconciliation
     ├── dailyAggregator.ts          # Daily wallet metrics aggregation
     ├── jobStats.ts                 # Background job statistics
+    ├── webhookDelivery.ts          # Webhook event delivery + retries
     └── githubReverify.ts           # Periodic GitHub verification refresh
 ```
 
@@ -90,7 +103,7 @@ Separate indexer for standard USDC `Transfer` events. Feeds the Reliability and 
 
 ### Database (`src/db/`)
 
-SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached volume compatibility). 20 tables:
+SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached volume compatibility). 25 tables:
 
 - `scores` — cached composite + dimension scores
 - `score_history` — historical score snapshots
@@ -101,6 +114,10 @@ SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached vol
 - `usdc_transfers` — indexed USDC Transfer events
 - `wallet_index` — first-seen timestamps for wallet age calculation
 - `free_tier_usage` — daily free tier quota tracking
+- `api_keys` — API key hashes, quotas, and usage tracking
+- `webhooks` — webhook subscription configuration
+- `webhook_deliveries` — delivery attempts and retry state
+- `certifications` — certified agent badge records
 - `job_stats` — background job execution metrics
 - And more (daily aggregates, anomaly flags, intent matching, etc.)
 
@@ -111,6 +128,7 @@ SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached vol
 | Blockchain indexer | Continuous (12s) | Index x402 settlements |
 | USDC Transfer indexer | Continuous (12s) | Index USDC transfers |
 | Score refresh | Hourly | Refresh up to 10 expired scores |
+| Webhook delivery | Every 30s | Deliver queued webhook events with retries |
 | Intent matcher | Every 6 hours | Match pre/post payment intents |
 | Outcome matcher | Every 6 hours | Reconcile payment outcomes |
 | Anomaly detector | Every 15 min | Flag anomalous wallet behavior |
