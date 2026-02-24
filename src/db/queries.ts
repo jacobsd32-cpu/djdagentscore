@@ -60,6 +60,17 @@ const stmtGetHistory = db.prepare<[string], ScoreHistoryRow>(`
   SELECT * FROM score_history WHERE wallet = ? ORDER BY calculated_at DESC LIMIT 10
 `)
 
+const stmtInsertDecay = db.prepare(
+  `INSERT INTO score_decay (wallet, composite_score) VALUES (?, ?)`,
+)
+const stmtUpdateWalletIndex = db.prepare(
+  `UPDATE wallet_index SET is_scored = 1, last_seen = ? WHERE wallet = ?`,
+)
+const stmtPruneHistory = db.prepare(
+  `DELETE FROM score_history WHERE wallet = ? AND id NOT IN
+   (SELECT id FROM score_history WHERE wallet = ? ORDER BY calculated_at DESC LIMIT 50)`,
+)
+
 const stmtGetExpired = db.prepare<[], { wallet: string }>(`
   SELECT wallet FROM scores WHERE expires_at < datetime('now')
 `)
@@ -232,20 +243,13 @@ const upsertScoreTxn = db.transaction(
     )
 
     // Record in score_decay for temporal tracking
-    db.prepare(
-      `INSERT INTO score_decay (wallet, composite_score) VALUES (?, ?)`,
-    ).run(wallet, compositeScore)
+    stmtInsertDecay.run(wallet, compositeScore)
 
     // Mark wallet as scored in wallet_index if it exists
-    db.prepare(
-      `UPDATE wallet_index SET is_scored = 1, last_seen = ? WHERE wallet = ?`,
-    ).run(now.toISOString(), wallet)
+    stmtUpdateWalletIndex.run(now.toISOString(), wallet)
 
     // Keep only last 50 history entries per wallet
-    db.prepare(
-      `DELETE FROM score_history WHERE wallet = ? AND id NOT IN
-       (SELECT id FROM score_history WHERE wallet = ? ORDER BY calculated_at DESC LIMIT 50)`,
-    ).run(wallet, wallet)
+    stmtPruneHistory.run(wallet, wallet)
   },
 )
 
