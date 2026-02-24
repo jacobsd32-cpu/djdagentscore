@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DJD Agent Score — Trust Infrastructure for the Agent Economy</title>
-<meta name="description" content="The first reputation scoring API for autonomous AI agent wallets. On-chain behavioral data, scored in milliseconds, paid via x402 micropayment on Base.">
+<title>DJD Agent Score — Trust Scores for AI Agent Wallets</title>
+<meta name="description" content="When your AI agent is about to send money to another AI agent, how do you know that agent is legit? Trust score 0–100 from on-chain history. One API call, no signup.">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -42,6 +42,7 @@ nav{padding:18px 0;display:flex;align-items:center;justify-content:space-between
 .badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(34,211,238,0.18);padding:5px 13px;border-radius:100px;letter-spacing:1px;text-transform:uppercase;margin-bottom:22px}
 .hero h1{font-size:clamp(30px,4.5vw,46px);font-weight:700;line-height:1.14;margin-bottom:18px;letter-spacing:-1px}
 .hero h1 em{font-style:normal;color:var(--accent)}
+.hero-sub{font-size:20px;color:var(--accent);font-weight:500;margin-bottom:18px;letter-spacing:-.3px}
 .hero-p{font-size:16px;color:var(--text-dim);max-width:600px;line-height:1.72;margin-bottom:10px}
 
 .sec{margin:60px 0}
@@ -198,9 +199,9 @@ footer{border-top:1px solid var(--border);padding:28px 0 36px;margin-top:60px}
 <!-- HERO -->
 <div class="hero">
   <div class="badge">Live on Base &middot; Paid via x402</div>
-  <h1>Should you trust<br>this <em>AI agent</em>?</h1>
-  <p class="hero-p">Autonomous agents send and receive money on-chain with no way to know if a counterparty is reliable, funded, or a scam. DJD Agent Score fixes that.</p>
-  <p class="hero-p">We index USDC transfer activity on the Base blockchain, analyze behavioral patterns across multiple dimensions, run integrity checks, and produce a 0-100 reputation score for any wallet. Query via API. Pay per lookup with USDC via <a href="https://www.x402.org/" target="_blank">x402</a>. No accounts, no API keys, no signup.</p>
+  <h1>Trust scores for<br><em>AI agent</em> wallets</h1>
+  <p class="hero-sub">One API call, no signup.</p>
+  <p class="hero-p">When your AI agent is about to send money to another AI agent, how do you know that agent is legit? DJD Agent Score gives you a trust score &mdash; 0 to 100 &mdash; based on the wallet's on-chain transaction history. One API call, free tier included, paid queries via <a href="https://www.x402.org/" target="_blank">x402</a> micropayments. No API keys. No accounts.</p>
 </div>
 
 <!-- STATS -->
@@ -214,8 +215,8 @@ footer{border-top:1px solid var(--border);padding:28px 0 36px;margin-top:60px}
 <!-- PROBLEM -->
 <div class="sec">
   <div class="sec-label">The Problem</div>
-  <div class="sec-title">Agents don't have reputations. Yet.</div>
-  <div class="sec-desc">When one AI agent pays another for a service, neither side has a trust signal. No credit score, no review history, no identity layer. Agents transact in the dark.</div>
+  <div class="sec-title">Who do you trust with your agent's wallet?</div>
+  <div class="sec-desc"><a href="https://www.x402.org/" target="_blank">x402</a> lets AI agents pay each other with USDC. But neither side has a trust signal &mdash; no credit score, no review history, no identity layer. DJD Agent Score indexes on-chain settlements on Base and scores every wallet across 5 dimensions. It's the credit score for the autonomous agent economy.</div>
   <div class="grid2">
     <div class="card"><div class="clbl r">Without a score</div><h3>Agent A sends $50 USDC to Agent B for a task.</h3><p>Agent B was created yesterday, has no meaningful history, and shares a funding source with dozens of other wallets. Agent A has no way to know this. The money is gone. The task never completes.</p></div>
     <div class="card"><div class="clbl g">With DJD Agent Score</div><h3>Agent A queries Agent B's score first.</h3><p>Low score. Unverified tier. Zero confidence. Recommendation: insufficient history. Integrity flags raised. Agent A doesn't transact. $50 saved in milliseconds.</p></div>
