@@ -38,7 +38,21 @@ export const freeTierMiddleware: MiddlewareHandler = async (c, next) => {
   const usesToday = countFreeTierUsesToday(key)
 
   if (usesToday >= FREE_DAILY_LIMIT) {
-    return c.json({ error: 'Free tier quota exhausted — upgrade to paid' }, 429)
+    c.header('Retry-After', '86400')
+    return c.json({
+      error: 'free_tier_quota_exhausted',
+      message: 'Daily free quota exhausted (10/day). Upgrade to paid endpoints for unlimited access.',
+      upgrade: {
+        docs: '/docs',
+        endpoints: {
+          '/v1/score/full': { price: '$0.10', description: 'Full score with dimension breakdown' },
+          '/v1/score/refresh': { price: '$0.25', description: 'Force live recalculation' },
+        },
+        protocol: 'x402',
+        network: 'base',
+        paymentInfo: 'Send x402 USDC payment header on Base. See /docs for integration guide.',
+      },
+    }, 429)
   }
 
   // Still within free quota — serve directly

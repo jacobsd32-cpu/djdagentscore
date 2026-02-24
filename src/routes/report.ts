@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { insertReport, getScore, applyReportPenalty, scoreToTier, countReporterReportsForTarget } from '../db.js'
 import { isValidAddress, REPORT_REASONS } from '../types.js'
 import type { Address, ReportReason, ReportBody } from '../types.js'
+import { errorResponse, ErrorCodes } from '../errors.js'
 
 const PENALTY_PER_REPORT = 5
 
@@ -14,31 +15,29 @@ report.post('/', async (c) => {
   try {
     body = await c.req.json<ReportBody>()
   } catch {
-    return c.json({ error: 'Invalid JSON body' }, 400)
+    return c.json(errorResponse(ErrorCodes.INVALID_JSON, 'Invalid JSON body'), 400)
   }
 
   const { target, reporter, reason, details } = body
 
   // Validate fields
   if (!target || !isValidAddress(target)) {
-    return c.json({ error: 'Invalid or missing target address' }, 400)
+    return c.json(errorResponse(ErrorCodes.INVALID_WALLET, 'Invalid or missing target address'), 400)
   }
   if (!reporter || !isValidAddress(reporter)) {
-    return c.json({ error: 'Invalid or missing reporter address' }, 400)
+    return c.json(errorResponse(ErrorCodes.INVALID_WALLET, 'Invalid or missing reporter address'), 400)
   }
   if (!reason || !(REPORT_REASONS as readonly string[]).includes(reason)) {
     return c.json(
-      {
-        error: `Invalid reason. Must be one of: ${REPORT_REASONS.join(', ')}`,
-      },
+      errorResponse(ErrorCodes.INVALID_REPORT, `Invalid reason. Must be one of: ${REPORT_REASONS.join(', ')}`, { validReasons: [...REPORT_REASONS] }),
       400,
     )
   }
   if (typeof details !== 'string' || details.trim().length === 0) {
-    return c.json({ error: 'details is required' }, 400)
+    return c.json(errorResponse(ErrorCodes.INVALID_REPORT, 'details is required'), 400)
   }
   if (target.toLowerCase() === reporter.toLowerCase()) {
-    return c.json({ error: 'target and reporter must be different addresses' }, 400)
+    return c.json(errorResponse(ErrorCodes.SELF_REPORT, 'target and reporter must be different addresses'), 400)
   }
 
   // Rate limit: max 3 reports per reporter per target
@@ -47,7 +46,7 @@ report.post('/', async (c) => {
     target.toLowerCase(),
   )
   if (existingReports >= 3) {
-    return c.json({ error: 'Report limit reached for this reporter/target pair' }, 429)
+    return c.json(errorResponse(ErrorCodes.REPORT_LIMIT_EXCEEDED, 'Report limit reached for this reporter/target pair (max 3)'), 429)
   }
 
   const reportId = uuidv4()

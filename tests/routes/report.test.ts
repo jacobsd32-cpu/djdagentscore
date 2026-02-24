@@ -68,7 +68,8 @@ describe('POST /v1/report', () => {
     })
     expect(res.status).toBe(429)
     const body = await res.json()
-    expect(body.error).toMatch(/report limit/i)
+    expect(body.error.code).toBe('report_limit_exceeded')
+    expect(body.error.message).toMatch(/report limit/i)
     expect(mockInsertReport).not.toHaveBeenCalled()
   })
 

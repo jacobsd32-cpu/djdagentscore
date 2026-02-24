@@ -5,6 +5,7 @@
 import { Hono } from 'hono'
 import { db } from '../db.js'
 import { isValidAddress } from '../types.js'
+import { errorResponse, ErrorCodes } from '../errors.js'
 
 const blacklist = new Hono()
 
@@ -12,7 +13,7 @@ blacklist.get('/', (c) => {
   const wallet = c.req.query('wallet')
 
   if (!wallet || !isValidAddress(wallet)) {
-    return c.json({ error: 'Invalid or missing wallet address' }, 400)
+    return c.json(errorResponse(ErrorCodes.INVALID_WALLET, 'Invalid or missing wallet address'), 400)
   }
 
   const normalized = wallet.toLowerCase()

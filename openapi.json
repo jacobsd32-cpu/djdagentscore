@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "DJD Agent Score API",
-    "description": "Reputation scoring for autonomous AI agent wallets on Base. Scores are derived from on-chain USDC behavioral data and optional self-registration. Paid endpoints require an x402 USDC micropayment on Base; free endpoints require no authentication.",
+    "description": "Reputation scoring for autonomous AI agent wallets on Base. Scores are derived from on-chain USDC behavioral data and optional self-registration. Paid endpoints require an x402 USDC micropayment on Base; free endpoints require no authentication. Interactive docs available at /docs.",
     "version": "1.0.0",
     "contact": { "email": "feedback@djdagentscore.xyz" },
     "license": { "name": "Proprietary" }
@@ -48,7 +48,8 @@
             }
           },
           "400": { "$ref": "#/components/responses/BadRequest" },
-          "402": { "$ref": "#/components/responses/PaymentRequired" }
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "429": { "$ref": "#/components/responses/FreeTierExhausted" }
         }
       }
     },
@@ -73,7 +74,8 @@
             }
           },
           "400": { "$ref": "#/components/responses/BadRequest" },
-          "402": { "$ref": "#/components/responses/PaymentRequired" }
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
         }
       }
     },
@@ -98,7 +100,8 @@
             }
           },
           "400": { "$ref": "#/components/responses/BadRequest" },
-          "402": { "$ref": "#/components/responses/PaymentRequired" }
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
         }
       },
       "get": {
@@ -122,7 +125,8 @@
             }
           },
           "400": { "$ref": "#/components/responses/BadRequest" },
-          "402": { "$ref": "#/components/responses/PaymentRequired" }
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
         }
       }
     },
@@ -310,7 +314,8 @@
             }
           },
           "400": { "$ref": "#/components/responses/BadRequest" },
-          "402": { "$ref": "#/components/responses/PaymentRequired" }
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
         }
       }
     },
@@ -335,7 +340,8 @@
             }
           },
           "400": { "$ref": "#/components/responses/BadRequest" },
-          "402": { "$ref": "#/components/responses/PaymentRequired" }
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
         }
       }
     },
@@ -391,6 +397,128 @@
           "200": { "description": "System healthy" }
         }
       }
+    },
+    "/docs": {
+      "get": {
+        "tags": ["system"],
+        "summary": "Interactive API documentation",
+        "description": "Serves a Swagger UI interface for exploring and testing the API interactively. Free — no payment required.",
+        "operationId": "getDocs",
+        "responses": {
+          "200": { "description": "Swagger UI HTML page", "content": { "text/html": { "schema": { "type": "string" } } } }
+        }
+      }
+    },
+    "/v1/data/economy": {
+      "get": {
+        "tags": ["data"],
+        "summary": "Ecosystem economy metrics",
+        "description": "Returns aggregated ecosystem health metrics: unique wallets scored, total queries, revenue, average scores, and more. Free — no payment required.",
+        "operationId": "getEconomyMetrics",
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "description": "Aggregation period (default: daily)",
+            "schema": { "type": "string", "enum": ["daily", "weekly", "monthly"], "default": "daily" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Number of periods to return (max 90, default 30)",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 90, "default": 30 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Economy metrics returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "period": { "type": "string" },
+                    "count": { "type": "integer" },
+                    "metrics": { "type": "array", "items": { "type": "object" } }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/v1/score/batch": {
+      "post": {
+        "tags": ["score"],
+        "summary": "Batch score lookup",
+        "description": "Score up to 20 wallets in a single request. Returns basic score data for each wallet. **Requires x402 payment of $0.50 USDC on Base.**",
+        "operationId": "batchScore",
+        "security": [{ "x402": [] }],
+        "x-x402": { "price": "$0.50", "network": "base" },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["wallets"],
+                "properties": {
+                  "wallets": {
+                    "type": "array",
+                    "items": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
+                    "minItems": 2,
+                    "maxItems": 20,
+                    "description": "Array of wallet addresses to score"
+                  }
+                }
+              },
+              "example": {
+                "wallets": [
+                  "0x3e4ef1f774857c69e33dddc471e110c7ac7bb528",
+                  "0x1234567890123456789012345678901234567890"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Batch scores returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "results": { "type": "array", "items": { "$ref": "#/components/schemas/BasicScoreResponse" } },
+                    "count": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "tags": ["system"],
+        "summary": "Prometheus metrics",
+        "description": "Returns Prometheus-compatible metrics in text exposition format. Includes HTTP request counters, database gauges, and process metrics. Free — no payment required.",
+        "operationId": "getMetrics",
+        "responses": {
+          "200": {
+            "description": "Prometheus text metrics",
+            "content": { "text/plain": { "schema": { "type": "string" } } }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -402,12 +530,29 @@
         "description": "Base wallet address (EIP-55 checksummed or lowercase)",
         "schema": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
         "example": "0x3e4ef1f774857c69e33dddc471e110c7ac7bb528"
+      },
+      "X-Request-ID": {
+        "name": "X-Request-ID",
+        "in": "header",
+        "required": false,
+        "description": "Client-provided request ID for tracing. If omitted, the server generates a UUID v4. Returned in the X-Request-ID response header.",
+        "schema": { "type": "string", "format": "uuid" }
       }
     },
     "schemas": {
       "Error": {
         "type": "object",
-        "properties": { "error": { "type": "string" } }
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "string", "description": "Machine-readable error code" },
+              "message": { "type": "string", "description": "Human-readable error message" },
+              "details": { "type": "object", "description": "Optional additional context", "additionalProperties": true }
+            },
+            "required": ["code", "message"]
+          }
+        }
       },
       "BasicScoreResponse": {
         "type": "object",
@@ -553,6 +698,39 @@
         "description": "x402 payment required. The response includes a WWW-Authenticate header with payment details. Use an x402-compatible client to pay and retry.",
         "headers": {
           "WWW-Authenticate": { "schema": { "type": "string" } }
+        }
+      },
+      "RateLimited": {
+        "description": "Rate limit exceeded (120 requests/hour per payer wallet on paid endpoints)",
+        "headers": {
+          "RateLimit-Limit": { "schema": { "type": "integer" }, "description": "Maximum requests per window" },
+          "RateLimit-Remaining": { "schema": { "type": "integer" }, "description": "Requests remaining in current window" },
+          "RateLimit-Reset": { "schema": { "type": "string", "format": "date-time" }, "description": "When the current window resets" },
+          "Retry-After": { "schema": { "type": "integer" }, "description": "Seconds until rate limit resets" }
+        },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "FreeTierExhausted": {
+        "description": "Free tier daily quota exhausted (10 requests/day). Upgrade to paid x402 for unlimited access.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": { "type": "string" },
+                "message": { "type": "string" },
+                "upgrade": {
+                  "type": "object",
+                  "properties": {
+                    "docs": { "type": "string" },
+                    "pricing": { "type": "object" },
+                    "protocol": { "type": "string" },
+                    "network": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },

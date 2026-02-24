@@ -325,3 +325,13 @@ addColumnIfMissing('agent_registrations', 'github_verified', 'INTEGER NOT NULL D
 addColumnIfMissing('agent_registrations', 'github_stars', 'INTEGER')
 addColumnIfMissing('agent_registrations', 'github_pushed_at', 'TEXT')
 addColumnIfMissing('agent_registrations', 'github_verified_at', 'TEXT')
+
+// ── P2: Rate limiting (SQLite-backed, per-payer per-window) ──
+db.exec(`
+  CREATE TABLE IF NOT EXISTS rate_limits (
+    key    TEXT NOT NULL,
+    window TEXT NOT NULL,
+    count  INTEGER DEFAULT 1,
+    PRIMARY KEY (key, window)
+  );
+`)

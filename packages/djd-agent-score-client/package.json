@@ -1,0 +1,29 @@
+{
+  "name": "djd-agent-score-client",
+  "version": "0.1.0",
+  "description": "TypeScript client for the DJD Agent Score API — on-chain reputation for AI agents",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "djd",
+    "agent",
+    "score",
+    "x402",
+    "reputation",
+    "ai",
+    "autonomous"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "typescript": "^5.7.2"
+  }
+}

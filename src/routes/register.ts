@@ -3,6 +3,7 @@ import { upsertRegistration, getRegistration, updateGithubVerification } from '.
 import { isValidAddress } from '../types.js'
 import type { Address, AgentRegistrationBody, AgentRegistrationResponse } from '../types.js'
 import { log } from '../logger.js'
+import { errorResponse, ErrorCodes } from '../errors.js'
 
 function isValidUrl(url: string): boolean {
   try {
@@ -97,12 +98,12 @@ const register = new Hono()
 register.get('/', (c) => {
   const wallet = c.req.query('wallet')
   if (!wallet || !isValidAddress(wallet)) {
-    return c.json({ error: 'Invalid or missing wallet address' }, 400)
+    return c.json(errorResponse(ErrorCodes.INVALID_WALLET, 'Invalid or missing wallet address'), 400)
   }
 
   const row = getRegistration(wallet.toLowerCase())
   if (!row) {
-    return c.json({ error: 'Wallet not registered' }, 404)
+    return c.json(errorResponse(ErrorCodes.WALLET_NOT_FOUND, 'Wallet not registered'), 404)
   }
 
   const response: AgentRegistrationResponse = {
@@ -127,26 +128,26 @@ register.post('/', async (c) => {
   try {
     body = await c.req.json<AgentRegistrationBody>()
   } catch {
-    return c.json({ error: 'Invalid JSON body' }, 400)
+    return c.json(errorResponse(ErrorCodes.INVALID_JSON, 'Invalid JSON body'), 400)
   }
 
   const { wallet, name, description, github_url, website_url } = body
 
   if (!wallet || !isValidAddress(wallet)) {
-    return c.json({ error: 'Invalid or missing wallet address' }, 400)
+    return c.json(errorResponse(ErrorCodes.INVALID_WALLET, 'Invalid or missing wallet address'), 400)
   }
 
   if (name !== undefined && (typeof name !== 'string' || name.trim().length === 0)) {
-    return c.json({ error: 'name must be a non-empty string' }, 400)
+    return c.json(errorResponse(ErrorCodes.INVALID_REGISTRATION, 'name must be a non-empty string'), 400)
   }
   if (description !== undefined && typeof description !== 'string') {
-    return c.json({ error: 'description must be a string' }, 400)
+    return c.json(errorResponse(ErrorCodes.INVALID_REGISTRATION, 'description must be a string'), 400)
   }
   if (github_url !== undefined && !isValidUrl(github_url)) {
-    return c.json({ error: 'github_url must be a valid URL' }, 400)
+    return c.json(errorResponse(ErrorCodes.INVALID_REGISTRATION, 'github_url must be a valid HTTPS URL'), 400)
   }
   if (website_url !== undefined && !isValidUrl(website_url)) {
-    return c.json({ error: 'website_url must be a valid URL' }, 400)
+    return c.json(errorResponse(ErrorCodes.INVALID_REGISTRATION, 'website_url must be a valid HTTPS URL'), 400)
   }
 
   const normalizedWallet = wallet.toLowerCase()
