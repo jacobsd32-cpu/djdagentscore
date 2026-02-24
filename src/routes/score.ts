@@ -106,8 +106,24 @@ score.get('/job/:jobId', (c) => {
     return c.json({ jobId, status: 'error', wallet: job.wallet, error: job.error })
   }
 
-  // complete
-  return c.json({ jobId, status: 'complete', wallet: job.wallet, result: job.result })
+  // complete — return basic score only (full details require /v1/score/full)
+  const r = job.result!
+  return c.json({
+    jobId,
+    status: 'complete',
+    wallet: job.wallet,
+    result: {
+      wallet: r.wallet,
+      score: r.score,
+      tier: r.tier,
+      confidence: r.confidence,
+      recommendation: r.recommendation,
+      modelVersion: r.modelVersion,
+      lastUpdated: r.lastUpdated,
+      computedAt: r.computedAt,
+      scoreFreshness: r.scoreFreshness,
+    },
+  })
 })
 
 // POST /v1/score/batch
