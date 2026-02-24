@@ -80,4 +80,12 @@ export const ErrorCodes = {
   // History
   HISTORY_NOT_FOUND: 'history_not_found',
   INVALID_DATE_RANGE: 'invalid_date_range',
+
+  // Certification
+  CERT_REQUIREMENTS_NOT_MET: 'cert_requirements_not_met',
+  CERT_NOT_FOUND: 'cert_not_found',
+  CERT_ALREADY_ACTIVE: 'cert_already_active',
+  CERT_EXPIRED: 'cert_expired',
+  CERT_SCORE_TOO_LOW: 'cert_score_too_low',
+  CERT_NOT_REGISTERED: 'cert_not_registered',
 } as const
