@@ -3,8 +3,9 @@ FROM node:20-slim AS builder
 WORKDIR /app
 
 # Install all deps (including devDeps for TypeScript)
+# Use npm ci for deterministic lockfile-based installs
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 # Copy source and compile
 COPY tsconfig.json ./
@@ -18,7 +19,7 @@ WORKDIR /app
 
 # Production deps only
 COPY package*.json ./
-RUN npm install --production
+RUN npm ci --omit=dev
 
 # Copy compiled output and static files
 COPY --from=builder /app/dist ./dist
