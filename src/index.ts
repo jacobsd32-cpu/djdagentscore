@@ -129,20 +129,40 @@ app.onError((err, c) => {
 // ---------- Graceful shutdown ----------
 
 const intervals: ReturnType<typeof setInterval>[] = []
+let server: ReturnType<typeof serve> | null = null
+let shuttingDown = false
 
 function shutdown() {
-  log.info('server', 'Shutting down…')
+  if (shuttingDown) return
+  shuttingDown = true
+  log.info('server', 'Shutting down...')
+
   for (const id of intervals) clearInterval(id)
   stopBlockchainIndexer()
   stopUsdcTransferIndexer()
-  process.exit(0)
+
+  if (server) {
+    server.close(() => {
+      log.info('server', 'All connections closed')
+      db.close()
+      process.exit(0)
+    })
+    setTimeout(() => {
+      log.warn('server', 'Forcing exit after 10s timeout')
+      db.close()
+      process.exit(1)
+    }, 10_000).unref()
+  } else {
+    db.close()
+    process.exit(0)
+  }
 }
 process.on('SIGINT', shutdown)
 process.on('SIGTERM', shutdown)
 
 // ---------- Start ----------
 
-serve({ fetch: app.fetch, port: PORT }, (info) => {
+server = serve({ fetch: app.fetch, port: PORT }, (info) => {
   log.info('server', `DJD Agent Score API running on http://localhost:${info.port}`)
   log.info('server', `payTo: ${PAY_TO}`)
   log.info('server', `facilitator: ${FACILITATOR_URL}`)
