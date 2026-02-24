@@ -266,6 +266,11 @@ db.exec(`
     total_queries     INTEGER DEFAULT 0
   );
   CREATE INDEX IF NOT EXISTS idx_economy_period ON economy_metrics(period_type, period_start DESC);
+
+  -- Deduplicate before creating unique index (needed for DBs created before this constraint)
+  DELETE FROM economy_metrics WHERE id NOT IN (
+    SELECT MAX(id) FROM economy_metrics GROUP BY period_type, period_start
+  );
   CREATE UNIQUE INDEX IF NOT EXISTS idx_economy_metrics_unique ON economy_metrics(period_type, period_start);
 
   -- Agent self-registration (bootstraps identity scoring before x402 volume exists)
