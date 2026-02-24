@@ -5,6 +5,7 @@ primary_region = 'ewr'
 [build]
 
 [env]
+  NODE_ENV = "production"
   PORT = "3000"
   PAY_TO = "0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528"
   FACILITATOR_URL = "https://facilitator.openx402.ai"
