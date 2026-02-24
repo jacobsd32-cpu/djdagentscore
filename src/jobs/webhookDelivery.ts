@@ -10,7 +10,10 @@ import { log } from '../logger.js'
 import { isValidWebhookUrl } from '../types.js'
 
 const MAX_ATTEMPTS = 3
-const RETRY_DELAYS_MS = [60_000, 300_000, 1_800_000] // 1min, 5min, 30min
+// Retry flow: attempt 1 (initial) fails → retry after 60s (attempt 2) → retry after 5min (attempt 3).
+// After attempt 3 fails, nextAttempt (4) > MAX_ATTEMPTS so it enters the final-failure branch.
+// Only 2 delays are reachable since the 3rd failure is terminal, not retried.
+const RETRY_DELAYS_MS = [60_000, 300_000] // 1min, 5min
 const MAX_CONSECUTIVE_FAILURES = 5
 
 interface WebhookRow {
