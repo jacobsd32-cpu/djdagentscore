@@ -50,7 +50,12 @@ db.exec(`
 
 // ---------- Migrate: add new columns to scores table ----------
 
+const VALID_IDENTIFIER = /^[a-zA-Z_][a-zA-Z0-9_]*$/
+
 function addColumnIfMissing(table: string, column: string, definition: string): void {
+  if (!VALID_IDENTIFIER.test(table) || !VALID_IDENTIFIER.test(column)) {
+    throw new Error(`Invalid SQL identifier: table=${table}, column=${column}`)
+  }
   const cols = db
     .prepare(\`PRAGMA table_info(\${table})\`)
     .all() as Array<{ name: string }>
