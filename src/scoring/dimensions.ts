@@ -271,6 +271,32 @@ export function calcViability(data: WalletUSDCData, walletAgeDays: number | null
 
 // ---------- Dimension 3: Identity & Lineage (20%) ----------
 
+function calcGithubActivityPts(
+  githubVerified: boolean,
+  githubStars: number | null | undefined,
+  githubPushedAt: string | null | undefined,
+): number {
+  if (!githubVerified) return 0
+  let pts = 0
+  if ((githubStars ?? 0) >= 5) pts += 5
+  else if ((githubStars ?? 0) >= 1) pts += 3
+  if (githubPushedAt) {
+    const daysSincePush = (Date.now() - new Date(githubPushedAt).getTime()) / 86_400_000
+    if (daysSincePush <= 30) pts += 10
+    else if (daysSincePush <= 90) pts += 5
+  }
+  return pts
+}
+
+function calcWalletAgePts(walletAgeDays: number | null | undefined): number {
+  const ageDays = walletAgeDays ?? 0
+  if (ageDays > 180) return 30
+  if (ageDays > 90) return 20
+  if (ageDays > 30) return 15
+  if (ageDays > 7) return 8
+  return 2
+}
+
 export async function calcIdentity(
   wallet: `0x${string}`,
   walletAgeDays: number | null,
@@ -304,18 +330,7 @@ export async function calcIdentity(
   if (githubVerified) pts += 25
 
   // --- GitHub activity bonuses (up to 15 pts) ---
-  if (githubVerified) {
-    // Stars: independent developers found it worth bookmarking
-    if ((githubStars ?? 0) >= 5) pts += 5
-    else if ((githubStars ?? 0) >= 1) pts += 3
-
-    // Active development: pushed within the last 90 days
-    if (githubPushedAt) {
-      const daysSincePush = (Date.now() - new Date(githubPushedAt).getTime()) / 86_400_000
-      if (daysSincePush <= 30) pts += 10
-      else if (daysSincePush <= 90) pts += 5
-    }
-  }
+  pts += calcGithubActivityPts(githubVerified, githubStars, githubPushedAt)
 
   // --- ERC-8004 registry: NOT YET DEPLOYED ---
   // The ERC-8004 agent registry standard has no deployed contract on Base mainnet.
@@ -332,11 +347,7 @@ export async function calcIdentity(
   // Even brand-new wallets get 2 pts as a baseline — don't zero out entirely.
   // (Increased from 25→30 after removing phantom ERC-8004 points.)
   const ageDays = walletAgeDays ?? 0
-  if (ageDays > 180) pts += 30
-  else if (ageDays > 90) pts += 20
-  else if (ageDays > 30) pts += 15
-  else if (ageDays > 7) pts += 8
-  else pts += 2
+  pts += calcWalletAgePts(walletAgeDays)
 
   // Fields kept for API compatibility (not actively scored until ERC-8004 deploys)
   const generationDepth = 0
@@ -346,22 +357,8 @@ export async function calcIdentity(
   const registrationPts = isRegistered ? 10 : 0
   const basenamePts = basename ? 20 : 0
   const githubVerifiedPts = githubVerified ? 25 : 0
-  let githubActivityPts = 0
-  if (githubVerified) {
-    if ((githubStars ?? 0) >= 5) githubActivityPts += 5
-    else if ((githubStars ?? 0) >= 1) githubActivityPts += 3
-    if (githubPushedAt) {
-      const daysSincePush2 = (Date.now() - new Date(githubPushedAt).getTime()) / 86_400_000
-      if (daysSincePush2 <= 30) githubActivityPts += 10
-      else if (daysSincePush2 <= 90) githubActivityPts += 5
-    }
-  }
-  let walletAgePts = 0
-  if (ageDays > 180) walletAgePts = 30
-  else if (ageDays > 90) walletAgePts = 20
-  else if (ageDays > 30) walletAgePts = 15
-  else if (ageDays > 7) walletAgePts = 8
-  else walletAgePts = 2
+  const githubActivityPts = calcGithubActivityPts(githubVerified, githubStars, githubPushedAt)
+  const walletAgePts = calcWalletAgePts(walletAgeDays)
 
   const signals: Record<string, number> = {
     registration: registrationPts,
