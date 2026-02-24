@@ -65,4 +65,19 @@ export const ErrorCodes = {
 
   // Rate limiting
   RATE_LIMIT_EXCEEDED: 'rate_limit_exceeded',
+
+  // API Keys
+  API_KEY_INVALID: 'api_key_invalid',
+  API_KEY_EXHAUSTED: 'api_key_quota_exhausted',
+  API_KEY_REVOKED: 'api_key_revoked',
+
+  // Webhooks
+  WEBHOOK_INVALID: 'webhook_invalid',
+  WEBHOOK_NOT_FOUND: 'webhook_not_found',
+  WEBHOOK_LIMIT_EXCEEDED: 'webhook_limit_exceeded',
+  WEBHOOK_URL_INVALID: 'webhook_url_invalid',
+
+  // History
+  HISTORY_NOT_FOUND: 'history_not_found',
+  INVALID_DATE_RANGE: 'invalid_date_range',
 } as const

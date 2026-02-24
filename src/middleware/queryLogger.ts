@@ -15,6 +15,8 @@ const ENDPOINT_PRICES: Record<string, number> = {
   '/v1/score/refresh': 0.25,
   '/v1/report': 0.02,
   '/v1/data/fraud/blacklist': 0.05,
+  '/v1/score/history': 0.15,
+  '/v1/score/batch': 0.50,
 }
 
 const FREE_ENDPOINTS = new Set(['/health', '/v1/leaderboard'])
@@ -66,7 +68,9 @@ export const queryLoggerMiddleware: MiddlewareHandler = async (c, next) => {
 
     const paymentHeader =
       c.req.header('X-PAYMENT') ?? c.req.header('x-payment') ?? undefined
-    const requesterWallet = extractPayerWallet(paymentHeader)
+    // Prefer API key wallet if present (set by apiKeyAuth middleware)
+    const apiKeyWallet = c.get('apiKeyWallet') ?? null
+    const requesterWallet = apiKeyWallet ?? extractPayerWallet(paymentHeader)
     const targetWallet = c.req.query('wallet') ?? null
 
     insertQueryLog({
@@ -76,7 +80,7 @@ export const queryLoggerMiddleware: MiddlewareHandler = async (c, next) => {
       tier_requested: tierFromEndpoint(path),
       target_score: null,  // populated by future outcome-matching job
       target_tier: null,
-      response_source: isFreeTier ? 'free_tier' : isFreeEndpoint ? 'cache' : 'paid',
+      response_source: apiKeyWallet ? 'api_key' : isFreeTier ? 'free_tier' : 'paid',
       response_time_ms: Date.now() - startTime,
       user_agent: c.req.header('user-agent') ?? null,
       price_paid: isFreeTier ? 0 : pricePaid,

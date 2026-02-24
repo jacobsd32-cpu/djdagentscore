@@ -19,12 +19,16 @@ import admin from './routes/admin.js'
 import economyRoute from './routes/economy.js'
 import docsRoute from './routes/docs.js'
 import metricsRoute from './routes/metrics.js'
+import historyRoute from './routes/history.js'
+import { adminWebhooks, publicWebhooks } from './routes/webhooks.js'
 import { requestIdMiddleware } from './middleware/requestId.js'
 import { paidRateLimitMiddleware } from './middleware/paidRateLimit.js'
 import { errorResponse, AppError } from './errors.js'
 import { responseHeadersMiddleware } from './middleware/responseHeaders.js'
 import { queryLoggerMiddleware } from './middleware/queryLogger.js'
 import { freeTierMiddleware } from './middleware/freeTier.js'
+import { apiKeyAuthMiddleware } from './middleware/apiKeyAuth.js'
+import apiKeysRoute from './routes/apiKeys.js'
 import { startBlockchainIndexer, stopBlockchainIndexer } from './jobs/blockchainIndexer.js'
 import { startUsdcTransferIndexer, stopUsdcTransferIndexer } from './jobs/usdcTransferIndexer.js'
 import { runHourlyRefresh } from './jobs/scoreRefresh.js'
@@ -33,6 +37,7 @@ import { runOutcomeMatcher } from './jobs/outcomeMatcher.js'
 import { runAnomalyDetector, runSybilMonitor } from './jobs/anomalyDetector.js'
 import { runDailyAggregator } from './jobs/dailyAggregator.js'
 import { runGithubReverify } from './jobs/githubReverify.js'
+import { processWebhookQueue } from './jobs/webhookDelivery.js'
 import { jobStats } from './jobs/jobStats.js'
 import { db, getIndexerState, setIndexerState } from './db.js'
 import { log } from './logger.js'
@@ -89,6 +94,9 @@ app.use('*', bodyLimit({
 app.use('*', responseHeadersMiddleware)  // adds X-DJD-* headers to every response
 app.use('*', queryLoggerMiddleware)       // logs every request post-response
 
+// ---------- API Key auth — bypasses x402 for valid keys ----------
+app.use('/v1/*', apiKeyAuthMiddleware)
+
 // ---------- Free tier — MUST be registered before x402 ----------
 // Serves /v1/score/basic for free (up to 10/day per requester) by short-circuiting the chain.
 
@@ -138,6 +146,11 @@ app.use(
         network: NETWORK,
         config: { description: 'Batch score up to 20 wallets ($0.50 USDC)' },
       },
+      '/v1/score/history': {
+        price: '$0.15',
+        network: NETWORK,
+        config: { description: 'Historical score data with trend analysis ($0.15 USDC)' },
+      },
     },
     { url: FACILITATOR_URL },
   ),
@@ -152,11 +165,15 @@ app.use('/v1/data/fraud/*', paidRateLimitMiddleware)
 // ---------- Routes ----------
 
 app.route('/health', healthRoute)
+app.route('/v1/score/history', historyRoute)
 app.route('/v1/score', scoreRoute)
 app.route('/v1/report', reportRoute)
 app.route('/v1/leaderboard', leaderboardRoute)
 app.route('/v1/data/fraud/blacklist', blacklistRoute)
+app.route('/v1/webhooks', publicWebhooks)
 app.route('/admin', admin)
+app.route('/admin/api-keys', apiKeysRoute)
+app.route('/admin/webhooks', adminWebhooks)
 
 // 404 handler
 app.notFound((c) => c.json(errorResponse('not_found', 'Not found'), 404))
@@ -330,6 +347,17 @@ server = serve({ fetch: app.fetch, port: PORT }, (info) => {
         dailyRunning = false
       }
     }, 60 * 60 * 1000),
+  )
+
+  // ── 8. Webhook delivery processor (every 30 seconds) ──────────────────────
+  intervals.push(
+    setInterval(async () => {
+      try {
+        await processWebhookQueue()
+      } catch (e) {
+        log.error('webhooks', 'Error in webhook delivery', e)
+      }
+    }, 30_000),
   )
 
   log.info('jobs', 'All background processes registered')
