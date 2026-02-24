@@ -277,12 +277,12 @@ db.exec(`
 // ── P1: USDC Transfer Index ───────────────────────────────────────────────
 db.exec(`
   CREATE TABLE IF NOT EXISTS usdc_transfers (
-    tx_hash TEXT UNIQUE,
-    block_number INTEGER,
-    from_wallet TEXT,
-    to_wallet TEXT,
-    amount_usdc REAL,
-    timestamp TEXT
+    tx_hash TEXT NOT NULL UNIQUE,
+    block_number INTEGER NOT NULL,
+    from_wallet TEXT NOT NULL,
+    to_wallet TEXT NOT NULL,
+    amount_usdc REAL NOT NULL DEFAULT 0,
+    timestamp TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
   CREATE INDEX IF NOT EXISTS idx_usdc_transfers_from ON usdc_transfers(from_wallet);
