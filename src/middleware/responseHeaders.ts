@@ -22,12 +22,20 @@ export const responseHeadersMiddleware: MiddlewareHandler = async (c, next) => {
   c.res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
   c.res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
 
-  // CSP: /docs needs CDN for Swagger UI; everything else is locked down
-  const isDocsRoute = c.req.path.startsWith('/docs')
+  // CSP: HTML pages need inline styles/scripts + Google Fonts; /docs needs Swagger CDN; API routes locked down
+  const path = c.req.path
+  const isDocsRoute = path.startsWith('/docs')
+  const isHtmlPage =
+    path === '/' || path === '/leaderboard' || path === '/terms' || path === '/privacy' || path.startsWith('/agent/')
   if (isDocsRoute) {
     c.res.headers.set(
       'Content-Security-Policy',
       "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data:; font-src 'self' https://unpkg.com; frame-ancestors 'none'",
+    )
+  } else if (isHtmlPage) {
+    c.res.headers.set(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://djd-agent-score.fly.dev; connect-src 'self'; frame-ancestors 'none'",
     )
   } else {
     c.res.headers.set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'")
