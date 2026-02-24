@@ -253,10 +253,14 @@ server = serve({ fetch: app.fetch, port: PORT }, (info) => {
     log.error('indexer', 'Fatal error, stopped', err),
   )
 
-  // ── 1b. USDC Transfer indexer (continuous) ─────────────────────────────────
-  startUsdcTransferIndexer().catch((err) =>
-    log.error('usdc-indexer', 'Fatal error, stopped', err),
-  )
+  // ── 1b. USDC Transfer indexer (continuous, delayed 30s) ──────────────────
+  // Staggered start prevents both indexers from competing for RPC bandwidth
+  // and event loop time simultaneously, which was causing health check failures.
+  setTimeout(() => {
+    startUsdcTransferIndexer().catch((err) =>
+      log.error('usdc-indexer', 'Fatal error, stopped', err),
+    )
+  }, 30_000)
 
   // ── 2. Hourly score refresh + wallet snapshots + economy metrics ───────────
   let hourlyRunning = false

@@ -69,7 +69,8 @@ const BASE_GENESIS_TS_MS = 1677177203_000n
 
 const POLL_INTERVAL_MS = 12_000 // 12 s between polls
 const RETRY_DELAY_MS = 30_000 // 30 s on RPC error
-const LOG_CHUNK_SIZE = 10_000n // getLogs block-range cap
+const LOG_CHUNK_SIZE = 2_000n // Reduced from 10k to avoid massive RPC responses on Base
+const EVENT_LOOP_YIELD_MS = 50 // Yield event loop between chunks so health checks can be served
 
 const STATE_KEY = 'last_indexed_block'
 
@@ -225,6 +226,8 @@ async function fetchAndIndexRange(fromBlock: bigint, toBlock: bigint): Promise<n
       if (chunkSize < LOG_CHUNK_SIZE) {
         chunkSize = chunkSize * 2n > LOG_CHUNK_SIZE ? LOG_CHUNK_SIZE : chunkSize * 2n
       }
+      // Yield the event loop so HTTP health checks can be served
+      await new Promise((r) => setTimeout(r, EVENT_LOOP_YIELD_MS))
     } catch (err) {
       // BlastAPI tells us the max safe range — use it directly
       const suggestedEnd = parseSuggestedEnd(err)
