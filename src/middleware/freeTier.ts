@@ -52,7 +52,7 @@ export const freeTierMiddleware: MiddlewareHandler = async (c, next) => {
   const result = await getOrCalculateScore(wallet as Address)
 
   // Signal to queryLogger that this was a free-tier response
-  c.set('freeTier' as never, true)
+  c.set('freeTier', true)
 
   return c.json({
     wallet: result.wallet,

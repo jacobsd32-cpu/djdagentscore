@@ -29,6 +29,7 @@ import { runGithubReverify } from './jobs/githubReverify.js'
 import { jobStats } from './jobs/jobStats.js'
 import { db } from './db.js'
 import { log } from './logger.js'
+import type { AppEnv } from './types/hono-env.js'
 
 // ---------- Config ----------
 
@@ -41,7 +42,7 @@ const NETWORK: Network = 'base'
 
 // ---------- App ----------
 
-const app = new Hono()
+const app = new Hono<AppEnv>()
 
 // ---------- Global middleware (registration order = execution order) ----------
 

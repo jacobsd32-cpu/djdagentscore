@@ -56,7 +56,7 @@ export const queryLoggerMiddleware: MiddlewareHandler = async (c, next) => {
     const pricePaid = ENDPOINT_PRICES[path] ?? 0
     const isFreeEndpoint = FREE_ENDPOINTS.has(path) ? 1 : 0
     // freeTier middleware sets this context variable for free-tier basic lookups
-    const isFreeByQuota = (c.get('freeTier' as never) as boolean | undefined) ? 1 : 0
+    const isFreeByQuota = c.get('freeTier') ? 1 : 0
     const isFreeTier = isFreeEndpoint || isFreeByQuota
 
     const paymentHeader =
