@@ -48,7 +48,13 @@ const app = new Hono<AppEnv>()
 // ---------- Global middleware (registration order = execution order) ----------
 
 app.use('*', logger())
-app.use('*', cors())
+app.use('*', cors({
+  origin: process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',')
+    : '*',
+  allowMethods: ['GET', 'POST', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
+}))
 app.use('*', bodyLimit({
   maxSize: 100 * 1024, // 100 KB
   onError: (c) => c.json({ error: 'Request body too large' }, 413),
