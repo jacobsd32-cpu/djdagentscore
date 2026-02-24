@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { v4 as uuidv4 } from 'uuid'
-import { insertReport, getScore, applyReportPenalty, scoreToTier } from '../db.js'
+import { insertReport, getScore, applyReportPenalty, scoreToTier, countReporterReportsForTarget } from '../db.js'
 import { isValidAddress, REPORT_REASONS } from '../types.js'
 import type { Address, ReportReason, ReportBody } from '../types.js'
 
@@ -39,6 +39,15 @@ report.post('/', async (c) => {
   }
   if (target.toLowerCase() === reporter.toLowerCase()) {
     return c.json({ error: 'target and reporter must be different addresses' }, 400)
+  }
+
+  // Rate limit: max 3 reports per reporter per target
+  const existingReports = countReporterReportsForTarget(
+    reporter.toLowerCase(),
+    target.toLowerCase(),
+  )
+  if (existingReports >= 3) {
+    return c.json({ error: 'Report limit reached for this reporter/target pair' }, 429)
   }
 
   const reportId = uuidv4()

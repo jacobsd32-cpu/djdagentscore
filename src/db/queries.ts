@@ -107,6 +107,11 @@ const stmtCountReportsAfter = db.prepare<[string, string], { count: number }>(`
   SELECT COUNT(*) as count FROM fraud_reports WHERE target_wallet = ? AND created_at > ?
 `)
 
+const stmtCountReporterReportsForTarget = db.prepare<[string, string], { count: number }>(`
+  SELECT COUNT(*) as count FROM fraud_reports
+  WHERE reporter_wallet = ? AND target_wallet = ?
+`)
+
 const stmtGetReportsByTarget = db.prepare<[string], FraudReportRow>(`
   SELECT * FROM fraud_reports WHERE target_wallet = ? ORDER BY created_at DESC
 `)
@@ -324,6 +329,10 @@ export function countReportsByTarget(wallet: string): number {
 
 export function countReportsAfterDate(wallet: string, afterDate: string): number {
   return stmtCountReportsAfter.get(wallet, afterDate)!.count
+}
+
+export function countReporterReportsForTarget(reporter: string, target: string): number {
+  return stmtCountReporterReportsForTarget.get(reporter, target)!.count
 }
 
 export function applyReportPenalty(wallet: string, penalty: number): void {
