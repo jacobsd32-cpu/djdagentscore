@@ -57,10 +57,10 @@ function addColumnIfMissing(table: string, column: string, definition: string): 
     throw new Error(`Invalid SQL identifier: table=${table}, column=${column}`)
   }
   const cols = db
-    .prepare(\`PRAGMA table_info(\${table})\`)
+    .prepare(`PRAGMA table_info(${table})`)
     .all() as Array<{ name: string }>
   if (!cols.find((c) => c.name === column)) {
-    db.exec(\`ALTER TABLE \${table} ADD COLUMN \${column} \${definition}\`)
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
   }
 }
 
