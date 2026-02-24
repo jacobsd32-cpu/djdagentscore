@@ -95,7 +95,10 @@ async function fetchAndIndexChunk(start: bigint, end: bigint): Promise<number> {
       refreshWalletTransferStats(db, walletsToRefresh)
     }
     if (affectedWallets.size > MAX_WALLET_REFRESH_PER_CHUNK) {
-      log.info('usdc-indexer', `Capped wallet refresh to ${MAX_WALLET_REFRESH_PER_CHUNK}/${affectedWallets.size} wallets`)
+      log.info(
+        'usdc-indexer',
+        `Capped wallet refresh to ${MAX_WALLET_REFRESH_PER_CHUNK}/${affectedWallets.size} wallets`,
+      )
     }
 
     return inserted
