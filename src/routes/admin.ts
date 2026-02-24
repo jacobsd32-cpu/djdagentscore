@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import crypto from 'node:crypto'
-import { db } from '../db.js'
+import { db, getRevenueSummary, getTopPayers, getRevenueByHour } from '../db.js'
 import { generateCalibrationReport } from '../scoring/calibrationReport.js'
 import { MODEL_VERSION } from '../scoring/responseBuilders.js'
 
@@ -51,6 +51,25 @@ admin.post('/calibration/generate', (c) => {
     tier_accuracy: JSON.parse(report.tier_accuracy),
     recommendations: JSON.parse(report.recommendations),
   })
+})
+
+// ---------- Revenue dashboard ----------
+
+admin.get('/revenue', (c) => {
+  const days = Math.min(Math.max(Number(c.req.query('days') ?? 30), 1), 365)
+  const summary = getRevenueSummary(days)
+  return c.json({ days, ...summary })
+})
+
+admin.get('/revenue/top-payers', (c) => {
+  const limit = Math.min(Math.max(Number(c.req.query('limit') ?? 20), 1), 100)
+  const payers = getTopPayers(limit)
+  return c.json({ payers, count: payers.length })
+})
+
+admin.get('/revenue/realtime', (c) => {
+  const hourly = getRevenueByHour()
+  return c.json({ hours: hourly, count: hourly.length })
 })
 
 export default admin

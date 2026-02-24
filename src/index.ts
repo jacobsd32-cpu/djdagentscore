@@ -16,6 +16,12 @@ import badgeRoute from './routes/badge.js'
 import agentRoute from './routes/agent.js'
 import openapiRoute from './routes/openapi.js'
 import admin from './routes/admin.js'
+import economyRoute from './routes/economy.js'
+import docsRoute from './routes/docs.js'
+import metricsRoute from './routes/metrics.js'
+import { requestIdMiddleware } from './middleware/requestId.js'
+import { paidRateLimitMiddleware } from './middleware/paidRateLimit.js'
+import { errorResponse, AppError } from './errors.js'
 import { responseHeadersMiddleware } from './middleware/responseHeaders.js'
 import { queryLoggerMiddleware } from './middleware/queryLogger.js'
 import { freeTierMiddleware } from './middleware/freeTier.js'
@@ -67,6 +73,7 @@ const app = new Hono<AppEnv>()
 
 // ---------- Global middleware (registration order = execution order) ----------
 
+app.use('*', requestIdMiddleware)  // must be first — generates X-Request-ID
 app.use('*', logger())
 app.use('*', cors({
   origin: process.env.CORS_ORIGINS
@@ -77,7 +84,7 @@ app.use('*', cors({
 }))
 app.use('*', bodyLimit({
   maxSize: 100 * 1024, // 100 KB
-  onError: (c) => c.json({ error: 'Request body too large' }, 413),
+  onError: (c) => c.json(errorResponse('body_too_large', 'Request body too large'), 413),
 }))
 app.use('*', responseHeadersMiddleware)  // adds X-DJD-* headers to every response
 app.use('*', queryLoggerMiddleware)       // logs every request post-response
@@ -95,6 +102,9 @@ app.route('/v1/agent/register', registerRoute)
 app.route('/v1/badge', badgeRoute)          // free — must be before paymentMiddleware
 app.route('/agent', agentRoute)             // free — agent profile pages
 app.route('/openapi.json', openapiRoute)    // free — API spec
+app.route('/v1/data/economy', economyRoute)  // free — ecosystem health metrics
+app.route('/docs', docsRoute)                 // free — Swagger UI
+app.route('/metrics', metricsRoute)             // free — Prometheus metrics
 
 // ---------- x402 Payment Middleware ----------
 // Protects paid endpoints. Free endpoints (leaderboard, health) are not listed so they pass through.
@@ -123,10 +133,21 @@ app.use(
         network: NETWORK,
         config: { description: 'Fraud report check ($0.05 USDC)' },
       },
+      '/v1/score/batch': {
+        price: '$0.50',
+        network: NETWORK,
+        config: { description: 'Batch score up to 20 wallets ($0.50 USDC)' },
+      },
     },
     { url: FACILITATOR_URL },
   ),
 )
+
+// ---------- Paid Rate Limiting ----------
+// 120 requests/hour per payer wallet on paid endpoints.
+app.use('/v1/score/*', paidRateLimitMiddleware)
+app.use('/v1/report', paidRateLimitMiddleware)
+app.use('/v1/data/fraud/*', paidRateLimitMiddleware)
 
 // ---------- Routes ----------
 
@@ -138,12 +159,15 @@ app.route('/v1/data/fraud/blacklist', blacklistRoute)
 app.route('/admin', admin)
 
 // 404 handler
-app.notFound((c) => c.json({ error: 'Not found' }, 404))
+app.notFound((c) => c.json(errorResponse('not_found', 'Not found'), 404))
 
 // Global error handler
 app.onError((err, c) => {
+  if (err instanceof AppError) {
+    return c.json(err.toJSON(), err.statusCode as any)
+  }
   log.error('http', 'Unhandled error', err)
-  return c.json({ error: 'Internal server error' }, 500)
+  return c.json(errorResponse('internal_error', 'Internal server error'), 500)
 })
 
 // ---------- Graceful shutdown ----------

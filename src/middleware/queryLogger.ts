@@ -7,6 +7,7 @@
 import type { MiddlewareHandler } from 'hono'
 import { insertQueryLog } from '../db.js'
 import { log } from '../logger.js'
+import { incHttpRequest } from '../metrics.js'
 
 const ENDPOINT_PRICES: Record<string, number> = {
   '/v1/score/basic': 0.03,
@@ -47,8 +48,12 @@ function tierFromEndpoint(endpoint: string): string {
 
 export const queryLoggerMiddleware: MiddlewareHandler = async (c, next) => {
   const startTime = Date.now()
+  const requestId = c.get('requestId') ?? null
 
   await next()
+
+  // Record HTTP metric (non-blocking, before try/catch so it always fires)
+  incHttpRequest(c.req.method, c.req.path, c.res.status)
 
   // Run logging non-blocking so it never delays the response
   try {
@@ -80,6 +85,6 @@ export const queryLoggerMiddleware: MiddlewareHandler = async (c, next) => {
     })
   } catch (err) {
     // Never let logging failure affect the response
-    log.error('queryLogger', 'Failed to log', err)
+    log.error('queryLogger', 'Failed to log', { requestId, error: err })
   }
 }

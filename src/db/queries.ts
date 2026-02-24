@@ -606,6 +606,116 @@ export function getTransferTimestamps(wallet: string): string[] {
   return rows.map(r => r.timestamp)
 }
 
+// ---------- Revenue analytics ----------
+
+export interface RevenueSummary {
+  totalRevenue: number
+  paidQueryCount: number
+  freeQueryCount: number
+  revenueByEndpoint: Array<{ endpoint: string; revenue: number; count: number }>
+  revenueByDay: Array<{ date: string; revenue: number; count: number }>
+}
+
+export function getRevenueSummary(days: number): RevenueSummary {
+  const since = new Date(Date.now() - days * 86_400_000).toISOString()
+
+  const totals = db.prepare<[string], { revenue: number; paid: number; free: number }>(`
+    SELECT
+      COALESCE(SUM(price_paid), 0) as revenue,
+      SUM(CASE WHEN is_free_tier = 0 AND price_paid > 0 THEN 1 ELSE 0 END) as paid,
+      SUM(CASE WHEN is_free_tier = 1 THEN 1 ELSE 0 END) as free
+    FROM query_log WHERE timestamp >= ?
+  `).get(since)!
+
+  const byEndpoint = db.prepare<[string], { endpoint: string; revenue: number; count: number }>(`
+    SELECT endpoint, COALESCE(SUM(price_paid), 0) as revenue, COUNT(*) as count
+    FROM query_log WHERE timestamp >= ? AND price_paid > 0
+    GROUP BY endpoint ORDER BY revenue DESC
+  `).all(since)
+
+  const byDay = db.prepare<[string], { date: string; revenue: number; count: number }>(`
+    SELECT DATE(timestamp) as date, COALESCE(SUM(price_paid), 0) as revenue, COUNT(*) as count
+    FROM query_log WHERE timestamp >= ? AND price_paid > 0
+    GROUP BY DATE(timestamp) ORDER BY date DESC
+  `).all(since)
+
+  return {
+    totalRevenue: totals.revenue,
+    paidQueryCount: totals.paid,
+    freeQueryCount: totals.free,
+    revenueByEndpoint: byEndpoint,
+    revenueByDay: byDay,
+  }
+}
+
+export function getTopPayers(limit: number): Array<{
+  wallet: string
+  totalSpent: number
+  queryCount: number
+  lastSeen: string
+}> {
+  return db.prepare<[number], { wallet: string; totalSpent: number; queryCount: number; lastSeen: string }>(`
+    SELECT requester_wallet as wallet,
+           COALESCE(SUM(price_paid), 0) as totalSpent,
+           COUNT(*) as queryCount,
+           MAX(timestamp) as lastSeen
+    FROM query_log
+    WHERE requester_wallet IS NOT NULL AND price_paid > 0
+    GROUP BY requester_wallet
+    ORDER BY totalSpent DESC
+    LIMIT ?
+  `).all(limit)
+}
+
+export function getRevenueByHour(): Array<{
+  hour: string
+  revenue: number
+  count: number
+}> {
+  return db.prepare<[], { hour: string; revenue: number; count: number }>(`
+    SELECT strftime('%Y-%m-%dT%H:00:00Z', timestamp) as hour,
+           COALESCE(SUM(price_paid), 0) as revenue,
+           COUNT(*) as count
+    FROM query_log
+    WHERE timestamp >= datetime('now', '-24 hours') AND price_paid > 0
+    GROUP BY strftime('%Y-%m-%dT%H:00:00Z', timestamp)
+    ORDER BY hour DESC
+  `).all()
+}
+
+// ---------- Economy metrics ----------
+
+export interface EconomyMetricsRow {
+  period_start: string
+  period_end: string
+  period_type: string
+  total_wallets: number
+  new_wallets: number
+  dead_wallets: number
+  active_wallets: number
+  total_tx_count: number
+  total_volume: number
+  avg_tx_size: number
+  median_score: number
+  avg_score: number
+  elite_count: number
+  trusted_count: number
+  established_count: number
+  emerging_count: number
+  unverified_count: number
+  total_fraud_reports: number
+  total_queries: number
+}
+
+export function getEconomyMetrics(periodType: string, limit: number): EconomyMetricsRow[] {
+  return db.prepare<[string, number], EconomyMetricsRow>(`
+    SELECT * FROM economy_metrics
+    WHERE period_type = ?
+    ORDER BY period_start DESC
+    LIMIT ?
+  `).all(periodType, limit)
+}
+
 export const indexTransferBatch: Transaction<(transfers: IndexedTransfer[]) => void> = db.transaction((transfers: IndexedTransfer[]) => {
   for (const t of transfers) {
     const from = t.fromWallet.toLowerCase()
