@@ -1,8 +1,9 @@
 /**
  * Scoring dimensions — each function returns an integer 0-100.
  *
- * AgentScore = (Reliability × 0.35) + (Viability × 0.30)
- *            + (Identity × 0.20)    + (Capability × 0.15)
+ * AgentScore = (Reliability × 0.30) + (Viability × 0.25)
+ *            + (Identity × 0.20)    + (Behavior × 0.15)
+ *            + (Capability × 0.10)
  *
  * ── Point budget design rationale ──
  *
