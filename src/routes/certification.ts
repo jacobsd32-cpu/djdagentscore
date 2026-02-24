@@ -305,20 +305,28 @@ certification.get('/admin/revenue', adminAuth, (c) => {
     `SELECT COUNT(*) as count FROM certifications WHERE is_active = 1 AND expires_at > datetime('now')`,
   ).get() as { count: number }
 
+  const revoked = db.prepare(
+    `SELECT COUNT(*) as count FROM certifications WHERE revoked_at IS NOT NULL`,
+  ).get() as { count: number }
+
   const byMonth = db.prepare(
     `SELECT
        strftime('%Y-%m', granted_at) as month,
        COUNT(*) as count,
-       SUM(99) as revenue_usd
+       SUM(CASE WHEN revoked_at IS NOT NULL THEN 1 ELSE 0 END) as revoked_count,
+       SUM(99) as gross_revenue_usd,
+       SUM(CASE WHEN revoked_at IS NULL THEN 99 ELSE 0 END) as net_revenue_usd
      FROM certifications
      GROUP BY strftime('%Y-%m', granted_at)
      ORDER BY month DESC`,
-  ).all() as Array<{ month: string; count: number; revenue_usd: number }>
+  ).all() as Array<{ month: string; count: number; revoked_count: number; gross_revenue_usd: number; net_revenue_usd: number }>
 
   return c.json({
     total_certifications: total.count,
     active_certifications: active.count,
-    total_revenue_usd: total.count * 99,
+    revoked_certifications: revoked.count,
+    gross_revenue_usd: total.count * 99,
+    net_revenue_usd: (total.count - revoked.count) * 99,
     price_per_cert_usd: 99,
     by_month: byMonth,
   })

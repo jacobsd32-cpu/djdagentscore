@@ -84,7 +84,9 @@ app.use('*', logger())
 app.use('*', cors({
   origin: process.env.CORS_ORIGINS
     ? process.env.CORS_ORIGINS.split(',')
-    : [],
+    : process.env.NODE_ENV === 'production'
+      ? []   // production requires explicit CORS_ORIGINS
+      : ['*'], // development: allow all origins
   allowMethods: ['GET', 'POST', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
 }))
