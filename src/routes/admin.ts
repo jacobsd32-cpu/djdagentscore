@@ -6,8 +6,12 @@ import { MODEL_VERSION } from '../scoring/responseBuilders.js'
 const admin = new Hono()
 
 admin.use('*', async (c, next) => {
+  const adminKey = process.env.ADMIN_KEY
+  if (!adminKey) {
+    return c.json({ error: 'Admin key not configured' }, 503)
+  }
   const key = c.req.header('x-admin-key')
-  if (!key || key !== process.env.ADMIN_KEY) {
+  if (!key || key !== adminKey) {
     return c.json({ error: 'Unauthorized' }, 401)
   }
   await next()
