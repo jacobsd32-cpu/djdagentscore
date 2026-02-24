@@ -156,6 +156,9 @@ describe('detectSybil', () => {
   it('detects single_partner when wallet has exactly 1 partner', () => {
     const db = createSybilDb()
     db.prepare(
+      `INSERT INTO wallet_index (wallet, first_seen, total_tx_count) VALUES (?, ?, ?)`,
+    ).run(WALLET, '2025-01-01T00:00:00Z', 10)
+    db.prepare(
       `INSERT INTO relationship_graph (wallet_a, wallet_b, total_volume_a_to_b, total_volume_b_to_a) VALUES (?, ?, ?, ?)`,
     ).run(WALLET, '0xonly', 1000, 50)
 

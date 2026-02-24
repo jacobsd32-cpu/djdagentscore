@@ -173,7 +173,7 @@ export async function runSybilMonitor(db: DatabaseType): Promise<void> {
     // Re-check sybil-flagged wallets for new transactions since last check
     const flaggedWallets = db
       .prepare<[], { wallet: string }>(
-        `SELECT wallet FROM scores WHERE sybil_flag = 1`,
+        `SELECT wallet FROM scores WHERE sybil_flag = 1 LIMIT 500`,
       )
       .all()
       .map((r) => r.wallet)

@@ -110,7 +110,7 @@ export function calcReliability(data: WalletUSDCData, blockNow: bigint, nonce: n
   let uptimeEstimate = 0
   if (data.firstBlockSeen !== null && data.lastBlockSeen !== null) {
     const spanBlocks = Number(data.lastBlockSeen - data.firstBlockSeen)
-    const windowBlocks = 90 * 43_200 // 90 days in blocks
+    const windowBlocks = 14 * 43_200 // 14 days in blocks
     const ratio = Math.min(1, spanBlocks / windowBlocks)
     uptimeEstimate = ratio
     pts += Math.round(ratio * 25)

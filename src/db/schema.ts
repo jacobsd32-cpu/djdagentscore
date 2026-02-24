@@ -266,6 +266,7 @@ db.exec(`
     total_queries     INTEGER DEFAULT 0
   );
   CREATE INDEX IF NOT EXISTS idx_economy_period ON economy_metrics(period_type, period_start DESC);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_economy_metrics_unique ON economy_metrics(period_type, period_start);
 
   -- Agent self-registration (bootstraps identity scoring before x402 volume exists)
   CREATE TABLE IF NOT EXISTS agent_registrations (

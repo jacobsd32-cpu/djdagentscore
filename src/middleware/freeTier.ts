@@ -28,9 +28,8 @@ const FREE_DAILY_LIMIT = 10
  */
 function requesterKey(c: Parameters<MiddlewareHandler>[0]): string {
   const ip =
-    c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ??
-    c.req.header('x-real-ip') ??
-    'unknown'
+    c.req.header('fly-client-ip') ??
+    c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
   return `ip:${createHash('sha256').update(ip).digest('hex').slice(0, 32)}`
 }
 
@@ -39,8 +38,7 @@ export const freeTierMiddleware: MiddlewareHandler = async (c, next) => {
   const usesToday = countFreeTierUsesToday(key)
 
   if (usesToday >= FREE_DAILY_LIMIT) {
-    // Quota exhausted — hand off to x402 payment middleware
-    return next()
+    return c.json({ error: 'Free tier quota exhausted — upgrade to paid' }, 429)
   }
 
   // Still within free quota — serve directly

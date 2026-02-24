@@ -72,7 +72,7 @@ function rollupPeriod(
     .get(sourceType, periodStart, periodEnd)
 
   db.prepare(
-    `INSERT INTO economy_metrics (
+    `INSERT OR REPLACE INTO economy_metrics (
        period_start, period_end, period_type,
        total_wallets, new_wallets, dead_wallets, active_wallets,
        total_tx_count, total_volume, avg_tx_size, median_score, avg_score,

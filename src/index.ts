@@ -28,14 +28,34 @@ import { runAnomalyDetector, runSybilMonitor } from './jobs/anomalyDetector.js'
 import { runDailyAggregator } from './jobs/dailyAggregator.js'
 import { runGithubReverify } from './jobs/githubReverify.js'
 import { jobStats } from './jobs/jobStats.js'
-import { db } from './db.js'
+import { db, getIndexerState, setIndexerState } from './db.js'
 import { log } from './logger.js'
 import type { AppEnv } from './types/hono-env.js'
+
+// ---------- Env helpers ----------
+
+function assertEnv(key: string, opts?: { minLength?: number }): string {
+  const val = process.env[key]
+  if (!val) throw new Error(`Missing required env var: ${key}`)
+  if (opts?.minLength && val.length < opts.minLength)
+    throw new Error(`${key} must be at least ${opts.minLength} characters`)
+  return val
+}
 
 // ---------- Config ----------
 
 const PORT = Number(process.env.PORT ?? 3000)
-const PAY_TO = (process.env.PAY_TO ?? '0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528') as `0x${string}`
+const PAY_TO = assertEnv('PAY_TO') as `0x${string}`
+if (!/^0x[0-9a-fA-F]{40}$/.test(PAY_TO)) throw new Error('PAY_TO must be a valid Ethereum address')
+
+if (process.env.NODE_ENV === 'production') {
+  assertEnv('ADMIN_KEY', { minLength: 32 })
+  assertEnv('CORS_ORIGINS')
+}
+
+if (!process.env.GITHUB_TOKEN) {
+  console.warn('[config] GITHUB_TOKEN not set — GitHub verification limited to 60 req/hr')
+}
 const FACILITATOR_URL = (
   process.env.FACILITATOR_URL ?? 'https://x402.org/facilitator'
 ) as `${string}://${string}`
@@ -51,7 +71,7 @@ app.use('*', logger())
 app.use('*', cors({
   origin: process.env.CORS_ORIGINS
     ? process.env.CORS_ORIGINS.split(',')
-    : '*',
+    : [],
   allowMethods: ['GET', 'POST', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
 }))
@@ -180,65 +200,112 @@ server = serve({ fetch: app.fetch, port: PORT }, (info) => {
   )
 
   // ── 2. Hourly score refresh + wallet snapshots + economy metrics ───────────
+  let hourlyRunning = false
   intervals.push(
-    setInterval(
-      () => runHourlyRefresh().catch((err) => log.error('refresh', 'Job error', err)),
-      60 * 60 * 1000,
-    ),
+    setInterval(async () => {
+      if (hourlyRunning) return
+      hourlyRunning = true
+      try {
+        await runHourlyRefresh()
+      } catch (e) {
+        log.error('refresh', 'Error in hourlyRefresh', e)
+      } finally {
+        hourlyRunning = false
+      }
+    }, 60 * 60 * 1000),
   )
 
   // ── 3. Intent matcher (every 6 hours, start after 60s) ────────────────────
+  let intentRunning = false
   setTimeout(() => {
     runIntentMatcher(db).catch((err) => log.error('intent', 'Startup error', err))
     intervals.push(
-      setInterval(
-        () => runIntentMatcher(db).catch((err) => log.error('intent', 'Job error', err)),
-        6 * 60 * 60 * 1000,
-      ),
+      setInterval(async () => {
+        if (intentRunning) return
+        intentRunning = true
+        try {
+          await runIntentMatcher(db)
+        } catch (e) {
+          log.error('intent', 'Error in intentMatcher', e)
+        } finally {
+          intentRunning = false
+        }
+      }, 6 * 60 * 60 * 1000),
     )
   }, 60_000)
 
   // ── 4. Outcome matcher (every 6 hours, start after 90s) ───────────────────
+  let outcomeRunning = false
   setTimeout(() => {
     runOutcomeMatcher(db).catch((err) => log.error('outcome', 'Startup error', err))
     intervals.push(
-      setInterval(
-        () => runOutcomeMatcher(db).catch((err) => log.error('outcome', 'Job error', err)),
-        6 * 60 * 60 * 1000,
-      ),
+      setInterval(async () => {
+        if (outcomeRunning) return
+        outcomeRunning = true
+        try {
+          await runOutcomeMatcher(db)
+        } catch (e) {
+          log.error('outcome', 'Error in outcomeMatcher', e)
+        } finally {
+          outcomeRunning = false
+        }
+      }, 6 * 60 * 60 * 1000),
     )
   }, 90_000)
 
   // ── 5. Anomaly detector (every 15 min) ─────────────────────────────────────
+  let anomalyRunning = false
   intervals.push(
-    setInterval(
-      () => runAnomalyDetector(db).catch((err) => log.error('anomaly', 'Job error', err)),
-      15 * 60 * 1000,
-    ),
+    setInterval(async () => {
+      if (anomalyRunning) return
+      anomalyRunning = true
+      try {
+        await runAnomalyDetector(db)
+      } catch (e) {
+        log.error('anomaly', 'Error in anomalyDetector', e)
+      } finally {
+        anomalyRunning = false
+      }
+    }, 15 * 60 * 1000),
   )
 
   // ── 6. Enhanced Sybil monitoring (every 5 min) ────────────────────────────
+  let sybilRunning = false
   intervals.push(
-    setInterval(
-      () => runSybilMonitor(db).catch((err) => log.error('sybil', 'Job error', err)),
-      5 * 60 * 1000,
-    ),
+    setInterval(async () => {
+      if (sybilRunning) return
+      sybilRunning = true
+      try {
+        await runSybilMonitor(db)
+      } catch (e) {
+        log.error('sybil', 'Error in sybilMonitor', e)
+      } finally {
+        sybilRunning = false
+      }
+    }, 5 * 60 * 1000),
   )
 
   // ── 7. Daily aggregator + GitHub re-verification (check every hour, run once per day) ──
-  let lastAggDate = ''
+  let lastAggDate = getIndexerState('last_agg_date') ?? ''
+  let dailyRunning = false
   intervals.push(
-    setInterval(
-      async () => {
+    setInterval(async () => {
+      if (dailyRunning) return
+      dailyRunning = true
+      try {
         const today = new Date().toISOString().split('T')[0]!
         if (today !== lastAggDate) {
-          await runDailyAggregator(db).catch((err) => log.error('daily', 'Job error', err))
-          await runGithubReverify().catch((err) => log.error('github-reverify', 'Job error', err))
+          await runDailyAggregator(db)
+          await runGithubReverify()
           lastAggDate = today
+          setIndexerState('last_agg_date', today)
         }
-      },
-      60 * 60 * 1000,
-    ),
+      } catch (e) {
+        log.error('daily', 'Error in dailyAggregator', e)
+      } finally {
+        dailyRunning = false
+      }
+    }, 60 * 60 * 1000),
   )
 
   log.info('jobs', 'All background processes registered')

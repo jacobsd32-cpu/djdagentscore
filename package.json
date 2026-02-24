@@ -19,7 +19,7 @@
     "pino": "^10.3.1",
     "uuid": "^10.0.0",
     "viem": "^2.21.54",
-    "x402-hono": "^0.3.0"
+    "x402-hono": "0.3.0"
   },
   "devDependencies": {
     "@flydotio/dockerfile": "^0.7.10",

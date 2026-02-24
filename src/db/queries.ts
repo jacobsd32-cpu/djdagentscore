@@ -71,6 +71,18 @@ const stmtPruneHistory = db.prepare(
    (SELECT id FROM score_history WHERE wallet = ? ORDER BY calculated_at DESC LIMIT 50)`,
 )
 
+const stmtPruneDecay = db.prepare(
+  `DELETE FROM score_decay WHERE wallet = ? AND rowid NOT IN (
+    SELECT rowid FROM score_decay WHERE wallet = ? ORDER BY recorded_at DESC LIMIT 50
+  )`
+)
+
+const stmtPruneSnapshots = db.prepare(
+  `DELETE FROM wallet_snapshots WHERE wallet = ? AND rowid NOT IN (
+    SELECT rowid FROM wallet_snapshots WHERE wallet = ? ORDER BY snapshot_at DESC LIMIT 50
+  )`
+)
+
 const stmtGetExpired = db.prepare<[], { wallet: string }>(`
   SELECT wallet FROM scores WHERE expires_at < datetime('now')
 `)
@@ -255,6 +267,8 @@ const upsertScoreTxn = db.transaction(
 
     // Keep only last 50 history entries per wallet
     stmtPruneHistory.run(wallet, wallet)
+    stmtPruneDecay.run(wallet, wallet)
+    stmtPruneSnapshots.run(wallet, wallet)
   },
 )
 

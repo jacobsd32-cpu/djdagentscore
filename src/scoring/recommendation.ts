@@ -38,7 +38,7 @@ export function determineRecommendation(inputs: RecommendationInputs): Recommend
     return 'insufficient_history'
   }
 
-  if (score < 25 && confidence >= 0.5) {
+  if (score < 25) {
     return 'high_risk'
   }
 
