@@ -170,7 +170,7 @@ app.use(async (c, next) => {
     return
   }
   // Otherwise apply x402 payment middleware
-  await x402Middleware(c, next)
+  return x402Middleware(c, next)
 })
 
 // ---------- Paid Rate Limiting ----------
