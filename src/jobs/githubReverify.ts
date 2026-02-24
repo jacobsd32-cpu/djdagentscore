@@ -29,7 +29,7 @@ function parseGithubUrl(url: string): { owner: string; repo: string } | null {
 async function fetchGithubRepo(
   owner: string,
   repo: string,
-): Promise<{ stars: number; pushedAt: string } | null> {
+): Promise<{ stars: number; pushedAt: string } | 'not_found' | null> {
   try {
     const headers: Record<string, string> = {
       Accept: 'application/vnd.github+json',
@@ -42,9 +42,10 @@ async function fetchGithubRepo(
       headers,
       signal: AbortSignal.timeout(10_000), // 10s timeout
     })
+    if (resp.status === 404 || resp.status === 451) return 'not_found'
     if (!resp.ok) return null
     const data = await resp.json() as { private: boolean; stargazers_count: number; pushed_at: string }
-    if (data.private) return null
+    if (data.private) return 'not_found'
     return { stars: data.stargazers_count ?? 0, pushedAt: data.pushed_at }
   } catch {
     return null
@@ -68,13 +69,18 @@ export async function runGithubReverify(): Promise<void> {
     }
 
     const result = await fetchGithubRepo(parsed.owner, parsed.repo)
-    if (result) {
-      updateGithubVerification(reg.wallet, true, result.stars, result.pushedAt)
-      updated++
-      log.info('github-reverify', `${reg.wallet.slice(0, 10)}… → ${parsed.owner}/${parsed.repo} (${result.stars}★)`)
-    } else {
-      updateGithubVerification(reg.wallet, false, null, null)
+    if (result === null) {
+      // API error (rate limit, timeout, etc.) — skip, don't unverify
+      log.info('github-reverify', `${reg.wallet.slice(0, 10)}… → API error, skipping`)
+      continue
     }
+    if (result === 'not_found') {
+      updateGithubVerification(reg.wallet, false, null, null)
+      continue
+    }
+    updateGithubVerification(reg.wallet, true, result.stars, result.pushedAt)
+    updated++
+    log.info('github-reverify', `${reg.wallet.slice(0, 10)}… → ${parsed.owner}/${parsed.repo} (${result.stars}★)`)
 
     await new Promise((r) => setTimeout(r, INTER_CALL_DELAY_MS))
   }

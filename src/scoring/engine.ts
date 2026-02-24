@@ -197,6 +197,7 @@ async function computeScore(wallet: Address): Promise<{
   const rawComposite = Math.round(
     relScore * 0.30 + viaScore * 0.25 + idnScore * 0.20 + behScore * 0.15 + capScore * 0.10,
   )
+  const compositeDeduction = gaming.penalties.composite
 
   // ── STEP 7: P4 — Multiplicative integrity modifier ──────────────────────
   const reportCount = countReportsByTarget(wallet)
@@ -205,7 +206,8 @@ async function computeScore(wallet: Address): Promise<{
     gaming.indicators,
     reportCount,
   )
-  const composite = Math.round(rawComposite * integrityMultiplier)
+  const penalizedComposite = Math.max(0, rawComposite - compositeDeduction)
+  const composite = Math.min(100, Math.max(0, Math.round(penalizedComposite * integrityMultiplier)))
 
   // ── STEP 9: Calculate confidence ──────────────────────────────────────────
   const uniquePartners = countUniquePartners(wallet)
@@ -323,9 +325,10 @@ async function computeScore(wallet: Address): Promise<{
   const sorted = allSignals.sort((a, b) => b.points - a.points)
   const topContributors = sorted.slice(0, 5).map((s) => `${s.name} (${s.points} pts)`)
   const topDetractors = sorted
-    .filter((s) => s.points === 0)
-    .slice(0, 5)
-    .map((s) => `${s.name} (0 pts)`)
+    .filter((s) => s.points <= 0)
+    .slice(-5)
+    .reverse()
+    .map((s) => `${s.name} (${s.points} pts)`)
 
   return {
     composite,

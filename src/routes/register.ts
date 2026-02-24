@@ -7,7 +7,7 @@ import { log } from '../logger.js'
 function isValidUrl(url: string): boolean {
   try {
     const u = new URL(url)
-    return u.protocol === 'https:' || u.protocol === 'http:'
+    return u.protocol === 'https:'
   } catch {
     return false
   }

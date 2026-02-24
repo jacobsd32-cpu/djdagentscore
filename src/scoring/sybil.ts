@@ -121,13 +121,13 @@ export function detectSybil(wallet: string, db: Database): SybilResult {
   }
 
   // ── CHECK 4: Single-partner dependency ───────────────────────────────────
-  if (uniquePartnerCount === 1) {
+  const txCount = walletRow?.total_tx_count ?? 0
+  if (uniquePartnerCount === 1 && txCount >= 5) {
     indicators.push('single_partner')
     capReliability(35)
   }
 
   // ── CHECK 5: Volume without diversity ────────────────────────────────────
-  const txCount = walletRow?.total_tx_count ?? 0
   if (txCount > 50 && uniquePartnerCount < 5) {
     indicators.push('volume_without_diversity')
     capReliability(45)

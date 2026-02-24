@@ -37,7 +37,7 @@ let activeJobs = 0
 const MAX_CONCURRENT_JOBS = 1
 const pendingQueue: Array<() => void> = []
 
-function withConcurrencyLimit(fn: () => Promise<void>): void {
+function withConcurrencyLimit(fn: () => Promise<void>): Promise<void> {
   if (activeJobs < MAX_CONCURRENT_JOBS) {
     activeJobs++
     fn().finally(() => {
@@ -45,13 +45,21 @@ function withConcurrencyLimit(fn: () => Promise<void>): void {
       const next = pendingQueue.shift()
       if (next) next()
     })
+    return Promise.resolve()
   } else {
-    pendingQueue.push(() => {
-      activeJobs++
-      fn().finally(() => {
-        activeJobs--
-        const next = pendingQueue.shift()
-        if (next) next()
+    return new Promise<void>((resolve, reject) => {
+      if (pendingQueue.length >= 50) {
+        reject(new Error('Queue full'))
+        return
+      }
+      pendingQueue.push(() => {
+        activeJobs++
+        fn().finally(() => {
+          activeJobs--
+          const next = pendingQueue.shift()
+          if (next) next()
+        })
+        resolve()
       })
     })
   }
@@ -74,8 +82,11 @@ export function submitJob(wallet: Address): string {
       job.result = result
     } catch (err: unknown) {
       job.status = 'error'
-      job.error = (err instanceof Error ? err.message : String(err)).slice(0, 200)
+      job.error = 'Score computation failed'
     }
+  }).catch(() => {
+    job.status = 'error'
+    job.error = 'Queue full'
   })
 
   return jobId

@@ -88,6 +88,9 @@ score.post('/compute', async (c) => {
 // Poll the status of an async scoring job.
 score.get('/job/:jobId', (c) => {
   const jobId = c.req.param('jobId')
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(jobId)) {
+    return c.json({ error: 'Invalid job ID format' }, 400)
+  }
   const job = getJob(jobId)
 
   if (!job) {

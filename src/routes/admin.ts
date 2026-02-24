@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import crypto from 'node:crypto'
 import { db } from '../db.js'
 import { generateCalibrationReport } from '../scoring/calibrationReport.js'
 import { MODEL_VERSION } from '../scoring/responseBuilders.js'
@@ -11,7 +12,7 @@ admin.use('*', async (c, next) => {
     return c.json({ error: 'Admin key not configured' }, 503)
   }
   const key = c.req.header('x-admin-key')
-  if (!key || key !== adminKey) {
+  if (!key || key.length !== adminKey.length || !crypto.timingSafeEqual(Buffer.from(key), Buffer.from(adminKey))) {
     return c.json({ error: 'Unauthorized' }, 401)
   }
   await next()
