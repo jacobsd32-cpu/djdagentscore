@@ -9,9 +9,7 @@ import {
 } from '../db.js'
 import { getIndexerStatus } from '../jobs/blockchainIndexer.js'
 import { jobStats } from '../jobs/jobStats.js'
-
-const VERSION = '1.0.0'
-const MODEL_VERSION = '1.0.0'
+import { MODEL_VERSION } from '../scoring/responseBuilders.js'
 const startTime = Date.now()
 
 const health = new Hono()
@@ -21,7 +19,7 @@ health.get('/', (c) => {
 
   return c.json({
     status: 'ok',
-    version: VERSION,
+    version: MODEL_VERSION,
     modelVersion: MODEL_VERSION,
     experimentalStatus: true,
     uptime: Math.floor((Date.now() - startTime) / 1000),
