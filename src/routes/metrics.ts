@@ -24,9 +24,9 @@ metrics.get('/', (c) => {
   const scoreCount = db.prepare<[], { c: number }>('SELECT count(*) as c FROM scores').get()
   lines.push(`djd_scores_cached ${scoreCount?.c ?? 0}`)
 
-  lines.push('# HELP djd_wallets_indexed Number of unique wallets in wallet_stats')
+  lines.push('# HELP djd_wallets_indexed Number of unique wallets in wallet_index')
   lines.push('# TYPE djd_wallets_indexed gauge')
-  const walletCount = db.prepare<[], { c: number }>('SELECT count(*) as c FROM wallet_stats').get()
+  const walletCount = db.prepare<[], { c: number }>('SELECT count(*) as c FROM wallet_index').get()
   lines.push(`djd_wallets_indexed ${walletCount?.c ?? 0}`)
 
   lines.push('# HELP djd_queries_total Total queries logged')
@@ -36,12 +36,12 @@ metrics.get('/', (c) => {
 
   lines.push('# HELP djd_registrations_total Total agent registrations')
   lines.push('# TYPE djd_registrations_total gauge')
-  const regCount = db.prepare<[], { c: number }>('SELECT count(*) as c FROM registrations').get()
+  const regCount = db.prepare<[], { c: number }>('SELECT count(*) as c FROM agent_registrations').get()
   lines.push(`djd_registrations_total ${regCount?.c ?? 0}`)
 
   lines.push('# HELP djd_reports_total Total fraud reports')
   lines.push('# TYPE djd_reports_total gauge')
-  const reportCount = db.prepare<[], { c: number }>('SELECT count(*) as c FROM reports').get()
+  const reportCount = db.prepare<[], { c: number }>('SELECT count(*) as c FROM fraud_reports').get()
   lines.push(`djd_reports_total ${reportCount?.c ?? 0}`)
 
   // ── Process metrics ───────────────────────────────────────────────
