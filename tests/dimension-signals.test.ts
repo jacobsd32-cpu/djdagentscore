@@ -83,3 +83,40 @@ describe('dimension signal breakdowns', () => {
     expect(result.signals.walletAge).toBeGreaterThan(0)
   })
 })
+
+describe('calcIdentity DRY helpers', () => {
+  const ZERO_WALLET = '0x0000000000000000000000000000000000000000' as const
+
+  it('signal breakdown sums to total raw score', async () => {
+    const result = await calcIdentity(
+      ZERO_WALLET,
+      200,   // walletAgeDays
+      null,  // creatorScore
+      true,  // isRegistered
+      true,  // githubVerified
+      10,    // githubStars
+      new Date().toISOString(), // githubPushedAt (recent)
+      true,  // basename
+    )
+
+    const signalSum = Object.values(result.signals).reduce((a, b) => a + b, 0)
+    expect(result.score).toBe(signalSum)
+  })
+
+  it('gives zero github activity when not verified', async () => {
+    const result = await calcIdentity(
+      ZERO_WALLET, 0, null, false, false, 100, new Date().toISOString(),
+    )
+    expect(result.signals.githubActivity).toBe(0)
+  })
+
+  it('maxes wallet age at 30 pts for 180+ day wallets', async () => {
+    const result = await calcIdentity(ZERO_WALLET, 365)
+    expect(result.signals.walletAge).toBe(30)
+  })
+
+  it('gives 2 pts for brand-new wallets', async () => {
+    const result = await calcIdentity(ZERO_WALLET, 0)
+    expect(result.signals.walletAge).toBe(2)
+  })
+})
