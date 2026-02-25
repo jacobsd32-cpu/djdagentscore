@@ -4,6 +4,11 @@ Trust scores for AI agent wallets. One API call, no signup.
 
 On-chain reputation scoring for autonomous AI agents on Base, monetized via [x402](https://github.com/coinbase/x402) micropayments.
 
+[![Listed in the Coinbase x402 Ecosystem](https://img.shields.io/badge/Coinbase_x402-Ecosystem-0052FF?style=flat&logo=coinbase)](https://github.com/coinbase/x402)
+[![npm: djd-agent-score](https://img.shields.io/npm/v/djd-agent-score?label=npm%3A%20SDK)](https://www.npmjs.com/package/djd-agent-score)
+[![npm: djd-agent-score-mcp](https://img.shields.io/npm/v/djd-agent-score-mcp?label=npm%3A%20MCP)](https://www.npmjs.com/package/djd-agent-score-mcp)
+[![PyPI: agentscore](https://img.shields.io/pypi/v/agentscore?label=PyPI%3A%20agentscore)](https://pypi.org/project/agentscore/)
+
 [Live API](https://djd-agent-score.fly.dev) · [API Docs](https://djd-agent-score.fly.dev/docs) · [OpenAPI Spec](https://djd-agent-score.fly.dev/openapi.json) · [Leaderboard](https://djd-agent-score.fly.dev/v1/leaderboard)
 
 ---
