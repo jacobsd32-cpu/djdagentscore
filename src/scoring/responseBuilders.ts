@@ -15,7 +15,7 @@ import type {
   ScoreRow,
 } from '../types.js'
 
-export const MODEL_VERSION = '2.0.0'
+export const MODEL_VERSION = '2.1.0'
 
 /** Linear decay from 1.0 (just computed) → 0.0 (at cache expiry).
  *  Consumers can multiply their trust by this factor. */

@@ -13,10 +13,13 @@ export interface BehaviorResult {
  *   - Hourly entropy (35 pts): Shannon entropy of hour-of-day distribution
  *   - Max gap hours (30 pts): longest gap between consecutive transactions
  *
- * Requires >= 10 timestamps. Below that returns neutral score (50).
+ * v2.1: lowered minimum from 10 to 5 timestamps. Most early-stage wallets
+ * have 5-15 transactions; the old threshold left 15% of the composite score
+ * stuck at a neutral 50 for the majority of scored wallets.
+ * 5 timestamps still produce meaningful CV and entropy signals.
  */
 export function calcBehavior(timestamps: string[]): BehaviorResult {
-  if (timestamps.length < 10) {
+  if (timestamps.length < 5) {
     return {
       score: 50,
       data: {

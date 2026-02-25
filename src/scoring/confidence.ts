@@ -27,15 +27,20 @@ export function calcConfidence(inputs: ConfidenceInputs): number {
   const { txCount, walletAgeDays, uniquePartners, ratingCount, priorQueryCount } = inputs
 
   // ── txCount signal (log scale) ─────────────────────────────────────────────
+  // v2.1: lowered breakpoints to start building confidence earlier.
+  // Previously 5→0.3, 20→0.6, 100→1.0. Most wallets have 5-30 tx, so
+  // confidence was stuck at 0.3-0.5 for the majority of the ecosystem.
   let txSignal: number
   if (txCount === 0) {
     txSignal = 0.0
-  } else if (txCount < 5) {
-    txSignal = 0.1 + (txCount / 5) * 0.2
-  } else if (txCount < 20) {
-    txSignal = 0.3 + ((txCount - 5) / 15) * 0.3
+  } else if (txCount < 3) {
+    txSignal = 0.1 + (txCount / 3) * 0.15
+  } else if (txCount < 10) {
+    txSignal = 0.25 + ((txCount - 3) / 7) * 0.25
+  } else if (txCount < 30) {
+    txSignal = 0.5 + ((txCount - 10) / 20) * 0.25
   } else if (txCount < 100) {
-    txSignal = 0.6 + ((txCount - 20) / 80) * 0.4
+    txSignal = 0.75 + ((txCount - 30) / 70) * 0.25
   } else {
     txSignal = 1.0
   }

@@ -25,13 +25,12 @@ Returns:
   "tier": "Emerging",
   "confidence": 0.16,
   "recommendation": "insufficient_history",
-  "modelVersion": "2.0.0",
-  "lastUpdated": "2026-02-24T02:10:47.830Z",
-  "computedAt": "2026-02-24T02:10:47.830Z",
-  "scoreFreshness": 0,
+  "modelVersion": "2.1.0",
+  "lastUpdated": "2026-02-25T04:12:50.000Z",
+  "computedAt": "2026-02-25T04:12:50.000Z",
+  "scoreFreshness": 0.85,
   "freeTier": true,
-  "freeQueriesRemainingToday": 9,
-  "stale": true
+  "freeQueriesRemainingToday": 9
 }
 ```
 
@@ -109,21 +108,23 @@ curl "https://djd-agent-score.fly.dev/v1/score/full?wallet=0x…" \
 
 ## How scoring works
 
+> **Model v2.1.0** — Calibration pass (Feb 2025). Lowered breakpoints for early-stage ecosystem data, switched to log-linear interpolation for transaction counts and revenue, added finer wallet age granularity.
+
 Every wallet is evaluated across five weighted dimensions based on its USDC transaction history on Base:
 
 | Dimension | Weight | What it measures |
 |---|---|---|
-| **Payment Reliability** | 30% | Transaction volume, consistency, counterparty diversity |
-| **Economic Viability** | 25% | USDC balance, inflow/outflow ratios, wallet age |
-| **Identity** | 20% | Wallet age, Basename, registration, GitHub verification |
-| **Behavior** | 15% | Transaction patterns, consistency, anomaly signals |
-| **Capability** | 10% | x402 revenue earned, services operated |
+| **Payment Reliability** | 30% | Transaction volume (log-scaled), nonce depth, counterparty diversity |
+| **Economic Viability** | 25% | USDC balance, inflow/outflow ratios, revenue trajectory |
+| **Identity** | 20% | Wallet age (granular steps), Basename, registration, GitHub verification |
+| **Behavior** | 15% | Transaction timing patterns, consistency, anomaly signals |
+| **Capability** | 10% | x402 revenue earned (log-scaled), services operated |
 
 **Score tiers:** Elite (90+) · Trusted (75–89) · Established (50–74) · Emerging (25–49) · Unverified (0–24)
 
 The scoring engine indexes x402 settlements on-chain using the EIP-3009 `AuthorizationUsed` event. Agents that use x402 to pay for services accumulate verifiable payment history that feeds directly into their score. The more an agent transacts through x402, the more meaningful its reputation becomes.
 
-Additional integrity layers: Sybil detection heuristics, score gaming detection, fraud report penalties. Scores are cached for 1 hour with background refresh for active wallets.
+**Integrity layers:** Multiplicative penalty stacking from sybil detection (7 heuristics), gaming detection (5 checks), and fraud reports. The integrity multiplier floors at 0.10 (90% max penalty). Scores are cached for 1 hour with background refresh for active wallets.
 
 ---
 
@@ -236,7 +237,7 @@ Requires **Node.js v22**. Starts on `http://localhost:3000`.
 
 **ERC-8004:** [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) (AI Agent Registry) check is disabled until a registry contract deploys on Base. Identity points redistributed to Basename (+5), GitHub verification (+5), wallet age (+5).
 
-**Score caching:** 1 hour cache. Background refresh for up to 10 expired scores/hour. Force recalculation with `/v1/score/refresh` ($0.25).
+**Score caching:** 1 hour cache. Background refresh for up to 50 expired scores/hour. Force recalculation with `/v1/score/refresh` ($0.25). Admin flush endpoint expires all cached scores to trigger ecosystem-wide re-scoring after model updates.
 
 ### How x402 payments work
 
