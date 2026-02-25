@@ -9,14 +9,22 @@
  *
  * Each dimension targets 100 points max, allocated across sub-signals so that
  * a "healthy, active agent" lands at ~70-80 without gaming. Thresholds are
- * calibrated against real Base mainnet activity patterns observed Dec 2024-Jan 2025.
+ * calibrated against real Base mainnet activity patterns observed Dec 2024–Feb 2026.
  *
- * Transaction counts: 10 tx = hobbyist, 100 = active service, 1000+ = high-volume.
- *   These map to piecewiseLog breakpoints for diminishing returns.
+ * ── v2.1 Calibration Notes (Feb 2026) ──
  *
- * USDC balances: $1 = dust, $10 = funded, $50+ = operating capital, $100+ = serious.
- *   Agent wallets typically hold less than DeFi whales; thresholds reflect x402
- *   micropayment economics ($0.01-$1 per API call).
+ * Score compression was observed: all 34 scored wallets fell in the 2-59 range
+ * with median 24. Root cause: breakpoints calibrated for a mature ecosystem
+ * (1000+ tx, $100+ balances, $500+ revenue) but actual ecosystem is early-stage.
+ * Changes: lowered tx/nonce/balance/revenue thresholds, added wallet age granularity,
+ * switched nonce and revenue to piecewiseLog for smoother scaling.
+ *
+ * Transaction counts: 5 tx = first real usage, 25 = active, 100 = established, 500+ = high-volume.
+ *   Breakpoints lowered in v2.1 to match early-stage x402 ecosystem reality.
+ *
+ * USDC balances: $0.10 = first micropayment dust, $5 = funded agent, $25+ = operating capital.
+ *   Thresholds reflect observed x402 micropayment economics ($0.01-$1 per call).
+ *   Most active agents hold $1-$50, not $100+.
  *
  * Time windows: 7d = recent trend, 30d = medium-term health, 90d = established.
  *   Blocks-per-day on Base ≈ 43,200 (1 block / 2 seconds).
@@ -77,14 +85,19 @@ export function calcReliability(
   pts += successRatePts
 
   // --- Total completed transactions log-scale (up to 25 pts) ---
-  // Breakpoints: 0→0, 10→5, 100→15, 1000→25
+  // v2.1 recalibration: lowered thresholds to match early-stage x402 ecosystem.
+  // Breakpoints: 0→0, 5→4, 25→10, 100→18, 500→23, 1000→25
+  // Previously [10→5, 100→15, 1000→25] — too aggressive for ecosystem where
+  // most active agents have 10-50 USDC transfers.
   const txPts =
     txCount === 0
       ? 0
       : piecewiseLog(txCount, [
           [0, 0],
-          [10, 5],
-          [100, 15],
+          [5, 4],
+          [25, 10],
+          [100, 18],
+          [500, 23],
           [1000, 25],
         ])
   pts += txPts
@@ -92,13 +105,19 @@ export function calcReliability(
   // --- Nonce (total txs ever sent): up to 20 pts ---
   // The nonce is the authoritative count of all transactions originating from this wallet,
   // not just USDC transfers. A high nonce = actively operated over a long period.
-  // 1 tx = minimal (3 pts), 10 = light use (8), 100 = moderate (15), 1000+ = power user (20).
-  // Log-scale steps because nonce growth follows a power law distribution.
-  let noncePts = 0
-  if (nonce >= 1000) noncePts = 20
-  else if (nonce >= 100) noncePts = 15
-  else if (nonce >= 10) noncePts = 8
-  else if (nonce >= 1) noncePts = 3
+  // v2.1 recalibration: switched to piecewiseLog for smoother scaling.
+  // Breakpoints: 0→0, 1→3, 10→8, 50→14, 200→18, 1000→20
+  // Previously cliff-based (1→3, 10→8, 100→15, 1000→20) which left big gaps.
+  const noncePts = nonce === 0
+    ? 0
+    : Math.round(piecewiseLog(nonce, [
+        [0, 0],
+        [1, 3],
+        [10, 8],
+        [50, 14],
+        [200, 18],
+        [1000, 20],
+      ]))
   pts += noncePts
 
   // --- Service uptime proxy (up to 25 pts) ---
@@ -190,14 +209,18 @@ export function calcViability(
   pts += ethBalPts
 
   // --- USDC balance (up to 25 pts) ---
-  // x402 agents earn/spend small amounts: $1 = has some funds, $10 = can
-  // sustain operations, $50 = healthy reserve, $100+ = well-capitalised.
-  // Thresholds are low compared to DeFi because agent micropayments are tiny.
+  // v2.1 recalibration: added more granularity for micropayment-level balances.
+  // $0.10 = first x402 payment dust (2 pts), $1 = seed money (5), $5 = funded (10),
+  // $25 = operating reserve (18), $50 = healthy (22), $100+ = well-capitalised (25).
+  // Previously jumped from 5pts ($1) to 15pts ($10) — too steep for early agents.
   let balPts = 0
   if (balanceUsd > 100) balPts = 25
-  else if (balanceUsd > 50) balPts = 20
+  else if (balanceUsd > 50) balPts = 22
+  else if (balanceUsd > 25) balPts = 18
   else if (balanceUsd > 10) balPts = 15
+  else if (balanceUsd > 5) balPts = 10
   else if (balanceUsd > 1) balPts = 5
+  else if (balanceUsd > 0.1) balPts = 2
   pts += balPts
 
   // --- Income vs burn ratio (up to 30 pts) ---
@@ -304,11 +327,17 @@ function calcGithubActivityPts(
 }
 
 function calcWalletAgePts(walletAgeDays: number | null | undefined): number {
+  // v2.1 recalibration: added granularity in the 7-90 day range.
+  // Previously jumped from 8 (7d) to 15 (30d) to 20 (90d) — too coarse for
+  // an ecosystem where most wallets are 2-60 days old.
   const ageDays = walletAgeDays ?? 0
   if (ageDays > 180) return 30
-  if (ageDays > 90) return 20
-  if (ageDays > 30) return 15
+  if (ageDays > 90) return 25
+  if (ageDays > 60) return 22
+  if (ageDays > 30) return 18
+  if (ageDays > 14) return 13
   if (ageDays > 7) return 8
+  if (ageDays > 3) return 5
   return 2
 }
 
@@ -357,9 +386,10 @@ export async function calcIdentity(
 
   // --- Wallet age (up to 30 pts) ---
   // Older wallets are harder to spin up cheaply for Sybil attacks.
-  // 7d (8pts) = past initial testing, 30d (15) = survived a month,
-  // 90d (20) = established quarter, 180d+ (30) = long-running operator.
-  // Even brand-new wallets get 2 pts as a baseline — don't zero out entirely.
+  // v2.1: smoother ramp with more steps in the 7-90 day range where
+  // most real wallets currently fall. 3d (5pts) = survived initial testing,
+  // 14d (13) = two-week milestone, 30d (18) = monthly, 60d (22) = seasoned,
+  // 90d (25) = established, 180d+ (30) = long-running operator.
   // (Increased from 25→30 after removing phantom ERC-8004 points.)
   const ageDays = walletAgeDays ?? 0
   pts += calcWalletAgePts(walletAgeDays)
@@ -446,17 +476,25 @@ export function calcCapability(
   pts += x402ServicesPts
 
   // --- Total revenue earned (up to 50 pts) — prefer x402-specific revenue if available ---
-  // Weight increased from 30→50 to compensate for unimplemented features.
-  // $1 = has earned anything (15 pts), $50 = viable business (30), $500+ = proven revenue (50).
-  // $50 ≈ 500 API calls at $0.10 each — a real product with real users.
-  // $500 ≈ 5000 calls — a successful x402 service generating meaningful income.
+  // v2.1 recalibration: switched to piecewiseLog for smooth scaling from micropayment
+  // dust ($0.10) up to proven revenue ($500+). Previously cliff-based with huge gaps
+  // ($1→15, $50→30, $500→50) leaving most early agents at 0 or 15.
+  // $0.10 = first micropayment (5 pts), $1 = has real users (12), $10 = sustaining (22),
+  // $50 = viable business (32), $200 = established (42), $500+ = proven (50).
   // Falls back to total USDC inflows when x402-specific indexer data isn't available.
   const totalRevenue = hasX402Data ? x402Revenue : usdcToFloat(data.totalInflows)
   let revPts = 0
-  if (totalRevenue > 500) revPts = 50
-  else if (totalRevenue > 50) revPts = 30
-  else if (totalRevenue > 1) revPts = 15
-  else revPts = 0
+  if (totalRevenue > 0) {
+    revPts = Math.round(piecewiseLog(totalRevenue, [
+      [0, 0],
+      [0.1, 5],
+      [1, 12],
+      [10, 22],
+      [50, 32],
+      [200, 42],
+      [500, 50],
+    ]))
+  }
   pts += revPts
 
   // --- Domains owned — NOT YET IMPLEMENTED (0 pts) ---

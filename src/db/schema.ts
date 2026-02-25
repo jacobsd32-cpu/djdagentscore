@@ -111,6 +111,12 @@ db.exec(`
     '["sybil_detection","gaming_detection","behavior_analysis","integrity_multiplier","confidence_interval","data_availability","improvement_path"]',
     'Scoring overhaul v2 — 5 dimensions, multiplicative integrity, behavior analysis'
   );
+  INSERT OR IGNORE INTO model_versions (version, weights_json, features_json, notes) VALUES (
+    '2.1.0',
+    '{"reliability":0.30,"viability":0.25,"identity":0.20,"behavior":0.15,"capability":0.10}',
+    '["sybil_detection","gaming_detection","behavior_analysis","integrity_multiplier","confidence_interval","data_availability","improvement_path"]',
+    'Calibration pass — lowered breakpoints for early-stage ecosystem, behavior threshold 10→5, piecewiseLog for nonce/revenue, wallet age granularity'
+  );
 
   -- Blockchain Indexing
   CREATE TABLE IF NOT EXISTS raw_transactions (

@@ -53,6 +53,22 @@ admin.post('/calibration/generate', (c) => {
   })
 })
 
+// ---------- Score cache management ----------
+
+admin.post('/flush-scores', (c) => {
+  // Expire all cached scores so the next query triggers a fresh computation
+  // under the new model version. Doesn't delete history — just sets expires_at
+  // to the past so stale-serve logic re-scores.
+  const result = db
+    .prepare(`UPDATE scores SET expires_at = datetime('now', '-1 hour')`)
+    .run()
+  return c.json({
+    message: `Flushed ${result.changes} cached scores — next query will re-score under model ${MODEL_VERSION}`,
+    flushed: result.changes,
+    modelVersion: MODEL_VERSION,
+  })
+})
+
 // ---------- Revenue dashboard ----------
 
 admin.get('/revenue', (c) => {

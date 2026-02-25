@@ -58,39 +58,75 @@ nav{padding:18px 0;display:flex;align-items:center;justify-content:space-between
 .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:3px;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
+/* Animated Explainer */
+.exp{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:24px}
+.exp-tabs{display:flex;border-bottom:1px solid var(--border)}
+.exp-tab{flex:1;padding:13px 8px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);cursor:pointer;transition:all .2s;border:none;background:none;border-bottom:2px solid transparent}
+.exp-tab:hover{color:var(--text-dim)}
+.exp-tab.active{color:var(--accent);background:var(--accent-dim);border-bottom-color:var(--accent)}
+.exp-stage{padding:28px}
+.exp-task{font-size:14.5px;color:var(--text-dim);margin-bottom:24px;line-height:1.65}
+.exp-task strong{color:var(--text)}
+.exp-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.exp-card{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:18px;opacity:0;transform:translateY(10px);transition:all .4s ease}
+.exp-card.vis{opacity:1;transform:translateY(0)}
+.exp-card.scanning{border-color:var(--accent);box-shadow:0 0 20px rgba(34,211,238,0.15),inset 0 0 12px rgba(34,211,238,0.04);animation:expPulse .8s ease-in-out}
+.exp-card.selected{border-color:var(--green);box-shadow:0 0 20px rgba(52,211,153,0.15);background:var(--green-dim)}
+.exp-card.rejected{opacity:.3;filter:grayscale(.4)}
+@keyframes expPulse{0%{box-shadow:0 0 5px rgba(34,211,238,.1)}50%{box-shadow:0 0 28px rgba(34,211,238,.25),inset 0 0 15px rgba(34,211,238,.06)}100%{box-shadow:0 0 5px rgba(34,211,238,.1)}}
+.exp-card-name{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;margin-bottom:6px}
+.exp-card-price{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);margin-bottom:12px}
+.exp-card-score{font-family:'JetBrains Mono',monospace;font-size:12px;margin-bottom:4px;display:flex;align-items:baseline;gap:6px}
+.exp-card-num{font-weight:700;font-size:22px}
+.exp-card-tier{font-size:11px}
+.exp-card-stat{font-size:10.5px;color:var(--text-muted);line-height:1.5;margin-top:8px}
+.exp-card-flag{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--red);background:var(--red-dim);padding:2px 6px;border-radius:3px;display:inline-block;margin-top:6px}
+.exp-result{font-size:13px;color:var(--text-dim);line-height:1.65;padding:16px;background:var(--bg);border:1px solid var(--border);border-radius:8px;opacity:0;transform:translateY(6px);transition:all .5s ease}
+.exp-result.vis{opacity:1;transform:translateY(0)}
+.exp-result strong{color:var(--green)}
+.exp-ctrl{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;border-top:1px solid var(--border)}
+.exp-dot{width:8px;height:8px;border-radius:50%;background:var(--border-hi);transition:all .2s;cursor:pointer}
+.exp-dot.active{background:var(--accent)}
+.exp-replay{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);background:none;border:1px solid var(--border);border-radius:5px;padding:4px 10px;cursor:pointer;transition:all .2s;margin-left:8px}
+.exp-replay:hover{color:var(--accent);border-color:var(--accent)}
+.exp-scenario{display:none}
+
+/* Plain English */
+.plain{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:32px;margin-top:24px}
+.plain p{font-size:15px;color:var(--text-dim);line-height:1.75;margin-bottom:16px}
+.plain p:last-child{margin-bottom:0}
+.plain strong{color:var(--text)}
+
+/* Concrete Examples */
+.examples{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:11px;overflow:hidden;margin-top:24px}
+.example{background:var(--bg2);padding:24px 20px}
+.example-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
+.example-label.g{color:var(--green)}.example-label.r{color:var(--red)}.example-label.y{color:var(--yellow)}.example-label.o{color:var(--orange)}
+.example h3{font-size:14px;font-weight:700;margin-bottom:8px;line-height:1.4}
+.example p{font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:14px}
+.example-out{font-family:'JetBrains Mono',monospace;font-size:10.5px;padding:10px 12px;background:var(--bg);border-radius:6px;line-height:1.7}
+.example-out .eo-s{font-weight:700}.example-out .eo-r{display:block;margin-top:2px}
+
+/* Scoring Dimensions */
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:11px;overflow:hidden;margin-top:24px}
 .card{background:var(--bg2);padding:26px 22px}
 .card h3{font-size:14.5px;font-weight:700;margin-bottom:9px}
 .card p{font-size:13px;color:var(--text-dim);line-height:1.65}
 .clbl{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:9px}
 .clbl.r{color:var(--red)}.clbl.g{color:var(--green)}.clbl.a{color:var(--accent)}.clbl.p{color:var(--purple)}.clbl.y{color:var(--yellow)}.clbl.o{color:var(--orange)}
-
 .dim-q{font-size:13.5px;color:var(--accent);margin-bottom:7px;font-style:italic}
-.dim-hdr{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.dim-analogy{font-size:12.5px;color:var(--text-muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);line-height:1.55;font-style:italic}
 
-.pipeline{margin-top:24px;border:1px solid var(--border);border-radius:11px;overflow:hidden}
-.pipe-step{display:grid;grid-template-columns:40px 1fr;border-bottom:1px solid var(--border);transition:background .15s}
-.pipe-step:last-child{border-bottom:none}
-.pipe-step:hover{background:var(--bg3)}
-.pipe-num{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--accent);display:flex;align-items:center;justify-content:center;background:var(--bg2);border-right:1px solid var(--border)}
-.pipe-body{padding:14px 18px}
-.pipe-title{font-weight:700;font-size:13.5px;margin-bottom:3px}
-.pipe-desc{font-size:12.5px;color:var(--text-dim);line-height:1.55}
-.pipe-tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:9.5px;padding:2px 6px;border-radius:3px;margin-top:5px}
-.pipe-tag.integrity{color:var(--red);background:var(--red-dim)}
-.pipe-tag.scoring{color:var(--green);background:var(--green-dim)}
-.pipe-tag.meta{color:var(--purple);background:var(--purple-dim)}
+/* Output Grid */
+.output-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:11px;overflow:hidden;margin-top:24px}
+.output-card{background:var(--bg2);padding:24px 22px}
+.output-card h3{font-size:14.5px;font-weight:700;margin-bottom:4px}
+.output-sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin-bottom:10px}
+.output-card p{font-size:13px;color:var(--text-dim);line-height:1.65}
+.output-vals{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.output-val{font-family:'JetBrains Mono',monospace;font-size:9.5px;padding:2px 7px;border-radius:3px}
 
-.tiers{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:24px;font-family:'JetBrains Mono',monospace;font-size:12px}
-.tier-seg{padding:15px 8px;text-align:center;flex:1}
-.tier-seg .tn{font-weight:700;margin-bottom:2px}
-.tier-seg .tr{font-size:10px;opacity:.7}
-.t-unv{background:rgba(71,85,105,0.12);color:var(--text-muted)}
-.t-emg{background:rgba(251,146,60,0.06);color:var(--orange)}
-.t-est{background:rgba(251,191,36,0.06);color:var(--yellow)}
-.t-tru{background:rgba(52,211,153,0.06);color:var(--green)}
-.t-eli{background:rgba(34,211,238,0.06);color:var(--accent)}
-
+/* Score Lookup */
 .lookup{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:32px;margin-top:24px}
 .lu-wrap{display:flex;gap:10px}
 .lookup input{flex:1;background:var(--bg);border:1px solid var(--border-hi);border-radius:7px;padding:13px 16px;font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--text);outline:none;transition:border-color .2s}
@@ -117,11 +153,13 @@ nav{padding:18px 0;display:flex;align-items:center;justify-content:space-between
 .sc-disc{font-size:10px;color:var(--text-muted);margin-top:10px;line-height:1.5;padding-top:10px;border-top:1px solid var(--border)}.sc-disc a{color:var(--text-muted);text-decoration:underline}
 .err{color:var(--red);font-family:'JetBrains Mono',monospace;font-size:11px;margin-top:10px;display:none}.err.vis{display:block}
 
+/* Code */
 .code{background:#0c1018;border:1px solid var(--border);border-radius:10px;padding:22px;overflow-x:auto;margin-top:24px;position:relative}
 .code pre{font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.7;color:var(--text-dim);white-space:pre}
 .code .c{color:var(--text-muted)}.code .s{color:var(--green)}.code .k{color:var(--purple)}.code .f{color:var(--accent)}
 .code-l{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;position:absolute;top:9px;right:13px}
 
+/* API */
 .api{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:24px}
 .api-r{display:grid;grid-template-columns:1fr 90px 70px;padding:11px 18px;border-bottom:1px solid var(--border);font-size:12.5px;align-items:center}
 .api-r:last-child{border-bottom:none}
@@ -132,6 +170,7 @@ nav{padding:18px 0;display:flex;align-items:center;justify-content:space-between
 .api-f{color:var(--text-muted)}
 .api-m{text-align:right;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-muted)}
 
+/* Leaderboard */
 .lb{width:100%;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:24px}
 .lb-r{display:grid;grid-template-columns:40px 1fr 80px 80px;padding:11px 16px;border-bottom:1px solid var(--border);align-items:center;font-size:12.5px;transition:background .15s}
 .lb-r:last-child{border-bottom:none}.lb-r:hover{background:var(--bg3)}
@@ -144,6 +183,7 @@ nav{padding:18px 0;display:flex;align-items:center;justify-content:space-between
 .lb-badge{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;margin-left:5px;vertical-align:middle}
 .lb-badge.reg{color:var(--accent);background:var(--accent-dim)}.lb-badge.gh{color:var(--green);background:var(--green-dim)}
 
+/* Feedback */
 .fb{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:32px;margin-top:24px}
 .fb-row{margin-bottom:14px}
 .fb-row label{display:block;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
@@ -158,9 +198,27 @@ nav{padding:18px 0;display:flex;align-items:center;justify-content:space-between
 .fb-msg.vis{display:block}
 .fb-msg.ok{color:var(--green)}.fb-msg.bad{color:var(--red)}
 
+/* Info */
 .info{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px;margin-top:24px;font-size:13px;color:var(--text-dim);line-height:1.7}
 .info strong{color:var(--text)}
 
+/* Summary */
+.summary{text-align:center;padding:48px 20px;margin:40px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.summary p{font-size:18px;color:var(--text-dim);max-width:640px;margin:0 auto;line-height:1.7}
+.summary em{color:var(--accent);font-style:normal;font-weight:600}
+
+/* Tiers bar */
+.tiers{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:12px}
+.tier-seg{padding:15px 8px;text-align:center;flex:1}
+.tier-seg .tn{font-weight:700;margin-bottom:2px}
+.tier-seg .tr{font-size:10px;opacity:.7}
+.t-unv{background:rgba(71,85,105,0.12);color:var(--text-muted)}
+.t-emg{background:rgba(251,146,60,0.06);color:var(--orange)}
+.t-est{background:rgba(251,191,36,0.06);color:var(--yellow)}
+.t-tru{background:rgba(52,211,153,0.06);color:var(--green)}
+.t-eli{background:rgba(34,211,238,0.06);color:var(--accent)}
+
+/* Footer */
 footer{border-top:1px solid var(--border);padding:28px 0 36px;margin-top:60px}
 .ft-disc{font-size:10.5px;color:var(--text-muted);line-height:1.7;margin-bottom:18px;max-width:700px}.ft-disc a{color:var(--text-muted);text-decoration:underline}
 .ft-bot{display:flex;justify-content:space-between;align-items:center}
@@ -168,11 +226,13 @@ footer{border-top:1px solid var(--border);padding:28px 0 36px;margin-top:60px}
 .ft-links{display:flex;gap:14px}.ft-links a{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-muted);text-decoration:none;transition:color .2s}.ft-links a:hover{color:var(--accent);text-decoration:none}
 
 @media(max-width:768px){
-  .stats{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.tiers{flex-direction:column}
+  .stats{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}
+  .exp-cards{grid-template-columns:1fr}.examples{grid-template-columns:1fr}
+  .output-grid{grid-template-columns:1fr}
   .lu-wrap{flex-direction:column}.lb-r{grid-template-columns:34px 1fr 65px}.lb-t{display:none}
   .api-r{grid-template-columns:1fr 75px}.api-m{display:none}.sc-hdr{flex-direction:column;align-items:flex-start;gap:10px}
   .sc-meta{text-align:left}.ft-bot{flex-direction:column;gap:10px;text-align:center}
-  .pipe-step{grid-template-columns:34px 1fr}
+  .tiers{flex-direction:column}
 }
 </style>
 </head>
@@ -182,8 +242,8 @@ footer{border-top:1px solid var(--border);padding:28px 0 36px;margin-top:60px}
 <nav>
   <div class="logo">DJD<span> Agent Score</span></div>
   <div class="nav-links">
+    <a href="#explainer">Demo</a>
     <a href="#lookup">Score</a>
-    <a href="#methodology">How It Works</a>
     <a href="#api-ref">API</a>
     <a href="#feedback">Feedback</a>
     <a href="/terms">Terms</a>
@@ -199,9 +259,9 @@ footer{border-top:1px solid var(--border);padding:28px 0 36px;margin-top:60px}
 <!-- HERO -->
 <div class="hero">
   <div class="badge">Live on Base &middot; Paid via x402</div>
-  <h1>Trust scores for<br><em>AI agent</em> wallets</h1>
-  <p class="hero-sub">One API call, no signup.</p>
-  <p class="hero-p">When your AI agent is about to send money to another AI agent, how do you know that agent is legit? DJD Agent Score gives you a trust score &mdash; 0 to 100 &mdash; based on the wallet's on-chain transaction history. One API call, free tier included, paid queries via <a href="https://www.x402.org/" target="_blank">x402</a> micropayments. No API keys. No accounts.</p>
+  <h1>AI programs are starting to hire and pay other AI programs.<br>We help them decide <em>who to trust</em>.</h1>
+  <p class="hero-sub">One API call. No signup.</p>
+  <p class="hero-p">When your AI agent is about to send money to another AI agent, how do you know that agent is legit? DJD Agent Score analyzes every wallet's on-chain history and produces a trust score &mdash; 0 to 100 &mdash; so your agent can decide in milliseconds. Free tier included. Paid lookups via <a href="https://www.x402.org/" target="_blank">x402</a> micropayments. No API keys. No accounts.</p>
 </div>
 
 <!-- STATS -->
@@ -212,89 +272,256 @@ footer{border-top:1px solid var(--border);padding:28px 0 36px;margin-top:60px}
   <div class="st"><div class="st-v live"><span class="dot"></span><span id="sS">&mdash;</span></div><div class="st-l">Indexer</div></div>
 </div>
 
-<!-- PROBLEM -->
+<!-- ANIMATED EXPLAINER -->
+<div class="sec" id="explainer">
+  <div class="sec-label">See It Work</div>
+  <div class="sec-title">Watch a score in action</div>
+  <div class="sec-desc">Your agent needs a service. Multiple agents offer it. Who do you trust? Watch the score decide.</div>
+  <div class="exp">
+    <div class="exp-tabs">
+      <button class="exp-tab active" data-exp="0">Legal Research</button>
+      <button class="exp-tab" data-exp="1">Translation</button>
+      <button class="exp-tab" data-exp="2">Market Data</button>
+    </div>
+
+    <!-- Scenario 0: Legal Research -->
+    <div class="exp-scenario" data-scenario="0" data-winner="0">
+      <div class="exp-stage">
+        <div class="exp-task">Your <strong>legal research bot</strong> needs to hire a research service. Three agents offer the work at different prices.</div>
+        <div class="exp-cards">
+          <div class="exp-card" data-card="0">
+            <div class="exp-card-name">LexAgent</div>
+            <div class="exp-card-price">$15 / query</div>
+            <div class="exp-card-score"><span class="exp-card-num" style="color:var(--green)">78</span><span class="exp-card-tier" style="color:var(--green)">Trusted</span></div>
+            <div class="exp-card-stat">6-month history &middot; 43 counterparties</div>
+          </div>
+          <div class="exp-card" data-card="1">
+            <div class="exp-card-name">CaseFinder</div>
+            <div class="exp-card-price">$8 / query</div>
+            <div class="exp-card-score"><span class="exp-card-num" style="color:var(--orange)">23</span><span class="exp-card-tier" style="color:var(--orange)">Emerging</span></div>
+            <div class="exp-card-stat">2-week history &middot; 3 counterparties</div>
+          </div>
+          <div class="exp-card" data-card="2">
+            <div class="exp-card-name">LawBot99</div>
+            <div class="exp-card-price">$5 / query</div>
+            <div class="exp-card-score"><span class="exp-card-num" style="color:var(--text-muted)">9</span><span class="exp-card-tier" style="color:var(--text-muted)">Unverified</span></div>
+            <div class="exp-card-stat">Created yesterday &middot; 0 completed jobs</div>
+          </div>
+        </div>
+        <div class="exp-result"><strong>LexAgent selected.</strong> Consistent 6-month history with 43 unique counterparties, no integrity flags. The cheapest option was created yesterday with zero history &mdash; price isn't everything.</div>
+      </div>
+    </div>
+
+    <!-- Scenario 1: Translation -->
+    <div class="exp-scenario" data-scenario="1" data-winner="2">
+      <div class="exp-stage">
+        <div class="exp-task">Your <strong>content bot</strong> needs a translation service for a product launch. Three translation agents are available.</div>
+        <div class="exp-cards">
+          <div class="exp-card" data-card="0">
+            <div class="exp-card-name">TranslateAI</div>
+            <div class="exp-card-price">$0.02 / word</div>
+            <div class="exp-card-score"><span class="exp-card-num" style="color:var(--yellow)">64</span><span class="exp-card-tier" style="color:var(--yellow)">Established</span></div>
+            <div class="exp-card-stat">3-month history &middot; 18 counterparties</div>
+          </div>
+          <div class="exp-card" data-card="1">
+            <div class="exp-card-name">PolyGlot</div>
+            <div class="exp-card-price">$0.01 / word</div>
+            <div class="exp-card-score"><span class="exp-card-num" style="color:var(--text-muted)">14</span><span class="exp-card-tier" style="color:var(--text-muted)">Unverified</span></div>
+            <div class="exp-card-stat">Created 3 days ago &middot; 1 counterparty</div>
+          </div>
+          <div class="exp-card" data-card="2">
+            <div class="exp-card-name">LingoPro</div>
+            <div class="exp-card-price">$0.03 / word</div>
+            <div class="exp-card-score"><span class="exp-card-num" style="color:var(--green)">82</span><span class="exp-card-tier" style="color:var(--green)">Trusted</span></div>
+            <div class="exp-card-stat">8-month history &middot; 67 counterparties</div>
+          </div>
+        </div>
+        <div class="exp-result"><strong>LingoPro selected.</strong> Highest score with strong confidence. PolyGlot's wallet was created 3 days ago &mdash; insufficient history to trust with a product launch.</div>
+      </div>
+    </div>
+
+    <!-- Scenario 2: Market Data -->
+    <div class="exp-scenario" data-scenario="2" data-winner="1">
+      <div class="exp-stage">
+        <div class="exp-task">Your <strong>trading bot</strong> needs a market data feed. Three aggregator agents are available.</div>
+        <div class="exp-cards">
+          <div class="exp-card" data-card="0">
+            <div class="exp-card-name">DataStream</div>
+            <div class="exp-card-price">$0.05 / call</div>
+            <div class="exp-card-score"><span class="exp-card-num" style="color:var(--orange)">41</span><span class="exp-card-tier" style="color:var(--orange)">Emerging</span></div>
+            <div class="exp-card-stat">1-month history &middot; 6 counterparties</div>
+            <div class="exp-card-flag">&#9888; sybil_risk</div>
+          </div>
+          <div class="exp-card" data-card="1">
+            <div class="exp-card-name">MarketPulse</div>
+            <div class="exp-card-price">$0.10 / call</div>
+            <div class="exp-card-score"><span class="exp-card-num" style="color:var(--green)">71</span><span class="exp-card-tier" style="color:var(--green)">Established</span></div>
+            <div class="exp-card-stat">5-month history &middot; 31 counterparties</div>
+          </div>
+          <div class="exp-card" data-card="2">
+            <div class="exp-card-name">AlphaFeed</div>
+            <div class="exp-card-price">$0.08 / call</div>
+            <div class="exp-card-score"><span class="exp-card-num" style="color:var(--yellow)">55</span><span class="exp-card-tier" style="color:var(--yellow)">Established</span></div>
+            <div class="exp-card-stat">4-month history &middot; 22 counterparties</div>
+          </div>
+        </div>
+        <div class="exp-result"><strong>MarketPulse selected.</strong> DataStream was flagged &mdash; its wallet shares a funding source with 12 other wallets, indicating possible Sybil activity. Integrity matters more than price.</div>
+      </div>
+    </div>
+
+    <div class="exp-ctrl">
+      <div class="exp-dot active" data-exp-dot="0"></div>
+      <div class="exp-dot" data-exp-dot="1"></div>
+      <div class="exp-dot" data-exp-dot="2"></div>
+      <button class="exp-replay" id="expReplay">&#8635; Replay</button>
+    </div>
+  </div>
+</div>
+
+<!-- PLAIN ENGLISH -->
 <div class="sec">
-  <div class="sec-label">The Problem</div>
-  <div class="sec-title">Who do you trust with your agent's wallet?</div>
-  <div class="sec-desc"><a href="https://www.x402.org/" target="_blank">x402</a> lets AI agents pay each other with USDC. But neither side has a trust signal &mdash; no credit score, no review history, no identity layer. DJD Agent Score indexes on-chain settlements on Base and scores every wallet across 5 dimensions. It's the credit score for the autonomous agent economy.</div>
-  <div class="grid2">
-    <div class="card"><div class="clbl r">Without a score</div><h3>Agent A sends $50 USDC to Agent B for a task.</h3><p>Agent B was created yesterday, has no meaningful history, and shares a funding source with dozens of other wallets. Agent A has no way to know this. The money is gone. The task never completes.</p></div>
-    <div class="card"><div class="clbl g">With DJD Agent Score</div><h3>Agent A queries Agent B's score first.</h3><p>Low score. Unverified tier. Zero confidence. Recommendation: insufficient history. Integrity flags raised. Agent A doesn't transact. $50 saved in milliseconds.</p></div>
+  <div class="sec-label">What Is This?</div>
+  <div class="sec-title">The reference-check for AI agents</div>
+  <div class="plain">
+    <p>In the real world, before you hire someone you've never met, you check their references. <strong>DJD Agent Score is the reference-check for AI programs that pay other AI programs.</strong></p>
+    <p>Your AI agent sends us a wallet address. We look at every transaction that wallet has ever made on Base. We produce a score from 0 to 100 and a recommendation: <strong>proceed</strong>, <strong>use caution</strong>, or <strong>don't transact</strong>. One API call, under 200ms.</p>
   </div>
 </div>
 
-<!-- HOW IT WORKS -->
-<div class="sec" id="methodology">
-  <div class="sec-label">How It Works</div>
-  <div class="sec-title">What the score measures</div>
-  <div class="sec-desc">Every score request triggers a multi-stage pipeline. The system first checks for manipulation, then scores the wallet across multiple behavioral dimensions, and finally generates a confidence interval and actionable recommendation.</div>
-  <div class="pipeline">
-    <div class="pipe-step"><div class="pipe-num">1</div><div class="pipe-body"><div class="pipe-title">Integrity Screening</div><div class="pipe-desc">Before any scoring happens, the wallet's transaction graph is analyzed for Sybil patterns (fake identity clusters) and gaming behavior (attempts to artificially inflate a score). Multiple independent detection signals run in parallel. Wallets that fail integrity checks face score caps and penalties that cannot be overcome by volume alone.</div><span class="pipe-tag integrity">Integrity</span></div></div>
-    <div class="pipe-step"><div class="pipe-num">2</div><div class="pipe-body"><div class="pipe-title">Behavioral Analysis</div><div class="pipe-desc">The wallet's on-chain activity is evaluated across multiple weighted dimensions. Each dimension answers a different question about the wallet's trustworthiness. Dimension weights are proprietary and reflect our research into which behavioral signals are most predictive of agent reliability.</div><span class="pipe-tag scoring">Scoring</span></div></div>
-    <div class="pipe-step"><div class="pipe-num">3</div><div class="pipe-body"><div class="pipe-title">Integrity Adjustment</div><div class="pipe-desc">Raw dimension scores are adjusted based on integrity screening results. Flagged wallets receive caps and penalties applied to the relevant dimensions. This ensures that wallets engaged in manipulation cannot achieve high scores regardless of other activity.</div><span class="pipe-tag integrity">Integrity</span></div></div>
-    <div class="pipe-step"><div class="pipe-num">4</div><div class="pipe-body"><div class="pipe-title">Composite Score</div><div class="pipe-desc">Adjusted dimension scores are combined into a single 0-100 composite using proprietary weighting. The composite is the headline number returned in every API response.</div><span class="pipe-tag scoring">Score</span></div></div>
-    <div class="pipe-step"><div class="pipe-num">5</div><div class="pipe-body"><div class="pipe-title">Confidence &amp; Recommendation</div><div class="pipe-desc">A confidence interval (0.0 to 1.0) is calculated based on the quantity and quality of available data. A recommendation is generated using priority-ordered logic that considers integrity flags, data sufficiency, and score thresholds. This is the output your agent should use to make decisions.</div><span class="pipe-tag meta">Output</span></div></div>
+<!-- CONCRETE EXAMPLES -->
+<div class="sec">
+  <div class="sec-label">Real Scenarios</div>
+  <div class="sec-title">How agents use the score</div>
+  <div class="sec-desc">Three situations where a trust score changes the outcome.</div>
+  <div class="examples">
+    <div class="example">
+      <div class="example-label g">Proceed</div>
+      <h3>Law firm hires a research agent</h3>
+      <p>A law firm's research agent needs to hire a legal-research service agent it's never used before. It checks the score first.</p>
+      <div class="example-out">
+        <span class="eo-s" style="color:var(--green)">Score: 72</span> &middot; Established
+        <span class="eo-r" style="color:var(--green)">&#10003; Recommendation: proceed</span>
+      </div>
+    </div>
+    <div class="example">
+      <div class="example-label y">Caution</div>
+      <h3>Content bot needs a translator</h3>
+      <p>A content-creation agent needs to pay a translation agent for a product launch. The cheapest option looks suspicious.</p>
+      <div class="example-out">
+        <span class="eo-s" style="color:var(--text-muted)">Score: 14</span> &middot; Unverified
+        <span class="eo-r" style="color:var(--text-muted)">&#10007; Recommendation: insufficient_history</span>
+      </div>
+    </div>
+    <div class="example">
+      <div class="example-label r">Flagged</div>
+      <h3>Trading agent vets an aggregator</h3>
+      <p>A trading agent considers routing an order through a new aggregator agent. The score catches something humans might miss.</p>
+      <div class="example-out">
+        <span class="eo-s" style="color:var(--orange)">Score: 41</span> &middot; Emerging &middot; <span style="color:var(--red)">&#9888; sybil_risk</span>
+        <span class="eo-r" style="color:var(--red)">&#10007; Recommendation: flagged_for_review</span>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- DIMENSIONS -->
+<!-- SCORING DIMENSIONS -->
 <div class="sec" id="dimensions">
   <div class="sec-label">Scoring Dimensions</div>
-  <div class="sec-title">Four questions about every wallet</div>
-  <div class="sec-desc">Each dimension evaluates a different facet of on-chain behavior. Dimensions are independently scored and then combined using proprietary weights.</div>
+  <div class="sec-title">Five questions about every wallet</div>
+  <div class="sec-desc">Each dimension evaluates a different facet of on-chain behavior, then they're combined into a single composite score. Model v2.1.0.</div>
   <div class="grid2">
-    <div class="card"><div class="dim-hdr"><h3>Reliability</h3></div><div class="dim-q">"Does this agent follow through?"</div><p>Evaluates consistency and predictability of transaction behavior over time. Wallets with regular, sustained activity patterns across diverse counterparties are considered more reliable than those with erratic or concentrated behavior.</p></div>
-    <div class="card"><div class="dim-hdr"><h3>Viability</h3></div><div class="dim-q">"Can this agent actually pay?"</div><p>Assesses financial health and sustainability. Considers the relationship between a wallet's balance, its transaction volume, and how its financial position changes over time. Wallets that maintain healthy, stable positions score higher.</p></div>
-    <div class="card"><div class="dim-hdr"><h3>Identity</h3></div><div class="dim-q">"Is this a real, unique agent?"</div><p>Measures the wallet's uniqueness and organic legitimacy within the broader transaction network. Evaluates relationship diversity, network structure, and the absence of patterns associated with manufactured identities.</p></div>
-    <div class="card"><div class="dim-hdr"><h3>Capability</h3></div><div class="dim-q">"Is this agent economically active?"</div><p>Gauges overall economic footprint and network influence. Considers transaction volume, activity breadth, and the wallet's role within the wider agent economy. Larger, more connected participants score higher.</p></div>
+    <div class="card">
+      <h3>Reliability</h3>
+      <div class="dim-q">"Does this agent follow through?"</div>
+      <p>Evaluates consistency and predictability of transaction behavior over time. Wallets with regular, sustained activity across diverse counterparties score higher than erratic or concentrated ones.</p>
+      <div class="dim-analogy">Like checking someone's track record &mdash; do they consistently show up and do good work?</div>
+    </div>
+    <div class="card">
+      <h3>Viability</h3>
+      <div class="dim-q">"Can this agent actually pay?"</div>
+      <p>Assesses financial health and sustainability. Considers balance relative to transaction volume and how the wallet's position changes over time. Stable, healthy positions score higher.</p>
+      <div class="dim-analogy">Like checking if a contractor is financially stable enough to complete your project.</div>
+    </div>
+    <div class="card">
+      <h3>Identity</h3>
+      <div class="dim-q">"Is this a real, unique agent?"</div>
+      <p>Measures the wallet's uniqueness and organic legitimacy. Evaluates relationship diversity, network structure, and the absence of patterns associated with manufactured identities.</p>
+      <div class="dim-analogy">Like verifying someone is who they say they are &mdash; not five fake profiles run by one person.</div>
+    </div>
+    <div class="card">
+      <h3>Behavior</h3>
+      <div class="dim-q">"Does this agent act like a real one?"</div>
+      <p>Analyzes transaction timing patterns, consistency, and anomaly signals. Wallets that transact at regular intervals with organic timing patterns score higher than those with erratic bursts or suspiciously uniform activity.</p>
+      <div class="dim-analogy">Like watching how someone works day-to-day &mdash; genuine agents have natural rhythms, not robotic scripts.</div>
+    </div>
+    <div class="card">
+      <h3>Capability</h3>
+      <div class="dim-q">"Is this agent economically active?"</div>
+      <p>Gauges x402 revenue earned (log-scaled), services operated, and the wallet's role within the wider agent economy. Agents that earn through x402 micropayments build verifiable economic track records.</p>
+      <div class="dim-analogy">Like checking how much business experience someone has &mdash; more connections and activity means more established.</div>
+    </div>
   </div>
 </div>
 
-<!-- INTEGRITY -->
+<!-- HOW WE CATCH FAKES -->
 <div class="sec">
   <div class="sec-label">Integrity Systems</div>
-  <div class="sec-title">How we detect manipulation</div>
-  <div class="sec-desc">Two proprietary detection systems run before dimension scoring. If either flags a wallet, score caps and penalties apply automatically.</div>
+  <div class="sec-title">How we catch fakes</div>
+  <div class="sec-desc">Two proprietary detection systems run as part of the scoring pipeline. Flags from either system apply multiplicative penalties that stack &mdash; the integrity multiplier floors at 0.10 (90% max penalty).</div>
   <div class="grid2">
     <div class="card">
-      <div class="clbl r">Sybil Detection</div>
+      <div class="clbl r">Sybil Detection &mdash; "One person, many masks"</div>
       <h3>Catches fake identity clusters</h3>
-      <p>Analyzes the wallet's transaction graph for patterns consistent with coordinated inauthentic behavior: circular fund flows, artificial relationship structures, and wallet creation patterns that suggest a single operator controlling multiple identities. Multiple independent signals are evaluated. Any confirmed pattern triggers score restrictions.</p>
+      <p>Imagine discovering that five "different" freelancers you're considering all work from the same office, share the same bank account, and were all created last week. That's what Sybil detection catches on-chain: circular fund flows, artificial relationship structures, and wallet creation patterns that suggest one operator controlling multiple identities.</p>
     </div>
     <div class="card">
-      <div class="clbl o">Gaming Detection</div>
+      <div class="clbl o">Gaming Detection &mdash; "Cramming before the test"</div>
       <h3>Catches score manipulation</h3>
-      <p>Monitors for behavioral anomalies that suggest a wallet is trying to artificially inflate its score: sudden spikes in activity inconsistent with history, strategically timed balance changes, and patterns of activity that stop abruptly once a score threshold is reached. Each detection applies targeted penalties.</p>
+      <p>Like someone padding their resume right before an interview &mdash; sudden spikes of fake activity designed to look legitimate. We monitor for behavioral anomalies: activity inconsistent with history, strategically timed balance changes, and patterns that stop abruptly once a score threshold is reached. Each detection applies targeted penalties.</p>
     </div>
   </div>
 </div>
 
-<!-- TIERS -->
+<!-- THE OUTPUT -->
 <div class="sec">
-  <div class="sec-label">Output Format</div>
-  <div class="sec-title">Tiers, confidence, and recommendations</div>
-  <div class="sec-desc">Every API response includes the composite score, a tier label, a confidence interval, and an actionable recommendation.</div>
-  <div class="tiers">
-    <div class="tier-seg t-unv"><div class="tn">Unverified</div><div class="tr">Low</div></div>
-    <div class="tier-seg t-emg"><div class="tn">Emerging</div><div class="tr">&darr;</div></div>
-    <div class="tier-seg t-est"><div class="tn">Established</div><div class="tr">&middot;</div></div>
-    <div class="tier-seg t-tru"><div class="tn">Trusted</div><div class="tr">&uarr;</div></div>
-    <div class="tier-seg t-eli"><div class="tn">Elite</div><div class="tr">High</div></div>
-  </div>
-  <div class="info" style="margin-top:16px">
-    <strong>Confidence (0.0 to 1.0):</strong> How much data backs the score. A high score with high confidence is meaningful. A high score with low confidence means the wallet is under-observed and the score may shift significantly as more data arrives.<br><br>
-    <strong>Recommendation:</strong> The actionable output. Possible values: <span class="mono" style="color:var(--red)">flagged_for_review</span> (integrity concern detected), <span class="mono" style="color:var(--text-muted)">insufficient_history</span> (not enough data to score meaningfully), <span class="mono" style="color:var(--red)">high_risk</span> (low score), <span class="mono" style="color:var(--green)">proceed</span> (score and confidence support transacting), <span class="mono" style="color:var(--yellow)">proceed_with_caution</span> (mixed signals). The thresholds for each recommendation are proprietary and may be adjusted across model versions.
-  </div>
-</div>
-
-<!-- MODEL -->
-<div class="sec">
-  <div class="sec-label">Transparency</div>
-  <div class="sec-title">Model versioning</div>
-  <div class="info">
-    <strong>Scores update as new data arrives.</strong> The system continuously indexes blockchain activity and periodically refreshes scored wallets. If a wallet's behavior changes, its score changes on the next refresh cycle.<br><br>
-    <strong>The model itself evolves manually.</strong> Dimension weights, scoring thresholds, and integrity parameters are adjusted based on outcome data and ecosystem feedback. Every adjustment creates a new model version. Every API response includes a <span class="mono">modelVersion</span> field so you always know which version produced the score.<br><br>
-    <strong>Outcome tracking is built in.</strong> The system monitors what happens after score lookups: did a transaction follow? Did a fraud report come in? This data informs model tuning decisions over time. Your usage makes the model better.
+  <div class="sec-label">The Output</div>
+  <div class="sec-title">What you get back</div>
+  <div class="sec-desc">Every API response includes these key fields. Together they tell your agent everything it needs to make a decision.</div>
+  <div class="output-grid">
+    <div class="output-card">
+      <h3>Score</h3>
+      <div class="output-sub">0 &ndash; 100</div>
+      <p>The headline number. A single composite of all five scoring dimensions, adjusted for integrity. Higher is better.</p>
+    </div>
+    <div class="output-card">
+      <h3>Tier</h3>
+      <div class="output-sub">5 levels</div>
+      <p>A human-readable label derived from the score. Makes it easy to set thresholds without thinking about numbers.</p>
+      <div class="tiers" style="margin-top:12px">
+        <div class="tier-seg t-unv"><div class="tn">Unverified</div></div>
+        <div class="tier-seg t-emg"><div class="tn">Emerging</div></div>
+        <div class="tier-seg t-est"><div class="tn">Established</div></div>
+        <div class="tier-seg t-tru"><div class="tn">Trusted</div></div>
+        <div class="tier-seg t-eli"><div class="tn">Elite</div></div>
+      </div>
+    </div>
+    <div class="output-card">
+      <h3>Confidence</h3>
+      <div class="output-sub">0.0 &ndash; 1.0</div>
+      <p>How much data backs the score. A high score with high confidence is meaningful. A high score with low confidence means the wallet is under-observed and may shift.</p>
+    </div>
+    <div class="output-card">
+      <h3>Recommendation</h3>
+      <div class="output-sub">actionable output</div>
+      <p>The field your agent should use to make decisions. Uses priority-ordered logic combining integrity flags, data sufficiency, and score thresholds.</p>
+      <div class="output-vals">
+        <span class="output-val" style="color:var(--green);background:var(--green-dim)">proceed</span>
+        <span class="output-val" style="color:var(--yellow);background:var(--yellow-dim)">proceed_with_caution</span>
+        <span class="output-val" style="color:var(--text-muted);background:rgba(71,85,105,.18)">insufficient_history</span>
+        <span class="output-val" style="color:var(--red);background:var(--red-dim)">high_risk</span>
+        <span class="output-val" style="color:var(--red);background:var(--red-dim)">flagged_for_review</span>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -364,7 +591,7 @@ curl <span class="s">"https://djd-agent-score.fly.dev/v1/score/basic?wallet=0x..
 <span class="c">#   "tier": "Established",</span>
 <span class="c">#   "confidence": 0.42,</span>
 <span class="c">#   "recommendation": "proceed_with_caution",</span>
-<span class="c">#   "modelVersion": "1.0.0"</span>
+<span class="c">#   "modelVersion": "2.1.0"</span>
 <span class="c"># }</span></pre></div>
 </div>
 
@@ -399,7 +626,7 @@ curl <span class="s">"https://djd-agent-score.fly.dev/v1/score/basic?wallet=0x..
 <div class="sec" id="feedback">
   <div class="sec-label">Improve the Model</div>
   <div class="sec-title">Submit feedback</div>
-  <div class="sec-desc">This is v1. Your feedback directly influences how we tune the model, adjust detection systems, and prioritize new features. Every submission is reviewed.</div>
+  <div class="sec-desc">Your feedback directly influences how we tune the model, adjust detection systems, and prioritize new features. Every submission is reviewed.</div>
   <div class="fb">
     <div class="fb-row">
       <label>Feedback Type</label>
@@ -430,9 +657,11 @@ curl <span class="s">"https://djd-agent-score.fly.dev/v1/score/basic?wallet=0x..
     <button class="fb-submit" onclick="submitFeedback()">Submit Feedback</button>
     <div class="fb-msg" id="fbMsg"></div>
   </div>
-  <div class="info" style="margin-top:16px">
-    <strong>What happens with feedback:</strong> Score accuracy reports are logged against the wallet and reviewed during model tuning cycles. Integrity reports are cross-referenced with our detection systems. Feature requests are prioritized by frequency and impact. You're helping build the trust standard for the agent economy.
-  </div>
+</div>
+
+<!-- ONE-SENTENCE SUMMARY -->
+<div class="summary">
+  <p>Before your AI agent sends money, it asks us: <em>"Is this wallet legit?"</em> We check the blockchain and answer in milliseconds.</p>
 </div>
 
 <!-- FOOTER -->
@@ -452,52 +681,68 @@ curl <span class="s">"https://djd-agent-score.fly.dev/v1/score/basic?wallet=0x..
 const A=window.location.origin;
 const fmt=n=>n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':String(n);
 
+/* DOM helper — avoids unsafe HTML injection patterns */
+function mkEl(tag, cls, text) {
+  var el = document.createElement(tag);
+  if (cls) el.className = cls;
+  if (text !== undefined) el.textContent = String(text);
+  return el;
+}
+
+/* ── Stats ── */
 async function loadStats(){
-  try{const d=await(await fetch(A+'/health')).json();
+  try{var d=await(await fetch(A+'/health')).json();
   document.getElementById('sW').textContent=fmt(d.database.indexedWallets);
   document.getElementById('sT').textContent=fmt(d.database.totalTransactionsIndexed);
   document.getElementById('sQ').textContent=fmt(d.database.totalQueryLogEntries);
   document.getElementById('sS').textContent=d.indexer.running?'LIVE':'DOWN';
   }catch(e){document.getElementById('sS').textContent='ERR'}}
 
+/* ── Leaderboard (DOM-built, no raw HTML injection) ── */
 async function loadLB(){
-  try{const d=await(await fetch(A+'/v1/leaderboard')).json();
-  const t=document.getElementById('lbT'),e=document.getElementById('lbE');
+  try{var d=await(await fetch(A+'/v1/leaderboard')).json();
+  var t=document.getElementById('lbT'),e=document.getElementById('lbE');
   if(!d.leaderboard||!d.leaderboard.length){e.textContent='No scored wallets yet. Indexer is accumulating data.';return}
   e.style.display='none';
-  d.leaderboard.slice(0,10).forEach((w,i)=>{
-    const r=document.createElement('div');r.className='lb-r';
-    const tn=w.tier||'Unverified';
-    const tc={Elite:'var(--accent)',Trusted:'var(--green)',Established:'var(--yellow)',Emerging:'var(--orange)'}[tn]||'var(--text-muted)';
-    const sc=w.score>=75?'var(--green)':w.score>=50?'var(--yellow)':w.score>=25?'var(--orange)':'var(--text-muted)';
-    const badges=(w.isRegistered?'<span class="lb-badge reg">REG</span>':'')+(w.githubVerified?'<span class="lb-badge gh">GH</span>':'');
-    r.innerHTML=`<div class="lb-rk">${i+1}</div><div class="lb-w">${w.wallet.slice(0,6)}...${w.wallet.slice(-4)}${badges}</div><div class="lb-s" style="color:${sc}">${w.score}</div><div class="lb-t" style="color:${tc}">${tn}</div>`;
-    t.appendChild(r)});
+  d.leaderboard.slice(0,10).forEach(function(w,i){
+    var row=mkEl('div','lb-r');
+    row.appendChild(mkEl('div','lb-rk',i+1));
+    var wDiv=mkEl('div','lb-w',w.wallet.slice(0,6)+'...'+w.wallet.slice(-4));
+    if(w.isRegistered){wDiv.appendChild(mkEl('span','lb-badge reg','REG'))}
+    if(w.githubVerified){wDiv.appendChild(mkEl('span','lb-badge gh','GH'))}
+    row.appendChild(wDiv);
+    var sc=w.score>=75?'var(--green)':w.score>=50?'var(--yellow)':w.score>=25?'var(--orange)':'var(--text-muted)';
+    var sDiv=mkEl('div','lb-s',w.score);sDiv.style.color=sc;row.appendChild(sDiv);
+    var tn=w.tier||'Unverified';
+    var tc={Elite:'var(--accent)',Trusted:'var(--green)',Established:'var(--yellow)',Emerging:'var(--orange)'}[tn]||'var(--text-muted)';
+    var tDiv=mkEl('div','lb-t',tn);tDiv.style.color=tc;row.appendChild(tDiv);
+    t.appendChild(row)});
   }catch(e){document.getElementById('lbE').textContent='Could not load leaderboard.'}}
 
-const sCol=s=>s>=90?'var(--accent)':s>=75?'var(--green)':s>=50?'var(--yellow)':s>=25?'var(--orange)':'var(--text-muted)';
-const tCls=t=>'stt-'+(t||'unverified').toLowerCase();
-const rCls=r=>({proceed:'rc-proceed',proceed_with_caution:'rc-caution',insufficient_history:'rc-insufficient',high_risk:'rc-high-risk',flagged_for_review:'rc-flagged'})[r]||'rc-insufficient';
+/* ── Score Lookup ── */
+var sCol=function(s){return s>=90?'var(--accent)':s>=75?'var(--green)':s>=50?'var(--yellow)':s>=25?'var(--orange)':'var(--text-muted)'};
+var tCls=function(t){return 'stt-'+(t||'unverified').toLowerCase()};
+var rCls=function(r){return({proceed:'rc-proceed',proceed_with_caution:'rc-caution',insufficient_history:'rc-insufficient',high_risk:'rc-high-risk',flagged_for_review:'rc-flagged'})[r]||'rc-insufficient'};
 
-async function doScore(pushState=true){
-  const i=document.getElementById('wI'),b=document.getElementById('sB'),r=document.getElementById('res'),e=document.getElementById('eM');
-  const w=i.value.trim();e.classList.remove('vis');r.classList.remove('vis');
+async function doScore(pushState){
+  if(pushState===undefined)pushState=true;
+  var i=document.getElementById('wI'),b=document.getElementById('sB'),r=document.getElementById('res'),e=document.getElementById('eM');
+  var w=i.value.trim();e.classList.remove('vis');r.classList.remove('vis');
   if(!w||!w.startsWith('0x')||w.length!==42){e.textContent='Enter a valid 42-character wallet address starting with 0x';e.classList.add('vis');return}
   b.disabled=true;b.textContent='Scoring...';
   if(pushState)history.pushState({},'',location.pathname+'?wallet='+w+'#lookup');
-  try{const resp=await fetch(A+'/v1/score/basic?wallet='+w);
+  try{var resp=await fetch(A+'/v1/score/basic?wallet='+w);
   if(!resp.ok)throw new Error('API returned '+resp.status);
-  const d=await resp.json();
-  const s=d.score??0,t=d.tier||'Unverified',c=d.confidence??0,rec=d.recommendation||'insufficient_history';
+  var d=await resp.json();
+  var s=d.score??0,t=d.tier||'Unverified',c=d.confidence??0,rec=d.recommendation||'insufficient_history';
   document.getElementById('rV').textContent=s;document.getElementById('rV').style.color=sCol(s);
-  const te=document.getElementById('rT');te.textContent=t;te.className='sc-tier '+tCls(t);
+  var te=document.getElementById('rT');te.textContent=t;te.className='sc-tier '+tCls(t);
   document.getElementById('rC').textContent='Confidence: '+(c*100).toFixed(0)+'%';
-  const re=document.getElementById('rR');re.textContent=rec.replace(/_/g,' ');re.className='sc-rec '+rCls(rec);
-  const bar=document.getElementById('rB');bar.style.width=s+'%';bar.style.background=sCol(s);
+  var re=document.getElementById('rR');re.textContent=rec.replace(/_/g,' ');re.className='sc-rec '+rCls(rec);
+  var bar=document.getElementById('rB');bar.style.width=s+'%';bar.style.background=sCol(s);
   document.getElementById('rW').textContent=w;r.classList.add('vis');
-  // Badge embed
-  const badgeUrl=A+'/v1/badge/'+w+'.svg';
-  const mdEmbed='![DJD Score]('+badgeUrl+')';
+  var badgeUrl=A+'/v1/badge/'+w+'.svg';
+  var mdEmbed='![DJD Score]('+badgeUrl+')';
   document.getElementById('rBadgeImg').src=badgeUrl;
   document.getElementById('rBadgeCode').value=mdEmbed;
   document.getElementById('rBadge').style.display='block';
@@ -505,41 +750,132 @@ async function doScore(pushState=true){
   b.disabled=false;b.textContent='Score'}
 
 function copyBadge(){
-  const inp=document.getElementById('rBadgeCode');
-  navigator.clipboard.writeText(inp.value).then(()=>{
-    const btn=document.getElementById('copyBtn');btn.textContent='copied!';
-    setTimeout(()=>btn.textContent='copy',1800);
-  }).catch(()=>{inp.select();document.execCommand('copy')});
+  var inp=document.getElementById('rBadgeCode');
+  navigator.clipboard.writeText(inp.value).then(function(){
+    var btn=document.getElementById('copyBtn');btn.textContent='copied!';
+    setTimeout(function(){btn.textContent='copy'},1800);
+  }).catch(function(){inp.select();document.execCommand('copy')});
 }
 
+/* ── Feedback (uses textContent — no HTML injection) ── */
 function submitFeedback(){
-  const type=document.getElementById('fbType').value;
-  const wallet=document.getElementById('fbWallet').value.trim();
-  const details=document.getElementById('fbDetails').value.trim();
-  const contact=document.getElementById('fbContact').value.trim();
-  const msg=document.getElementById('fbMsg');
+  var type=document.getElementById('fbType').value;
+  var wallet=document.getElementById('fbWallet').value.trim();
+  var details=document.getElementById('fbDetails').value.trim();
+  var contact=document.getElementById('fbContact').value.trim();
+  var msg=document.getElementById('fbMsg');
   if(!type){msg.textContent='Please select a feedback category.';msg.className='fb-msg vis bad';return}
   if(!details){msg.textContent='Please provide details.';msg.className='fb-msg vis bad';return}
-  const entry={type,wallet,details,contact,ts:new Date().toISOString()};
-  const subject=encodeURIComponent('[DJD Feedback] '+type);
-  const body=encodeURIComponent('Type: '+type+'\nWallet: '+(wallet||'N/A')+'\nContact: '+(contact||'N/A')+'\nTimestamp: '+entry.ts+'\n\nDetails:\n'+details);
+  var entry={type:type,wallet:wallet,details:details,contact:contact,ts:new Date().toISOString()};
+  var subject=encodeURIComponent('[DJD Feedback] '+type);
+  var body=encodeURIComponent('Type: '+type+'\nWallet: '+(wallet||'N/A')+'\nContact: '+(contact||'N/A')+'\nTimestamp: '+entry.ts+'\n\nDetails:\n'+details);
   window.open('mailto:feedback@djd-agent-score.fly.dev?subject='+subject+'&body='+body,'_blank');
-  msg.innerHTML='Feedback recorded. A compose window should open. If not, email <strong>feedback@djd-agent-score.fly.dev</strong> directly.';
+  msg.textContent='Feedback recorded. A compose window should open. If not, email feedback@djd-agent-score.fly.dev directly.';
   msg.className='fb-msg vis ok';
   document.getElementById('fbType').value='';document.getElementById('fbWallet').value='';
   document.getElementById('fbDetails').value='';document.getElementById('fbContact').value='';
 }
 
-document.getElementById('wI').addEventListener('keydown',e=>{if(e.key==='Enter')doScore()});
+/* ── Animated Explainer ── */
+var expIdx=0, expTimers=[];
+
+function clearExpTimers(){
+  expTimers.forEach(function(t){clearTimeout(t)});
+  expTimers=[];
+}
+
+function expAt(ms, fn){
+  expTimers.push(setTimeout(fn, ms));
+}
+
+function switchScenario(idx){
+  clearExpTimers();
+  expIdx=idx;
+
+  /* Reset all scenarios */
+  document.querySelectorAll('.exp-scenario').forEach(function(s){
+    s.style.display='none';
+    s.querySelectorAll('.exp-card').forEach(function(c){
+      c.classList.remove('vis','scanning','selected','rejected');
+    });
+    s.querySelector('.exp-result').classList.remove('vis');
+  });
+
+  /* Activate current */
+  var sc=document.querySelector('[data-scenario="'+idx+'"]');
+  sc.style.display='block';
+  var winnerIdx=parseInt(sc.dataset.winner);
+
+  /* Update tabs & dots */
+  document.querySelectorAll('.exp-tab').forEach(function(t,i){
+    t.classList.toggle('active',i===idx);
+  });
+  document.querySelectorAll('.exp-dot').forEach(function(d,i){
+    d.classList.toggle('active',i===idx);
+  });
+
+  var cards=sc.querySelectorAll('.exp-card');
+  var result=sc.querySelector('.exp-result');
+
+  /* Phase 1: Cards fade in (staggered) */
+  cards.forEach(function(c,i){
+    expAt(i*300, function(){c.classList.add('vis')});
+  });
+
+  /* Phase 2: Scanning sweep */
+  cards.forEach(function(c,i){
+    expAt(1500+i*1200, function(){c.classList.add('scanning')});
+    expAt(1500+i*1200+800, function(){c.classList.remove('scanning')});
+  });
+
+  /* Phase 3: Decision */
+  expAt(5500, function(){
+    cards.forEach(function(c,i){
+      if(i===winnerIdx) c.classList.add('selected');
+      else c.classList.add('rejected');
+    });
+  });
+
+  /* Phase 4: Result narrative */
+  expAt(6500, function(){result.classList.add('vis')});
+
+  /* Auto-advance after pause */
+  expAt(12000, function(){switchScenario((idx+1)%3)});
+}
+
+/* Tab click handlers */
+document.querySelectorAll('.exp-tab').forEach(function(tab){
+  tab.addEventListener('click', function(){
+    switchScenario(parseInt(this.dataset.exp));
+  });
+});
+
+/* Dot click handlers */
+document.querySelectorAll('.exp-dot').forEach(function(dot){
+  dot.addEventListener('click', function(){
+    switchScenario(parseInt(this.dataset.expDot));
+  });
+});
+
+/* Replay button */
+document.getElementById('expReplay').addEventListener('click', function(){
+  switchScenario(expIdx);
+});
+
+/* ── Init ── */
+document.getElementById('wI').addEventListener('keydown',function(e){if(e.key==='Enter')doScore()});
 loadStats();loadLB();setInterval(loadStats,30000);
 
-// Auto-score if ?wallet= param is present (enables shareable score links)
-const qw=new URLSearchParams(location.search).get('wallet');
+/* Start the explainer */
+switchScenario(0);
+
+/* Auto-score if ?wallet= param is present */
+var qw=new URLSearchParams(location.search).get('wallet');
 if(qw){document.getElementById('wI').value=qw;doScore(false);}
 
-// Replace code-example domain with actual current origin for local dev
+/* Replace code-example domain with actual origin for local dev */
 if(window.location.hostname==='localhost'){
-  document.querySelectorAll('pre .s').forEach(el=>{
+  document.querySelectorAll('pre .s').forEach(function(el){
     el.textContent=el.textContent.replace(/https:\/\/djd-agent-score\.fly\.dev/g,A);
   });
 }
