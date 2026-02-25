@@ -108,16 +108,19 @@ export function calcReliability(
   // v2.1 recalibration: switched to piecewiseLog for smoother scaling.
   // Breakpoints: 0→0, 1→3, 10→8, 50→14, 200→18, 1000→20
   // Previously cliff-based (1→3, 10→8, 100→15, 1000→20) which left big gaps.
-  const noncePts = nonce === 0
-    ? 0
-    : Math.round(piecewiseLog(nonce, [
-        [0, 0],
-        [1, 3],
-        [10, 8],
-        [50, 14],
-        [200, 18],
-        [1000, 20],
-      ]))
+  const noncePts =
+    nonce === 0
+      ? 0
+      : Math.round(
+          piecewiseLog(nonce, [
+            [0, 0],
+            [1, 3],
+            [10, 8],
+            [50, 14],
+            [200, 18],
+            [1000, 20],
+          ]),
+        )
   pts += noncePts
 
   // --- Service uptime proxy (up to 25 pts) ---
@@ -485,15 +488,17 @@ export function calcCapability(
   const totalRevenue = hasX402Data ? x402Revenue : usdcToFloat(data.totalInflows)
   let revPts = 0
   if (totalRevenue > 0) {
-    revPts = Math.round(piecewiseLog(totalRevenue, [
-      [0, 0],
-      [0.1, 5],
-      [1, 12],
-      [10, 22],
-      [50, 32],
-      [200, 42],
-      [500, 50],
-    ]))
+    revPts = Math.round(
+      piecewiseLog(totalRevenue, [
+        [0, 0],
+        [0.1, 5],
+        [1, 12],
+        [10, 22],
+        [50, 32],
+        [200, 42],
+        [500, 50],
+      ]),
+    )
   }
   pts += revPts
 
