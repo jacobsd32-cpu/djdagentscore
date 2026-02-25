@@ -44,8 +44,8 @@ describe('calcConfidence', () => {
     // txCount = 5 → 0.3 × 0.25 = 0.075 → rounds to 0.08
     expect(calcConfidence({ ...base, txCount: 5 })).toBeCloseTo(0.08, 1)
 
-    // txCount = 20 → 0.6 × 0.25 = 0.15
-    expect(calcConfidence({ ...base, txCount: 20 })).toBe(0.15)
+    // txCount = 20 → 0.625 × 0.25 = 0.15625 → rounds to 0.16
+    expect(calcConfidence({ ...base, txCount: 20 })).toBe(0.16)
 
     // txCount = 100 → 1.0 × 0.25 = 0.25
     expect(calcConfidence({ ...base, txCount: 100 })).toBe(0.25)

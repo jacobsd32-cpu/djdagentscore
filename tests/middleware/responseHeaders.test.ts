@@ -11,6 +11,6 @@ describe('responseHeadersMiddleware', () => {
 
     const res = await app.request('/test')
     expect(res.headers.get('X-DJD-Model-Version')).toBe(MODEL_VERSION)
-    expect(MODEL_VERSION).toBe('2.0.0')
+    expect(MODEL_VERSION).toBe('2.1.0')
   })
 })
