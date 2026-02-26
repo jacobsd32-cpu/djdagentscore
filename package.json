@@ -16,13 +16,15 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
+    "@x402/core": "^2.5.0",
+    "@x402/extensions": "^2.5.0",
+    "@x402/hono": "^2.5.0",
     "better-sqlite3": "^9.6.0",
     "hono": "^4.6.17",
     "insumer-verify": "^1.1.0",
     "pino": "^10.3.1",
     "uuid": "^10.0.0",
-    "viem": "^2.21.54",
-    "x402-hono": "0.3.0"
+    "viem": "^2.21.54"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
