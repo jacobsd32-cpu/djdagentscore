@@ -3,7 +3,10 @@ import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 import { cors } from 'hono/cors'
 import { bodyLimit } from 'hono/body-limit'
-import { paymentMiddleware, type Network } from 'x402-hono'
+import { paymentMiddlewareFromConfig } from '@x402/hono'
+import { HTTPFacilitatorClient } from '@x402/core/server'
+import type { Network } from '@x402/core/types'
+import { declareDiscoveryExtension } from '@x402/extensions/bazaar'
 
 import healthRoute from './routes/health.js'
 import scoreRoute from './routes/score.js'
@@ -70,10 +73,9 @@ if (process.env.NODE_ENV === 'production') {
 if (!process.env.GITHUB_TOKEN) {
   console.warn('[config] GITHUB_TOKEN not set — GitHub verification limited to 60 req/hr')
 }
-const FACILITATOR_URL = (
-  process.env.FACILITATOR_URL ?? 'https://x402.org/facilitator'
-) as `${string}://${string}`
-const NETWORK: Network = 'base'
+const FACILITATOR_URL = process.env.FACILITATOR_URL ?? 'https://x402.org/facilitator'
+const NETWORK: Network = 'eip155:8453' // Base mainnet (CAIP-2)
+const facilitatorClient = new HTTPFacilitatorClient({ url: FACILITATOR_URL })
 
 // ---------- App ----------
 
@@ -120,50 +122,168 @@ app.route('/v1/data/economy', economyRoute)  // free — ecosystem health metric
 app.route('/docs', docsRoute)                 // free — Swagger UI
 app.route('/metrics', metricsRoute)             // free — Prometheus metrics
 
-// ---------- x402 Payment Middleware ----------
+// ---------- x402 Payment Middleware (v2.5 + Bazaar Discovery) ----------
 // Protects paid endpoints. Free endpoints (leaderboard, health) are not listed so they pass through.
+// Each route now declares Bazaar discovery metadata so agents can find DJD via the x402 Bazaar.
 // Wrapped to skip x402 for valid API key authenticated requests (C2 fix).
 
-const x402Middleware = paymentMiddleware(
-  PAY_TO,
+const payment = (price: string) => ({
+  scheme: 'exact',
+  payTo: PAY_TO,
+  price,
+  network: NETWORK,
+})
+
+const x402Middleware = paymentMiddlewareFromConfig(
   {
     '/v1/score/full': {
-      price: '$0.10',
-      network: NETWORK,
-      config: { description: 'Full agent score with dimension breakdown ($0.10 USDC)' },
+      accepts: [payment('$0.10')],
+      description: 'Full agent reputation score with dimension breakdown — behavioral scoring for autonomous AI agents on Base',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { wallet: '0x1234567890abcdef1234567890abcdef12345678' },
+          inputSchema: {
+            properties: { wallet: { type: 'string', description: 'Ethereum wallet address to score' } },
+            required: ['wallet'],
+          },
+          output: {
+            example: {
+              wallet: '0x1234...',
+              score: 78,
+              tier: 'good',
+              confidence: 0.85,
+              recommendation: 'transact',
+              dimensions: {
+                transactionHistory: 85,
+                partnerDiversity: 72,
+                volumeConsistency: 80,
+                accountAge: 90,
+                sybilRisk: 15,
+                gamingRisk: 10,
+              },
+            },
+          },
+        }),
+      },
     },
     '/v1/score/refresh': {
-      price: '$0.25',
-      network: NETWORK,
-      config: { description: 'Force live recalculation of agent score ($0.25 USDC)' },
+      accepts: [payment('$0.25')],
+      description: 'Force live recalculation of agent reputation score from on-chain data',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { wallet: '0x1234567890abcdef1234567890abcdef12345678' },
+          inputSchema: {
+            properties: { wallet: { type: 'string', description: 'Ethereum wallet address to rescore' } },
+            required: ['wallet'],
+          },
+          output: {
+            example: { wallet: '0x1234...', score: 78, tier: 'good', confidence: 0.85, scoreFreshness: 'live' },
+          },
+        }),
+      },
     },
     '/v1/report': {
-      price: '$0.02',
-      network: NETWORK,
-      config: { description: 'Submit a fraud/misconduct report ($0.02 USDC)' },
+      accepts: [payment('$0.02')],
+      description: 'Submit a fraud or misconduct report against an agent wallet',
+      extensions: {
+        ...declareDiscoveryExtension({
+          bodyType: 'json',
+          input: { target: '0x1234...', reason: 'wash_trading', details: 'Suspicious circular transactions' },
+          inputSchema: {
+            properties: {
+              target: { type: 'string', description: 'Wallet address to report' },
+              reason: { type: 'string', description: 'Report reason: wash_trading | sybil_attack | rug_pull | spam | other' },
+              details: { type: 'string', description: 'Description of suspicious behavior' },
+            },
+            required: ['target', 'reason', 'details'],
+          },
+          output: { example: { reportId: 'rpt_abc123', status: 'accepted' } },
+        }),
+      },
     },
     '/v1/data/fraud/blacklist': {
-      price: '$0.05',
-      network: NETWORK,
-      config: { description: 'Fraud report check ($0.05 USDC)' },
+      accepts: [payment('$0.05')],
+      description: 'Check if a wallet has fraud reports filed against it',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { wallet: '0x1234567890abcdef1234567890abcdef12345678' },
+          inputSchema: {
+            properties: { wallet: { type: 'string', description: 'Wallet address to check' } },
+            required: ['wallet'],
+          },
+          output: {
+            example: { wallet: '0x1234...', reported: false, reportCount: 0, reasons: [], disputeStatus: 'none' },
+          },
+        }),
+      },
     },
     '/v1/score/batch': {
-      price: '$0.50',
-      network: NETWORK,
-      config: { description: 'Batch score up to 20 wallets ($0.50 USDC)' },
+      accepts: [payment('$0.50')],
+      description: 'Batch score up to 20 agent wallets in a single request',
+      extensions: {
+        ...declareDiscoveryExtension({
+          bodyType: 'json',
+          input: { wallets: ['0x1234...', '0xabcd...'] },
+          inputSchema: {
+            properties: {
+              wallets: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Array of wallet addresses (max 20)',
+              },
+            },
+            required: ['wallets'],
+          },
+          output: {
+            example: { results: [{ wallet: '0x1234...', score: 78, tier: 'good' }], count: 1 },
+          },
+        }),
+      },
     },
     '/v1/score/history': {
-      price: '$0.15',
-      network: NETWORK,
-      config: { description: 'Historical score data with trend analysis ($0.15 USDC)' },
+      accepts: [payment('$0.15')],
+      description: 'Historical score data with trend analysis for an agent wallet',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { wallet: '0x1234567890abcdef1234567890abcdef12345678' },
+          inputSchema: {
+            properties: {
+              wallet: { type: 'string', description: 'Wallet address' },
+              limit: { type: 'integer', description: 'Max records (default 50)' },
+              after: { type: 'string', description: 'ISO date filter start' },
+              before: { type: 'string', description: 'ISO date filter end' },
+            },
+            required: ['wallet'],
+          },
+          output: {
+            example: {
+              wallet: '0x1234...',
+              history: [{ score: 78, calculated_at: '2026-02-25T12:00:00Z' }],
+              trend: { direction: 'improving', change_pct: 5.2, avg_score: 75 },
+            },
+          },
+        }),
+      },
     },
     '/v1/certification/apply': {
-      price: '$99.00',
-      network: NETWORK,
-      config: { description: 'Annual agent certification ($99 USDC)' },
+      accepts: [payment('$99.00')],
+      description: 'Apply for annual DJD Certified Agent badge — verified on-chain reputation',
+      extensions: {
+        ...declareDiscoveryExtension({
+          bodyType: 'json',
+          input: { wallet: '0x1234567890abcdef1234567890abcdef12345678' },
+          inputSchema: {
+            properties: { wallet: { type: 'string', description: 'Wallet to certify' } },
+            required: ['wallet'],
+          },
+          output: {
+            example: { certificationId: 'cert_abc123', tier: 'gold', expiresAt: '2027-02-25', badgeUrl: '/v1/badge/0x1234...' },
+          },
+        }),
+      },
     },
   },
-  { url: FACILITATOR_URL },
+  facilitatorClient,
 )
 
 app.use(async (c, next) => {
