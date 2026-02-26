@@ -93,6 +93,7 @@ export interface IdentityData {
   creatorScore: number | null
   generationDepth: number
   constitutionHashVerified: boolean
+  insumerVerified: boolean
 }
 
 export interface CapabilityData {

@@ -126,13 +126,13 @@ describe('calcIdentity DRY helpers', () => {
     expect(result.signals.githubActivity).toBe(0)
   })
 
-  it('maxes wallet age at 30 pts for 180+ day wallets', async () => {
+  it('maxes wallet age at 20 pts for 180+ day wallets', async () => {
     const result = await calcIdentity(ZERO_WALLET, 365)
-    expect(result.signals.walletAge).toBe(30)
+    expect(result.signals.walletAge).toBe(20)
   })
 
-  it('gives 2 pts for brand-new wallets', async () => {
+  it('gives 1 pt for brand-new wallets', async () => {
     const result = await calcIdentity(ZERO_WALLET, 0)
-    expect(result.signals.walletAge).toBe(2)
+    expect(result.signals.walletAge).toBe(1)
   })
 })
