@@ -100,6 +100,8 @@ export interface CapabilityData {
   totalRevenue: string
   domainsOwned: number
   successfulReplications: number
+  uniqueCounterparties: number
+  serviceLongevityDays: number
 }
 
 export type BehaviorClassification = 'organic' | 'mixed' | 'automated' | 'suspicious' | 'insufficient_data'

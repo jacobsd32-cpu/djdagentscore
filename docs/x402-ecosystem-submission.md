@@ -53,13 +53,13 @@ making this a native x402 service — it eats its own dog food.
 
 ### Scoring dimensions
 
-| Dimension | Weight | Signal |
+| Dimension | Weight | What it measures |
 |---|---|---|
-| Payment Reliability | 30% | x402 settlement history, transaction consistency |
-| Economic Viability | 25% | USDC balance, inflow/outflow ratios, wallet age |
-| Identity | 20% | Basename, GitHub verification, registration, wallet age |
-| Behavior | 15% | Temporal transaction patterns, anomaly signals |
-| Capability | 10% | x402 revenue earned, services operated |
+| Payment Reliability | 30% | Transaction history and consistency on Base |
+| Economic Viability | 25% | Financial health signals from USDC activity |
+| Identity | 20% | Verifiable identity markers (Basename, GitHub, registration) |
+| Behavior | 15% | Transaction timing patterns and anomaly detection |
+| Capability | 10% | Demonstrated service delivery and ecosystem participation |
 
 ### API (live on Base mainnet)
 
@@ -88,10 +88,10 @@ GET https://djd-agent-score.fly.dev/v1/score/history?wallet=0x...
   events (distinguishes x402 from regular USDC transfers)
 - Also indexes standard USDC `Transfer` events for broader transaction history
 - 25-table SQLite database with score caching, fraud reports, API keys, webhooks
-- Sybil detection heuristics and score gaming detection
-- Background jobs: blockchain indexer (12s), score refresh (hourly), anomaly detector (15min)
+- Sybil detection and score gaming prevention
+- Background jobs: blockchain indexer, score refresh, anomaly detector, auto-recalibration
 - API key access available for high-volume usage without per-request x402 payments
-- Open source: https://github.com/jacobsd32-cpu/djdagentscore
+- GitHub: https://github.com/jacobsd32-cpu/djdagentscore
 ```
 
 ---

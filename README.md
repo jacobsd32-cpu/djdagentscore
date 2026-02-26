@@ -113,23 +113,23 @@ curl "https://djd-agent-score.fly.dev/v1/score/full?wallet=0x…" \
 
 ## How scoring works
 
-> **Model v2.1.0** — Calibration pass (Feb 2025). Lowered breakpoints for early-stage ecosystem data, switched to log-linear interpolation for transaction counts and revenue, added finer wallet age granularity.
+> **Model v2.1.0** — Improved scoring accuracy for low-data wallets. Expanded capability signals. Auto-recalibrating tier thresholds from outcome data.
 
 Every wallet is evaluated across five weighted dimensions based on its USDC transaction history on Base:
 
 | Dimension | Weight | What it measures |
 |---|---|---|
-| **Payment Reliability** | 30% | Transaction volume (log-scaled), nonce depth, counterparty diversity |
-| **Economic Viability** | 25% | USDC balance, inflow/outflow ratios, revenue trajectory |
-| **Identity** | 20% | Wallet age (granular steps), Basename, registration, GitHub verification |
-| **Behavior** | 15% | Transaction timing patterns, consistency, anomaly signals |
-| **Capability** | 10% | x402 revenue earned (log-scaled), services operated |
+| **Payment Reliability** | 30% | Transaction history and consistency on Base |
+| **Economic Viability** | 25% | Financial health signals from USDC activity |
+| **Identity** | 20% | Verifiable identity markers (Basename, GitHub, registration) |
+| **Behavior** | 15% | Transaction timing patterns and anomaly detection |
+| **Capability** | 10% | Demonstrated service delivery and ecosystem participation |
 
-**Score tiers:** Elite (90+) · Trusted (75–89) · Established (50–74) · Emerging (25–49) · Unverified (0–24)
+**Score tiers:** Elite (90+) · Trusted (75–89) · Established (50–74) · Emerging (25–49) · Unverified (0–24). Tier thresholds auto-adjust based on outcome calibration data.
 
 The scoring engine indexes x402 settlements on-chain using the EIP-3009 `AuthorizationUsed` event. Agents that use x402 to pay for services accumulate verifiable payment history that feeds directly into their score. The more an agent transacts through x402, the more meaningful its reputation becomes.
 
-**Integrity layers:** Multiplicative penalty stacking from sybil detection (7 heuristics), gaming detection (5 checks), and fraud reports. The integrity multiplier floors at 0.10 (90% max penalty). Scores are cached for 1 hour with background refresh for active wallets.
+**Integrity layers:** Sybil detection, gaming detection, and fraud report penalties are applied multiplicatively. Scores are cached for 1 hour with background refresh for active wallets.
 
 ---
 
@@ -240,9 +240,11 @@ Requires **Node.js v22**. Starts on `http://localhost:3000`.
 
 **RPC provider:** Default is BlastAPI public Base endpoint. For heavy indexing, use a dedicated provider via `BASE_RPC_URL`. Avoid `publicnode.com` (rejects 10k-block `eth_getLogs` ranges).
 
-**ERC-8004:** [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) (AI Agent Registry) check is disabled until a registry contract deploys on Base. Identity points redistributed to Basename (+5), GitHub verification (+5), wallet age (+5).
+**ERC-8004:** [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) (AI Agent Registry) check is disabled until a registry contract deploys on Base.
 
 **Score caching:** 1 hour cache. Background refresh for up to 50 expired scores/hour. Force recalculation with `/v1/score/refresh` ($0.25). Admin flush endpoint expires all cached scores to trigger ecosystem-wide re-scoring after model updates.
+
+**Auto-recalibration:** The system continuously adjusts scoring thresholds based on real-world outcome data, closing the feedback loop between predicted trust and actual wallet behavior.
 
 ### How x402 payments work
 

@@ -1,0 +1,3 @@
+[submodule "src/scoring"]
+	path = src/scoring
+	url = https://github.com/jacobsd32-cpu/djd-scoring-engine.git
