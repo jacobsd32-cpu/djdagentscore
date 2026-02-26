@@ -3,267 +3,273 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DJD Agent Score — Trust Scores for AI Agent Wallets</title>
+<title>DJD Agent Score — Trust Infrastructure for AI Agents</title>
 <meta name="description" content="When your AI agent is about to send money to another AI agent, how do you know that agent is legit? Trust score 0–100 from on-chain history. One API call, no signup.">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #090d16; --bg2: #10151f; --bg3: #171d2b;
-  --surface: #1a2030; --surface2: #1f2738;
-  --border: #1c2536; --border-hi: #2a3548;
-  --text: #e2e8f0; --text-dim: #94a3b8; --text-muted: #4b5c73;
-  --accent: #22d3ee; --accent-dim: rgba(34,211,238,0.08);
+  --bg: #0a1628; --bg2: #0d1b2a; --bg3: #132238;
+  --surface: #162740; --surface2: #1a3050;
+  --border: rgba(212,168,83,0.10); --border-hi: rgba(212,168,83,0.18);
+  --text: #f0f2f5; --text-dim: #94a3b8; --text-muted: #4b5c73;
+  --accent: #d4a853; --accent-dim: rgba(212,168,83,0.08);
   --green: #34d399; --green-dim: rgba(52,211,153,0.08);
   --yellow: #fbbf24; --yellow-dim: rgba(251,191,36,0.08);
   --red: #f87171; --red-dim: rgba(248,113,113,0.08);
   --orange: #fb923c; --orange-dim: rgba(251,146,60,0.08);
   --purple: #a78bfa; --purple-dim: rgba(167,139,250,0.08);
+  --radius: 16px;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(34,211,238,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(34,211,238,0.015) 1px,transparent 1px);background-size:64px 64px;pointer-events:none;z-index:0}
-.wrap{max-width:900px;margin:0 auto;padding:0 28px;position:relative;z-index:1}
+.wrap{max-width:1080px;margin:0 auto;padding:0 32px;position:relative;z-index:1}
 a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .mono{font-family:'JetBrains Mono',monospace}
+.serif{font-family:'Instrument Serif',serif}
 
-nav{padding:18px 0;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
-.logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:17px;color:var(--accent);letter-spacing:-0.5px;display:flex;align-items:center;gap:8px}
+/* ── Nav ── */
+.nav-outer{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,22,40,0.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+nav{max-width:1080px;margin:0 auto;padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-weight:700;font-size:17px;color:var(--accent);letter-spacing:-0.3px;display:flex;align-items:center;gap:8px;text-decoration:none}
+.logo:hover{text-decoration:none}
 .logo img{width:28px;height:28px;border-radius:6px}
 .logo span{color:var(--text-dim);font-weight:400}
-.nav-links{display:flex;gap:18px;flex-wrap:wrap}
-.nav-links a{color:var(--text-muted);text-decoration:none;font-size:12px;font-family:'JetBrains Mono',monospace;transition:color .2s}
+.nav-links{display:flex;gap:24px;align-items:center}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:13px;font-weight:500;transition:color .2s}
 .nav-links a:hover{color:var(--accent);text-decoration:none}
+.nav-links .nav-cta{color:var(--bg);background:var(--accent);padding:7px 18px;border-radius:8px;font-weight:600;font-size:12px;transition:all .2s}
+.nav-links .nav-cta:hover{opacity:.88}
 
-.banner{background:rgba(251,191,36,0.05);border:1px solid rgba(251,191,36,0.13);border-radius:8px;padding:11px 18px;margin-top:18px;display:flex;align-items:flex-start;gap:9px;font-size:11.5px;color:var(--yellow);line-height:1.55}
+/* ── Banner ── */
+.banner{background:rgba(251,191,36,0.04);border:1px solid rgba(251,191,36,0.10);border-radius:10px;padding:12px 20px;margin-top:84px;display:flex;align-items:flex-start;gap:10px;font-size:12px;color:var(--yellow);line-height:1.6}
 .banner .ico{font-size:15px;flex-shrink:0;margin-top:1px}
 .banner a{color:var(--yellow);text-decoration:underline}
 
-.hero{padding:68px 0 44px}
-.badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(34,211,238,0.18);padding:5px 13px;border-radius:100px;letter-spacing:1px;text-transform:uppercase;margin-bottom:22px}
-.hero h1{font-size:clamp(30px,4.5vw,46px);font-weight:700;line-height:1.14;margin-bottom:18px;letter-spacing:-1px}
-.hero h1 em{font-style:normal;color:var(--accent)}
-.hero-sub{font-size:20px;color:var(--accent);font-weight:500;margin-bottom:18px;letter-spacing:-.3px}
-.hero-p{font-size:16px;color:var(--text-dim);max-width:600px;line-height:1.72;margin-bottom:10px}
-
-.sec{margin:60px 0}
-.sec-label{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px}
-.sec-title{font-size:23px;font-weight:700;margin-bottom:7px;letter-spacing:-0.4px}
-.sec-desc{font-size:14.5px;color:var(--text-dim);line-height:1.72;max-width:620px}
-
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:36px 0}
-.st{background:var(--bg2);padding:20px 14px;text-align:center}
-.st-v{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;margin-bottom:3px}
-.st-v.live{color:var(--green)}
-.st-l{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
-.dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:3px;animation:pulse 2s infinite}
+/* ── Hero ── */
+.hero{padding:80px 0 60px;text-align:center;max-width:780px;margin:0 auto}
+.hero-chip{display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:var(--accent);background:var(--accent-dim);border:1px solid var(--border-hi);padding:6px 16px;border-radius:100px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:28px}
+.hero-chip .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+.hero h1{font-family:'Instrument Serif',serif;font-size:clamp(36px,5.5vw,60px);font-weight:400;line-height:1.12;margin-bottom:24px;letter-spacing:-1px;color:var(--text)}
+.hero h1 em{font-style:italic;color:var(--accent)}
+.hero-sub{font-size:18px;color:var(--text-dim);max-width:560px;margin:0 auto 36px;line-height:1.75}
+.hero-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:13px 28px;border-radius:10px;font-size:14px;font-weight:600;transition:all .2s;text-decoration:none;cursor:pointer;border:none}
+.btn:hover{text-decoration:none;transform:translateY(-1px)}
+.btn-primary{background:var(--accent);color:var(--bg)}
+.btn-primary:hover{opacity:.9}
+.btn-ghost{background:transparent;border:1px solid var(--border-hi);color:var(--text-dim)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* Animated Explainer */
-.exp{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:24px}
+/* ── Sections ── */
+.sec{padding:80px 0}
+.sec-label{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:2px;margin-bottom:12px}
+.sec-title{font-family:'Instrument Serif',serif;font-size:clamp(28px,3.5vw,40px);font-weight:400;margin-bottom:10px;letter-spacing:-0.5px}
+.sec-desc{font-size:16px;color:var(--text-dim);line-height:1.75;max-width:600px}
+.sec-center{text-align:center}.sec-center .sec-desc{margin:0 auto}
+.divider{height:1px;background:var(--border);margin:0}
+
+/* ── Stats ── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin:40px 0}
+.st{background:var(--bg2);padding:28px 16px;text-align:center}
+.st-v{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;margin-bottom:6px;color:var(--text)}
+.st-v.live{color:var(--green)}
+.st-l{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px}
+.dot-live{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:4px;animation:pulse 2s infinite}
+
+/* ── Animated Explainer ── */
+.exp{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:32px}
 .exp-tabs{display:flex;border-bottom:1px solid var(--border)}
-.exp-tab{flex:1;padding:13px 8px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);cursor:pointer;transition:all .2s;border:none;background:none;border-bottom:2px solid transparent}
+.exp-tab{flex:1;padding:16px 8px;text-align:center;font-size:13px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all .2s;border:none;background:none;border-bottom:2px solid transparent}
 .exp-tab:hover{color:var(--text-dim)}
 .exp-tab.active{color:var(--accent);background:var(--accent-dim);border-bottom-color:var(--accent)}
-.exp-stage{padding:28px}
-.exp-task{font-size:14.5px;color:var(--text-dim);margin-bottom:24px;line-height:1.65}
+.exp-stage{padding:36px}
+.exp-task{font-size:15px;color:var(--text-dim);margin-bottom:28px;line-height:1.7}
 .exp-task strong{color:var(--text)}
-.exp-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
-.exp-card{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:18px;opacity:0;transform:translateY(10px);transition:all .4s ease}
+.exp-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
+.exp-card{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:22px;opacity:0;transform:translateY(10px);transition:all .4s ease}
 .exp-card.vis{opacity:1;transform:translateY(0)}
-.exp-card.scanning{border-color:var(--accent);box-shadow:0 0 20px rgba(34,211,238,0.15),inset 0 0 12px rgba(34,211,238,0.04);animation:expPulse .8s ease-in-out}
-.exp-card.selected{border-color:var(--green);box-shadow:0 0 20px rgba(52,211,153,0.15);background:var(--green-dim)}
-.exp-card.rejected{opacity:.3;filter:grayscale(.4)}
-@keyframes expPulse{0%{box-shadow:0 0 5px rgba(34,211,238,.1)}50%{box-shadow:0 0 28px rgba(34,211,238,.25),inset 0 0 15px rgba(34,211,238,.06)}100%{box-shadow:0 0 5px rgba(34,211,238,.1)}}
-.exp-card-name{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;margin-bottom:6px}
-.exp-card-price{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);margin-bottom:12px}
-.exp-card-score{font-family:'JetBrains Mono',monospace;font-size:12px;margin-bottom:4px;display:flex;align-items:baseline;gap:6px}
-.exp-card-num{font-weight:700;font-size:22px}
-.exp-card-tier{font-size:11px}
-.exp-card-stat{font-size:10.5px;color:var(--text-muted);line-height:1.5;margin-top:8px}
-.exp-card-flag{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--red);background:var(--red-dim);padding:2px 6px;border-radius:3px;display:inline-block;margin-top:6px}
-.exp-result{font-size:13px;color:var(--text-dim);line-height:1.65;padding:16px;background:var(--bg);border:1px solid var(--border);border-radius:8px;opacity:0;transform:translateY(6px);transition:all .5s ease}
+.exp-card.scanning{border-color:var(--accent);box-shadow:0 0 24px rgba(212,168,83,0.12),inset 0 0 14px rgba(212,168,83,0.04);animation:expPulse .8s ease-in-out}
+.exp-card.selected{border-color:var(--green);box-shadow:0 0 24px rgba(52,211,153,0.12);background:var(--green-dim)}
+.exp-card.rejected{opacity:.25;filter:grayscale(.5)}
+@keyframes expPulse{0%{box-shadow:0 0 5px rgba(212,168,83,.08)}50%{box-shadow:0 0 30px rgba(212,168,83,.2),inset 0 0 16px rgba(212,168,83,.05)}100%{box-shadow:0 0 5px rgba(212,168,83,.08)}}
+.exp-card-name{font-weight:700;font-size:14px;margin-bottom:4px}
+.exp-card-price{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:14px}
+.exp-card-score{font-family:'JetBrains Mono',monospace;font-size:12px;margin-bottom:4px;display:flex;align-items:baseline;gap:8px}
+.exp-card-num{font-weight:700;font-size:26px}
+.exp-card-tier{font-size:12px;font-weight:500}
+.exp-card-stat{font-size:11px;color:var(--text-muted);line-height:1.5;margin-top:10px}
+.exp-card-flag{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--red);background:var(--red-dim);padding:3px 8px;border-radius:4px;display:inline-block;margin-top:8px}
+.exp-result{font-size:14px;color:var(--text-dim);line-height:1.7;padding:20px;background:var(--bg);border:1px solid var(--border);border-radius:12px;opacity:0;transform:translateY(6px);transition:all .5s ease}
 .exp-result.vis{opacity:1;transform:translateY(0)}
 .exp-result strong{color:var(--green)}
-.exp-ctrl{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;border-top:1px solid var(--border)}
-.exp-dot{width:8px;height:8px;border-radius:50%;background:var(--border-hi);transition:all .2s;cursor:pointer}
-.exp-dot.active{background:var(--accent)}
-.exp-replay{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);background:none;border:1px solid var(--border);border-radius:5px;padding:4px 10px;cursor:pointer;transition:all .2s;margin-left:8px}
+.exp-ctrl{display:flex;align-items:center;justify-content:center;gap:10px;padding:16px;border-top:1px solid var(--border)}
+.exp-dot{width:8px;height:8px;border-radius:50%;background:var(--text-muted);opacity:.3;transition:all .2s;cursor:pointer}
+.exp-dot.active{background:var(--accent);opacity:1}
+.exp-replay{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);background:none;border:1px solid var(--border);border-radius:6px;padding:5px 12px;cursor:pointer;transition:all .2s;margin-left:10px}
 .exp-replay:hover{color:var(--accent);border-color:var(--accent)}
 .exp-scenario{display:none}
 
-/* Plain English */
-.plain{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:32px;margin-top:24px}
-.plain p{font-size:15px;color:var(--text-dim);line-height:1.75;margin-bottom:16px}
-.plain p:last-child{margin-bottom:0}
-.plain strong{color:var(--text)}
+/* ── How It Works ── */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:40px}
+.step{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:36px 28px;position:relative}
+.step-num{font-family:'JetBrains Mono',monospace;font-size:48px;font-weight:700;color:var(--accent);opacity:.15;position:absolute;top:16px;right:20px;line-height:1}
+.step h3{font-size:17px;font-weight:700;margin-bottom:10px}
+.step p{font-size:14px;color:var(--text-dim);line-height:1.7}
 
-/* Concrete Examples */
-.examples{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:11px;overflow:hidden;margin-top:24px}
-.example{background:var(--bg2);padding:24px 20px}
-.example-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
-.example-label.g{color:var(--green)}.example-label.r{color:var(--red)}.example-label.y{color:var(--yellow)}.example-label.o{color:var(--orange)}
-.example h3{font-size:14px;font-weight:700;margin-bottom:8px;line-height:1.4}
-.example p{font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:14px}
-.example-out{font-family:'JetBrains Mono',monospace;font-size:10.5px;padding:10px 12px;background:var(--bg);border-radius:6px;line-height:1.7}
-.example-out .eo-s{font-weight:700}.example-out .eo-r{display:block;margin-top:2px}
-
-/* Scoring Dimensions */
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:11px;overflow:hidden;margin-top:24px}
-.card{background:var(--bg2);padding:26px 22px}
-.card h3{font-size:14.5px;font-weight:700;margin-bottom:9px}
-.card p{font-size:13px;color:var(--text-dim);line-height:1.65}
-.clbl{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:9px}
-.clbl.r{color:var(--red)}.clbl.g{color:var(--green)}.clbl.a{color:var(--accent)}.clbl.p{color:var(--purple)}.clbl.y{color:var(--yellow)}.clbl.o{color:var(--orange)}
-.dim-q{font-size:13.5px;color:var(--accent);margin-bottom:7px;font-style:italic}
-.dim-analogy{font-size:12.5px;color:var(--text-muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);line-height:1.55;font-style:italic}
-
-/* Output Grid */
-.output-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:11px;overflow:hidden;margin-top:24px}
-.output-card{background:var(--bg2);padding:24px 22px}
-.output-card h3{font-size:14.5px;font-weight:700;margin-bottom:4px}
-.output-sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin-bottom:10px}
-.output-card p{font-size:13px;color:var(--text-dim);line-height:1.65}
-.output-vals{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
-.output-val{font-family:'JetBrains Mono',monospace;font-size:9.5px;padding:2px 7px;border-radius:3px}
-
-/* Score Lookup */
-.lookup{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:32px;margin-top:24px}
-.lu-wrap{display:flex;gap:10px}
-.lookup input{flex:1;background:var(--bg);border:1px solid var(--border-hi);border-radius:7px;padding:13px 16px;font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--text);outline:none;transition:border-color .2s}
+/* ── Score Lookup ── */
+.lookup{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:40px;margin-top:32px}
+.lu-wrap{display:flex;gap:12px}
+.lookup input{flex:1;background:var(--bg);border:1px solid var(--border-hi);border-radius:10px;padding:15px 18px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);outline:none;transition:border-color .2s}
 .lookup input::placeholder{color:var(--text-muted)}
 .lookup input:focus{border-color:var(--accent)}
-.lookup button{background:var(--accent);color:var(--bg);border:none;border-radius:7px;padding:13px 26px;font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
-.lookup button:hover{background:#06b6d4;transform:translateY(-1px)}
-.lookup button:disabled{opacity:.5;cursor:not-allowed;transform:none}
-.lu-note{font-size:10.5px;color:var(--text-muted);margin-top:9px;line-height:1.5}
+.lookup button{background:var(--accent);color:var(--bg);border:none;border-radius:10px;padding:15px 32px;font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.lookup button:hover{opacity:.9;transform:translateY(-1px)}
+.lookup button:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.lu-note{font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.5}
 
-.result{margin-top:22px;display:none}.result.vis{display:block;animation:fadeIn .3s ease}
+.result{margin-top:24px;display:none}.result.vis{display:block;animation:fadeIn .3s ease}
 @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
-.sc{background:var(--bg);border:1px solid var(--border-hi);border-radius:9px;padding:26px}
-.sc-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-.sc-big{font-family:'JetBrains Mono',monospace;font-size:52px;font-weight:700;line-height:1}
+.sc{background:var(--bg);border:1px solid var(--border-hi);border-radius:12px;padding:30px}
+.sc-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.sc-big{font-family:'JetBrains Mono',monospace;font-size:56px;font-weight:700;line-height:1}
 .sc-meta{text-align:right}
-.sc-tier{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;padding:3px 9px;border-radius:4px;display:inline-block;margin-bottom:5px}
+.sc-tier{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;padding:4px 10px;border-radius:6px;display:inline-block;margin-bottom:5px}
 .stt-elite{color:var(--accent);background:var(--accent-dim)}.stt-trusted{color:var(--green);background:var(--green-dim)}.stt-established{color:var(--yellow);background:var(--yellow-dim)}.stt-emerging{color:var(--orange);background:var(--orange-dim)}.stt-unverified{color:var(--text-muted);background:rgba(71,85,105,0.18)}
-.sc-conf{font-size:11.5px;color:var(--text-dim);font-family:'JetBrains Mono',monospace}
-.sc-rec{font-size:10.5px;font-family:'JetBrains Mono',monospace;padding:2px 7px;border-radius:3px;display:inline-block;margin-top:4px}
+.sc-conf{font-size:12px;color:var(--text-dim);font-family:'JetBrains Mono',monospace}
+.sc-rec{font-size:11px;font-family:'JetBrains Mono',monospace;padding:3px 8px;border-radius:4px;display:inline-block;margin-top:5px}
 .rc-proceed{color:var(--green);background:var(--green-dim)}.rc-caution{color:var(--yellow);background:var(--yellow-dim)}.rc-insufficient{color:var(--text-muted);background:rgba(71,85,105,0.18)}.rc-high-risk{color:var(--red);background:var(--red-dim)}.rc-flagged{color:var(--red);background:var(--red-dim)}
-.sc-bar{margin-top:14px}.sc-bar-bg{height:4px;background:var(--bg2);border-radius:2px;overflow:hidden}.sc-bar-fill{height:100%;border-radius:2px;transition:width .6s ease}
-.sc-wallet{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-muted);word-break:break-all;padding-top:12px;border-top:1px solid var(--border);margin-top:14px}
-.sc-disc{font-size:10px;color:var(--text-muted);margin-top:10px;line-height:1.5;padding-top:10px;border-top:1px solid var(--border)}.sc-disc a{color:var(--text-muted);text-decoration:underline}
+.sc-bar{margin-top:16px}.sc-bar-bg{height:4px;background:var(--bg2);border-radius:2px;overflow:hidden}.sc-bar-fill{height:100%;border-radius:2px;transition:width .6s ease}
+.sc-wallet{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);word-break:break-all;padding-top:14px;border-top:1px solid var(--border);margin-top:16px}
+.sc-disc{font-size:10px;color:var(--text-muted);margin-top:12px;line-height:1.5;padding-top:12px;border-top:1px solid var(--border)}.sc-disc a{color:var(--text-muted);text-decoration:underline}
 .err{color:var(--red);font-family:'JetBrains Mono',monospace;font-size:11px;margin-top:10px;display:none}.err.vis{display:block}
 
-/* Code */
-.code{background:#0c1018;border:1px solid var(--border);border-radius:10px;padding:22px;overflow-x:auto;margin-top:24px;position:relative}
-.code pre{font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.7;color:var(--text-dim);white-space:pre}
-.code .c{color:var(--text-muted)}.code .s{color:var(--green)}.code .k{color:var(--purple)}.code .f{color:var(--accent)}
-.code-l{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;position:absolute;top:9px;right:13px}
+/* ── Dimensions ── */
+.dims{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:32px}
+.dims .dim:nth-child(n+4){grid-column:span 1}
+.dim{background:var(--bg2);padding:32px 24px}
+.dim h3{font-size:15px;font-weight:700;margin-bottom:6px}
+.dim-q{font-size:13px;color:var(--accent);margin-bottom:10px;font-style:italic}
+.dim p{font-size:13px;color:var(--text-dim);line-height:1.65}
 
-/* API */
-.api{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:24px}
-.api-r{display:grid;grid-template-columns:1fr 90px 70px;padding:11px 18px;border-bottom:1px solid var(--border);font-size:12.5px;align-items:center}
+/* ── Code ── */
+.code{background:#060e1a;border:1px solid var(--border);border-radius:var(--radius);padding:28px;overflow-x:auto;margin-top:32px;position:relative}
+.code pre{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.75;color:var(--text-dim);white-space:pre}
+.code .c{color:var(--text-muted)}.code .s{color:var(--green)}.code .k{color:var(--purple)}.code .f{color:var(--accent)}
+.code-l{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;position:absolute;top:12px;right:16px}
+
+/* ── API ── */
+.api{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:32px}
+.api-r{display:grid;grid-template-columns:1fr 100px 70px;padding:14px 20px;border-bottom:1px solid var(--border);font-size:13px;align-items:center}
 .api-r:last-child{border-bottom:none}
 .api-r.hdr{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;background:var(--bg3)}
-.api-ep{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--accent)}
-.api-d{font-size:10.5px;color:var(--text-muted);margin-top:2px}
-.api-p{font-family:'JetBrains Mono',monospace;font-size:11.5px;text-align:right;color:var(--green)}
+.api-ep{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent)}
+.api-d{font-size:11px;color:var(--text-muted);margin-top:3px}
+.api-p{font-family:'JetBrains Mono',monospace;font-size:12px;text-align:right;color:var(--green)}
 .api-f{color:var(--text-muted)}
-.api-m{text-align:right;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-muted)}
+.api-m{text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted)}
 
-/* Leaderboard */
-.lb{width:100%;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:24px}
-.lb-r{display:grid;grid-template-columns:40px 1fr 80px 80px;padding:11px 16px;border-bottom:1px solid var(--border);align-items:center;font-size:12.5px;transition:background .15s}
+/* ── Leaderboard ── */
+.lb{width:100%;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:32px}
+.lb-r{display:grid;grid-template-columns:40px 1fr 80px 80px;padding:13px 18px;border-bottom:1px solid var(--border);align-items:center;font-size:13px;transition:background .15s}
 .lb-r:last-child{border-bottom:none}.lb-r:hover{background:var(--bg3)}
 .lb-r.hdr{background:var(--bg2);font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
 .lb-rk{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--text-muted)}
-.lb-w{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text-dim)}
+.lb-w{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-dim)}
 .lb-s{font-family:'JetBrains Mono',monospace;font-weight:700;text-align:right}
-.lb-t{text-align:right;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500}
-.lb-e{padding:32px;text-align:center;color:var(--text-muted);font-size:12.5px}
-.lb-badge{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;margin-left:5px;vertical-align:middle}
+.lb-t{text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500}
+.lb-e{padding:36px;text-align:center;color:var(--text-muted);font-size:13px}
+.lb-badge{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;padding:2px 6px;border-radius:3px;margin-left:5px;vertical-align:middle}
 .lb-badge.reg{color:var(--accent);background:var(--accent-dim)}.lb-badge.gh{color:var(--green);background:var(--green-dim)}
 
-/* Feedback */
-.fb{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:32px;margin-top:24px}
-.fb-row{margin-bottom:14px}
-.fb-row label{display:block;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
-.fb-row select,.fb-row input,.fb-row textarea{width:100%;background:var(--bg);border:1px solid var(--border-hi);border-radius:7px;padding:11px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;transition:border-color .2s;resize:vertical}
+/* ── Feedback ── */
+.fb{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:40px;margin-top:32px}
+.fb-row{margin-bottom:16px}
+.fb-row label{display:block;font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+.fb-row select,.fb-row input,.fb-row textarea{width:100%;background:var(--bg);border:1px solid var(--border-hi);border-radius:10px;padding:12px 16px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);outline:none;transition:border-color .2s;resize:vertical}
 .fb-row select:focus,.fb-row input:focus,.fb-row textarea:focus{border-color:var(--accent)}
-.fb-row textarea{min-height:100px;font-size:13px;line-height:1.6}
-.fb-row select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234b5c73' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.fb-row textarea{min-height:110px;line-height:1.65}
+.fb-row select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234b5c73' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
 .fb-row select option{background:var(--bg2);color:var(--text)}
-.fb-submit{background:var(--accent);color:var(--bg);border:none;border-radius:7px;padding:12px 28px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
-.fb-submit:hover{background:#06b6d4;transform:translateY(-1px)}
+.fb-submit{background:var(--accent);color:var(--bg);border:none;border-radius:10px;padding:13px 32px;font-weight:700;font-size:14px;cursor:pointer;transition:all .2s}
+.fb-submit:hover{opacity:.9;transform:translateY(-1px)}
 .fb-msg{font-family:'JetBrains Mono',monospace;font-size:11px;margin-top:10px;display:none;line-height:1.5}
 .fb-msg.vis{display:block}
 .fb-msg.ok{color:var(--green)}.fb-msg.bad{color:var(--red)}
 
-/* Info */
-.info{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px;margin-top:24px;font-size:13px;color:var(--text-dim);line-height:1.7}
-.info strong{color:var(--text)}
-
-/* Summary */
-.summary{text-align:center;padding:48px 20px;margin:40px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.summary p{font-size:18px;color:var(--text-dim);max-width:640px;margin:0 auto;line-height:1.7}
-.summary em{color:var(--accent);font-style:normal;font-weight:600}
-
-/* Tiers bar */
-.tiers{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:12px}
-.tier-seg{padding:15px 8px;text-align:center;flex:1}
+/* ── Tiers bar ── */
+.tiers{display:flex;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:20px}
+.tier-seg{padding:16px 8px;text-align:center;flex:1;font-size:13px}
 .tier-seg .tn{font-weight:700;margin-bottom:2px}
-.tier-seg .tr{font-size:10px;opacity:.7}
-.t-unv{background:rgba(71,85,105,0.12);color:var(--text-muted)}
-.t-emg{background:rgba(251,146,60,0.06);color:var(--orange)}
-.t-est{background:rgba(251,191,36,0.06);color:var(--yellow)}
-.t-tru{background:rgba(52,211,153,0.06);color:var(--green)}
-.t-eli{background:rgba(34,211,238,0.06);color:var(--accent)}
+.t-unv{background:rgba(71,85,105,0.08);color:var(--text-muted)}
+.t-emg{background:rgba(251,146,60,0.05);color:var(--orange)}
+.t-est{background:rgba(251,191,36,0.05);color:var(--yellow)}
+.t-tru{background:rgba(52,211,153,0.05);color:var(--green)}
+.t-eli{background:rgba(212,168,83,0.05);color:var(--accent)}
 
-/* Footer */
-footer{border-top:1px solid var(--border);padding:28px 0 36px;margin-top:60px}
-.ft-disc{font-size:10.5px;color:var(--text-muted);line-height:1.7;margin-bottom:18px;max-width:700px}.ft-disc a{color:var(--text-muted);text-decoration:underline}
+/* ── Footer ── */
+footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
+.ft-disc{font-size:11px;color:var(--text-muted);line-height:1.7;margin-bottom:24px;max-width:720px}.ft-disc a{color:var(--text-muted);text-decoration:underline}
 .ft-bot{display:flex;justify-content:space-between;align-items:center}
-.ft-l{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-muted)}
-.ft-links{display:flex;gap:14px}.ft-links a{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-muted);text-decoration:none;transition:color .2s}.ft-links a:hover{color:var(--accent);text-decoration:none}
+.ft-l{font-size:12px;color:var(--text-muted)}
+.ft-links{display:flex;gap:18px}.ft-links a{font-size:12px;color:var(--text-muted);text-decoration:none;transition:color .2s}.ft-links a:hover{color:var(--accent)}
 
+/* ── Responsive ── */
 @media(max-width:768px){
-  .stats{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}
-  .exp-cards{grid-template-columns:1fr}.examples{grid-template-columns:1fr}
-  .output-grid{grid-template-columns:1fr}
-  .lu-wrap{flex-direction:column}.lb-r{grid-template-columns:34px 1fr 65px}.lb-t{display:none}
-  .api-r{grid-template-columns:1fr 75px}.api-m{display:none}.sc-hdr{flex-direction:column;align-items:flex-start;gap:10px}
-  .sc-meta{text-align:left}.ft-bot{flex-direction:column;gap:10px;text-align:center}
+  .wrap{padding:0 20px}
+  nav{padding:0 20px}
+  .hero{padding:50px 0 40px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .steps{grid-template-columns:1fr}
+  .exp-cards{grid-template-columns:1fr}
+  .dims{grid-template-columns:1fr}
+  .lu-wrap{flex-direction:column}
+  .lb-r{grid-template-columns:34px 1fr 65px}.lb-t{display:none}
+  .api-r{grid-template-columns:1fr 80px}.api-m{display:none}
+  .sc-hdr{flex-direction:column;align-items:flex-start;gap:10px}
+  .sc-meta{text-align:left}
+  .ft-bot{flex-direction:column;gap:12px;text-align:center}
   .tiers{flex-direction:column}
+  .hero-actions{flex-direction:column;align-items:center}
+  .nav-links{gap:14px}
 }
 </style>
 </head>
 <body>
-<div class="wrap">
 
+<!-- NAV -->
+<div class="nav-outer">
 <nav>
-  <div class="logo"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAIAAAAiOjnJAAAE4UlEQVR42u3dzXEbORAGUBx9cwbKYC+OxDm4yvlvBLsJ2NL8oIHuxlN9R5GaAV59PZwSyfHt23eR6RmWQMASsAQsEbAELAFLBKxt+fX7X4sA1j0xc2NJB0ZrAhZMkIFVytNRwgZPhIHVzVNjYYMnwsA6glQPXgMpvMDaTOrHj594NYQVjWZW8CoDKzOjLdTAykVqsadoYWDtVDWRxcfHP9mQgbWa1AM0s7JeGFgrVK2XNMVZM1ujDalUmN4g68FrNFCV39MDYdVtjdKqynm6K6yerdGPVAlPt4RV5DXKqepHKo7XobAmqmpA6gqvQrZGFVWHkIrgdRCsKaoak/qSV35bQ1GprvKwFNU51TUKqTqW1Oe8ctoaCVUpqujqagKLqgNt5YKF1LKxWB4WVWfaGlSxVQzWY1WsvOe13dagiq0ysKhiaycsqvLYKgCLKrbmw6KKrfmwqGJrGyyqkttKB4sqtubDMgQNxG2wqDqqtAZVbEXYGlSxFWELLLDywaKKrT2wqKpuawOsu3VlUxPaiiutoa6UViJYVLEFlhSBRRVb+2HZwh5X8eGw1JXS2g/L5h1bWkNdgRVha6grtrLDUlftSysElrpSWtdtgSW5YVF1iK3JsNQVWLdsDZftEnEJP8xBiZiGwxyUiGk4zEGJmIbDHJSIaTjMQYmYhmBJSlhUmYZgSRpY5iBYz2yNTjca/rv5M/eZo4+h1k2H0WkOgpVnGoIFFlhggQUWWGCBBRZYYIEFFlhggQUWWGCBBRZYYFV/M8XcRxV6MwVYYIEFFlhggQWWgCVggQXWNlhsUfUQltICy4eCCFgCFlhg+QxSmaxqGyyl5SWhz3mXdXMQLMkKiy1zECzJBMs0BMs3rMr+Gw2+E1qi5qBvsZeQORgCiy1zcBospWUOPoRlGoJ1XdVMWGypK7AkEyyX8C7br1OZCUtpqasVsNhqVleBsJSWukoBi60z6+oJLKWlrlLAYuvAunoIiy2qwJJSsNiiahssV/ENrtk3wFJa6mobLLZKq9oGiy2qwAKrFCy2qIqCxRZVO2GxVUVVIlhKS11FwWKLqp2w2Go/BOfDYouqKFhsURUFiy2qNsNiK4mqMrDYOlxVICy2TlYVC+uNLbwek8qgKhwWW2eqWgGLrQNVpYP1R1t4XSF1S1UTWGydpmodrLu2jMWI8bdM1VJYU2ydzOt9US1TtRrWLFun8frbIqRVtQGW6updVJthqa6uRbUf1gNb5/CaRWqXqs2w5trqweuTsyukaj+sZ7Za8ppLaq+qFLCCeFUR9vkpVCSVC9ZjW1/yyinsy2N+vBpJdjMRrDe2rvDKIOzKQb5ZhDxbmQvWe14Xha1EdvF4Xp51tk3MCOu9reu8Ipzd/dPvTzbhDuYFNYvXA2Gf45v4bFPOLu3epYY1y1YEso2Y8qsqACuC17ph048//5bVgBXEK4ha6HFW2axKsBbw+hLfxr9ea5vqwdrOC6nOsA7hVXdrasNqzKv6pnSA1UlYm71oBauusH5b0BNWFWGNV745rJzCTljwU2BtR3baIp8IawE1SwrWPX8WASwBS8ASAUvAErBEwJI9+R8Q1gw8vPId5wAAAABJRU5ErkJggg==" alt="DJD Agent Score" />DJD<span> Agent Score</span></div>
+  <a class="logo" href="/"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAIAAAAiOjnJAAAE4UlEQVR42u3dzXEbORAGUBx9cwbKYC+OxDm4yvlvBLsJ2NL8oIHuxlN9R5GaAV59PZwSyfHt23eR6RmWQMASsAQsEbAELAFLBKxt+fX7X4sA1j0xc2NJB0ZrAhZMkIFVytNRwgZPhIHVzVNjYYMnwsA6glQPXgMpvMDaTOrHj594NYQVjWZW8CoDKzOjLdTAykVqsadoYWDtVDWRxcfHP9mQgbWa1AM0s7JeGFgrVK2XNMVZM1ujDalUmN4g68FrNFCV39MDYdVtjdKqynm6K6yerdGPVAlPt4RV5DXKqepHKo7XobAmqmpA6gqvQrZGFVWHkIrgdRCsKaoak/qSV35bQ1GprvKwFNU51TUKqTqW1Oe8ctoaCVUpqujqagKLqgNt5YKF1LKxWB4WVWfaGlSxVQzWY1WsvOe13dagiq0ysKhiaycsqvLYKgCLKrbmw6KKrfmwqGJrGyyqkttKB4sqtubDMgQNxG2wqDqqtAZVbEXYGlSxFWELLLDywaKKrT2wqKpuawOsu3VlUxPaiiutoa6UViJYVLEFlhSBRRVb+2HZwh5X8eGw1JXS2g/L5h1bWkNdgRVha6grtrLDUlftSysElrpSWtdtgSW5YVF1iK3JsNQVWLdsDZftEnEJP8xBiZiGwxyUiGk4zEGJmIbDHJSIaTjMQYmYhmBJSlhUmYZgSRpY5iBYz2yNTjca/rv5M/eZo4+h1k2H0WkOgpVnGoIFFlhggQUWWGCBBRZYYIEFFlhggQUWWGCBBRZYYFV/M8XcRxV6MwVYYIEFFlhggQWWgCVggQXWNlhsUfUQltICy4eCCFgCFlhg+QxSmaxqGyyl5SWhz3mXdXMQLMkKiy1zECzJBMs0BMs3rMr+Gw2+E1qi5qBvsZeQORgCiy1zcBospWUOPoRlGoJ1XdVMWGypK7AkEyyX8C7br1OZCUtpqasVsNhqVleBsJSWukoBi60z6+oJLKWlrlLAYuvAunoIiy2qwJJSsNiiahssV/ENrtk3wFJa6mobLLZKq9oGiy2qwAKrFCy2qIqCxRZVO2GxVUVVIlhKS11FwWKLqp2w2Go/BOfDYouqKFhsURUFiy2qNsNiK4mqMrDYOlxVICy2TlYVC+uNLbwek8qgKhwWW2eqWgGLrQNVpYP1R1t4XSF1S1UTWGydpmodrLu2jMWI8bdM1VJYU2ydzOt9US1TtRrWLFun8frbIqRVtQGW6updVJthqa6uRbUf1gNb5/CaRWqXqs2w5trqweuTsyukaj+sZ7Za8ppLaq+qFLCCeFUR9vkpVCSVC9ZjW1/yyinsy2N+vBpJdjMRrDe2rvDKIOzKQb5ZhDxbmQvWe14Xha1EdvF4Xp51tk3MCOu9reu8Ipzd/dPvTzbhDuYFNYvXA2Gf45v4bFPOLu3epYY1y1YEso2Y8qsqACuC17ph048//5bVgBXEK4ha6HFW2axKsBbw+hLfxr9ea5vqwdrOC6nOsA7hVXdrasNqzKv6pnSA1UlYm71oBauusH5b0BNWFWGNV745rJzCTljwU2BtR3baIp8IawE1SwrWPX8WASwBS8ASAUvAErBEwJI9+R8Q1gw8vPId5wAAAABJRU5ErkJggg==" alt="DJD" />DJD<span> Agent Score</span></a>
   <div class="nav-links">
     <a href="/explorer">Explorer</a>
-    <a href="#explainer">Demo</a>
+    <a href="/blog">Blog</a>
     <a href="#lookup">Score</a>
     <a href="#api-ref">API</a>
-    <a href="#feedback">Feedback</a>
-    <a href="/terms">Terms</a>
-    <a href="/privacy">Privacy</a>
+    <a href="https://github.com/djd-agent-score" target="_blank">GitHub</a>
+    <a class="nav-cta" href="#lookup">Try It Free</a>
   </div>
 </nav>
+</div>
 
+<div class="wrap">
+
+<!-- BANNER -->
 <div class="banner">
   <span class="ico">&#9888;</span>
-  <span><strong>Experimental.</strong> DJD Agent Score is an unvalidated algorithmic model. Scores are informational only, not financial advice, credit assessments, or consumer reports under the FCRA. Use at your own risk. <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a></span>
+  <span><strong>Experimental.</strong> DJD Agent Score is an unvalidated algorithmic model. Scores are informational only, not financial advice or consumer reports. <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a></span>
 </div>
 
 <!-- HERO -->
 <div class="hero">
-  <div class="badge">Live on Base &middot; Paid via x402</div>
-  <h1>AI programs are starting to hire and pay other AI programs.<br>We help them decide <em>who to trust</em>.</h1>
-  <p class="hero-sub">One API call. No signup.</p>
-  <p class="hero-p">When your AI agent is about to send money to another AI agent, how do you know that agent is legit? DJD Agent Score analyzes every wallet's on-chain history and produces a trust score &mdash; 0 to 100 &mdash; so your agent can decide in milliseconds. Free tier included. Paid lookups via <a href="https://www.x402.org/" target="_blank">x402</a> micropayments. No API keys. No accounts.</p>
+  <div class="hero-chip"><span class="dot"></span> Live on Base &middot; Paid via x402</div>
+  <h1>Trust scores for the <em>autonomous agent economy</em></h1>
+  <p class="hero-sub">Before your AI agent sends money to another AI agent, it asks us one question: <strong>is this wallet legit?</strong> We check the blockchain and answer in milliseconds.</p>
+  <div class="hero-actions">
+    <a href="#lookup" class="btn btn-primary">Score a Wallet</a>
+    <a href="#explainer" class="btn btn-ghost">Watch the Demo</a>
+  </div>
 </div>
 
 <!-- STATS -->
@@ -271,22 +277,22 @@ footer{border-top:1px solid var(--border);padding:28px 0 36px;margin-top:60px}
   <div class="st"><div class="st-v" id="sW">&mdash;</div><div class="st-l">Wallets Indexed</div></div>
   <div class="st"><div class="st-v" id="sT">&mdash;</div><div class="st-l">Transactions</div></div>
   <div class="st"><div class="st-v" id="sQ">&mdash;</div><div class="st-l">Queries Served</div></div>
-  <div class="st"><div class="st-v live"><span class="dot"></span><span id="sS">&mdash;</span></div><div class="st-l">Indexer</div></div>
+  <div class="st"><div class="st-v live"><span class="dot-live"></span><span id="sS">&mdash;</span></div><div class="st-l">Indexer</div></div>
 </div>
+
+<div class="divider"></div>
 
 <!-- ANIMATED EXPLAINER -->
 <div class="sec" id="explainer">
   <div class="sec-label">See It Work</div>
-  <div class="sec-title">Watch a score in action</div>
-  <div class="sec-desc">Your agent needs a service. Multiple agents offer it. Who do you trust? Watch the score decide.</div>
+  <div class="sec-title">Watch a score decide in real time</div>
+  <div class="sec-desc">Your agent needs a service. Multiple agents offer it. Who do you trust?</div>
   <div class="exp">
     <div class="exp-tabs">
       <button class="exp-tab active" data-exp="0">Legal Research</button>
       <button class="exp-tab" data-exp="1">Translation</button>
       <button class="exp-tab" data-exp="2">Market Data</button>
     </div>
-
-    <!-- Scenario 0: Legal Research -->
     <div class="exp-scenario" data-scenario="0" data-winner="0">
       <div class="exp-stage">
         <div class="exp-task">Your <strong>legal research bot</strong> needs to hire a research service. Three agents offer the work at different prices.</div>
@@ -313,8 +319,6 @@ footer{border-top:1px solid var(--border);padding:28px 0 36px;margin-top:60px}
         <div class="exp-result"><strong>LexAgent selected.</strong> Consistent 6-month history with 43 unique counterparties, no integrity flags. The cheapest option was created yesterday with zero history &mdash; price isn't everything.</div>
       </div>
     </div>
-
-    <!-- Scenario 1: Translation -->
     <div class="exp-scenario" data-scenario="1" data-winner="2">
       <div class="exp-stage">
         <div class="exp-task">Your <strong>content bot</strong> needs a translation service for a product launch. Three translation agents are available.</div>
@@ -341,8 +345,6 @@ footer{border-top:1px solid var(--border);padding:28px 0 36px;margin-top:60px}
         <div class="exp-result"><strong>LingoPro selected.</strong> Highest score with strong confidence. PolyGlot's wallet was created 3 days ago &mdash; insufficient history to trust with a product launch.</div>
       </div>
     </div>
-
-    <!-- Scenario 2: Market Data -->
     <div class="exp-scenario" data-scenario="2" data-winner="1">
       <div class="exp-stage">
         <div class="exp-task">Your <strong>trading bot</strong> needs a market data feed. Three aggregator agents are available.</div>
@@ -370,7 +372,6 @@ footer{border-top:1px solid var(--border);padding:28px 0 36px;margin-top:60px}
         <div class="exp-result"><strong>MarketPulse selected.</strong> DataStream was flagged &mdash; its wallet shares a funding source with 12 other wallets, indicating possible Sybil activity. Integrity matters more than price.</div>
       </div>
     </div>
-
     <div class="exp-ctrl">
       <div class="exp-dot active" data-exp-dot="0"></div>
       <div class="exp-dot" data-exp-dot="1"></div>
@@ -380,158 +381,39 @@ footer{border-top:1px solid var(--border);padding:28px 0 36px;margin-top:60px}
   </div>
 </div>
 
-<!-- PLAIN ENGLISH -->
-<div class="sec">
-  <div class="sec-label">What Is This?</div>
-  <div class="sec-title">The reference-check for AI agents</div>
-  <div class="plain">
-    <p>In the real world, before you hire someone you've never met, you check their references. <strong>DJD Agent Score is the reference-check for AI programs that pay other AI programs.</strong></p>
-    <p>Your AI agent sends us a wallet address. We look at every transaction that wallet has ever made on Base. We produce a score from 0 to 100 and a recommendation: <strong>proceed</strong>, <strong>use caution</strong>, or <strong>don't transact</strong>. One API call, under 200ms.</p>
-  </div>
-</div>
+<div class="divider"></div>
 
-<!-- CONCRETE EXAMPLES -->
+<!-- HOW IT WORKS -->
 <div class="sec">
-  <div class="sec-label">Real Scenarios</div>
-  <div class="sec-title">How agents use the score</div>
-  <div class="sec-desc">Three situations where a trust score changes the outcome.</div>
-  <div class="examples">
-    <div class="example">
-      <div class="example-label g">Proceed</div>
-      <h3>Law firm hires a research agent</h3>
-      <p>A law firm's research agent needs to hire a legal-research service agent it's never used before. It checks the score first.</p>
-      <div class="example-out">
-        <span class="eo-s" style="color:var(--green)">Score: 72</span> &middot; Established
-        <span class="eo-r" style="color:var(--green)">&#10003; Recommendation: proceed</span>
-      </div>
+  <div class="sec-label">How It Works</div>
+  <div class="sec-title">Three steps to trust</div>
+  <div class="sec-desc">Your agent sends a wallet address. We return a verdict. One API call, under 200ms.</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <h3>Query</h3>
+      <p>Your agent sends us any Base wallet address via a simple GET request. No API keys. No accounts. Free tier included.</p>
     </div>
-    <div class="example">
-      <div class="example-label y">Caution</div>
-      <h3>Content bot needs a translator</h3>
-      <p>A content-creation agent needs to pay a translation agent for a product launch. The cheapest option looks suspicious.</p>
-      <div class="example-out">
-        <span class="eo-s" style="color:var(--text-muted)">Score: 14</span> &middot; Unverified
-        <span class="eo-r" style="color:var(--text-muted)">&#10007; Recommendation: insufficient_history</span>
-      </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <h3>Analyze</h3>
+      <p>We check every transaction that wallet has ever made. Five scoring dimensions plus two integrity detection systems produce a score from 0 to 100.</p>
     </div>
-    <div class="example">
-      <div class="example-label r">Flagged</div>
-      <h3>Trading agent vets an aggregator</h3>
-      <p>A trading agent considers routing an order through a new aggregator agent. The score catches something humans might miss.</p>
-      <div class="example-out">
-        <span class="eo-s" style="color:var(--orange)">Score: 41</span> &middot; Emerging &middot; <span style="color:var(--red)">&#9888; sybil_risk</span>
-        <span class="eo-r" style="color:var(--red)">&#10007; Recommendation: flagged_for_review</span>
-      </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>Decide</h3>
+      <p>Your agent receives a score, tier, confidence level, and an actionable recommendation: <strong>proceed</strong>, <strong>use caution</strong>, or <strong>don't transact</strong>.</p>
     </div>
   </div>
 </div>
 
-<!-- SCORING DIMENSIONS -->
-<div class="sec" id="dimensions">
-  <div class="sec-label">Scoring Dimensions</div>
-  <div class="sec-title">Five questions about every wallet</div>
-  <div class="sec-desc">Each dimension evaluates a different facet of on-chain behavior, then they're combined into a single composite score. Model v2.1.0.</div>
-  <div class="grid2">
-    <div class="card">
-      <h3>Reliability</h3>
-      <div class="dim-q">"Does this agent follow through?"</div>
-      <p>Evaluates consistency and predictability of transaction behavior over time. Wallets with regular, sustained activity across diverse counterparties score higher than erratic or concentrated ones.</p>
-      <div class="dim-analogy">Like checking someone's track record &mdash; do they consistently show up and do good work?</div>
-    </div>
-    <div class="card">
-      <h3>Viability</h3>
-      <div class="dim-q">"Can this agent actually pay?"</div>
-      <p>Assesses financial health and sustainability. Considers balance relative to transaction volume and how the wallet's position changes over time. Stable, healthy positions score higher.</p>
-      <div class="dim-analogy">Like checking if a contractor is financially stable enough to complete your project.</div>
-    </div>
-    <div class="card">
-      <h3>Identity</h3>
-      <div class="dim-q">"Is this a real, unique agent?"</div>
-      <p>Measures the wallet's uniqueness and organic legitimacy. Evaluates relationship diversity, network structure, and the absence of patterns associated with manufactured identities.</p>
-      <div class="dim-analogy">Like verifying someone is who they say they are &mdash; not five fake profiles run by one person.</div>
-    </div>
-    <div class="card">
-      <h3>Behavior</h3>
-      <div class="dim-q">"Does this agent act like a real one?"</div>
-      <p>Analyzes transaction timing patterns, consistency, and anomaly signals. Wallets that transact at regular intervals with organic timing patterns score higher than those with erratic bursts or suspiciously uniform activity.</p>
-      <div class="dim-analogy">Like watching how someone works day-to-day &mdash; genuine agents have natural rhythms, not robotic scripts.</div>
-    </div>
-    <div class="card">
-      <h3>Capability</h3>
-      <div class="dim-q">"Is this agent economically active?"</div>
-      <p>Gauges x402 revenue earned (log-scaled), services operated, and the wallet's role within the wider agent economy. Agents that earn through x402 micropayments build verifiable economic track records.</p>
-      <div class="dim-analogy">Like checking how much business experience someone has &mdash; more connections and activity means more established.</div>
-    </div>
-  </div>
-</div>
-
-<!-- HOW WE CATCH FAKES -->
-<div class="sec">
-  <div class="sec-label">Integrity Systems</div>
-  <div class="sec-title">How we catch fakes</div>
-  <div class="sec-desc">Two proprietary detection systems run as part of the scoring pipeline. Flags from either system apply multiplicative penalties that stack &mdash; the integrity multiplier floors at 0.10 (90% max penalty).</div>
-  <div class="grid2">
-    <div class="card">
-      <div class="clbl r">Sybil Detection &mdash; "One person, many masks"</div>
-      <h3>Catches fake identity clusters</h3>
-      <p>Imagine discovering that five "different" freelancers you're considering all work from the same office, share the same bank account, and were all created last week. That's what Sybil detection catches on-chain: circular fund flows, artificial relationship structures, and wallet creation patterns that suggest one operator controlling multiple identities.</p>
-    </div>
-    <div class="card">
-      <div class="clbl o">Gaming Detection &mdash; "Cramming before the test"</div>
-      <h3>Catches score manipulation</h3>
-      <p>Like someone padding their resume right before an interview &mdash; sudden spikes of fake activity designed to look legitimate. We monitor for behavioral anomalies: activity inconsistent with history, strategically timed balance changes, and patterns that stop abruptly once a score threshold is reached. Each detection applies targeted penalties.</p>
-    </div>
-  </div>
-</div>
-
-<!-- THE OUTPUT -->
-<div class="sec">
-  <div class="sec-label">The Output</div>
-  <div class="sec-title">What you get back</div>
-  <div class="sec-desc">Every API response includes these key fields. Together they tell your agent everything it needs to make a decision.</div>
-  <div class="output-grid">
-    <div class="output-card">
-      <h3>Score</h3>
-      <div class="output-sub">0 &ndash; 100</div>
-      <p>The headline number. A single composite of all five scoring dimensions, adjusted for integrity. Higher is better.</p>
-    </div>
-    <div class="output-card">
-      <h3>Tier</h3>
-      <div class="output-sub">5 levels</div>
-      <p>A human-readable label derived from the score. Makes it easy to set thresholds without thinking about numbers.</p>
-      <div class="tiers" style="margin-top:12px">
-        <div class="tier-seg t-unv"><div class="tn">Unverified</div></div>
-        <div class="tier-seg t-emg"><div class="tn">Emerging</div></div>
-        <div class="tier-seg t-est"><div class="tn">Established</div></div>
-        <div class="tier-seg t-tru"><div class="tn">Trusted</div></div>
-        <div class="tier-seg t-eli"><div class="tn">Elite</div></div>
-      </div>
-    </div>
-    <div class="output-card">
-      <h3>Confidence</h3>
-      <div class="output-sub">0.0 &ndash; 1.0</div>
-      <p>How much data backs the score. A high score with high confidence is meaningful. A high score with low confidence means the wallet is under-observed and may shift.</p>
-    </div>
-    <div class="output-card">
-      <h3>Recommendation</h3>
-      <div class="output-sub">actionable output</div>
-      <p>The field your agent should use to make decisions. Uses priority-ordered logic combining integrity flags, data sufficiency, and score thresholds.</p>
-      <div class="output-vals">
-        <span class="output-val" style="color:var(--green);background:var(--green-dim)">proceed</span>
-        <span class="output-val" style="color:var(--yellow);background:var(--yellow-dim)">proceed_with_caution</span>
-        <span class="output-val" style="color:var(--text-muted);background:rgba(71,85,105,.18)">insufficient_history</span>
-        <span class="output-val" style="color:var(--red);background:var(--red-dim)">high_risk</span>
-        <span class="output-val" style="color:var(--red);background:var(--red-dim)">flagged_for_review</span>
-      </div>
-    </div>
-  </div>
-</div>
+<div class="divider"></div>
 
 <!-- SCORE LOOKUP -->
 <div class="sec" id="lookup">
-  <div class="sec-label">Try It</div>
-  <div class="sec-title">Score any wallet</div>
-  <div class="sec-desc">Paste any Base wallet address. Free basic lookups available daily. No account needed.</div>
+  <div class="sec-label sec-center">Try It</div>
+  <div class="sec-title sec-center" style="text-align:center">Score any wallet</div>
+  <div class="sec-desc sec-center" style="text-align:center;margin:0 auto">Paste any Base wallet address. Free basic lookups daily. No account needed.</div>
   <div class="lookup">
     <div class="lu-wrap">
       <input type="text" id="wI" placeholder="0x... (any Base wallet address)" spellcheck="false" autocomplete="off">
@@ -551,24 +433,73 @@ footer{border-top:1px solid var(--border);padding:28px 0 36px;margin-top:60px}
         </div>
         <div class="sc-bar"><div class="sc-bar-bg"><div class="sc-bar-fill" id="rB"></div></div></div>
         <div class="sc-wallet" id="rW">&mdash;</div>
-        <div class="sc-badge-row" id="rBadge" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Embed Badge</div>
+        <div class="sc-badge-row" id="rBadge" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Embed Badge</div>
           <div style="margin-bottom:8px"><img id="rBadgeImg" src="" alt="DJD Agent Score badge" style="height:20px;display:block"></div>
           <div style="position:relative">
-            <input id="rBadgeCode" type="text" readonly style="width:100%;background:var(--bg);border:1px solid var(--border-hi);border-radius:5px;padding:7px 60px 7px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);outline:none;cursor:text" value="">
-            <button onclick="copyBadge()" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:var(--bg3);color:var(--text-dim);border:none;border-radius:4px;padding:3px 9px;font-family:'JetBrains Mono',monospace;font-size:9.5px;cursor:pointer" id="copyBtn">copy</button>
+            <input id="rBadgeCode" type="text" readonly style="width:100%;background:var(--bg);border:1px solid var(--border-hi);border-radius:6px;padding:8px 64px 8px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);outline:none" value="">
+            <button onclick="copyBadge()" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:var(--bg3);color:var(--text-dim);border:none;border-radius:5px;padding:4px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer" id="copyBtn">copy</button>
           </div>
         </div>
-        <div class="sc-disc">This score is algorithmically generated from public blockchain data and unverified third-party submissions. It is not verified, audited, or guaranteed. Do not use as the sole basis for any financial or transactional decision. Not a consumer report under the FCRA. <a href="/terms">Terms</a></div>
+        <div class="sc-disc">This score is algorithmically generated from public blockchain data and unverified third-party submissions. It is not verified, audited, or guaranteed. Not a consumer report under the FCRA. <a href="/terms">Terms</a></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- CODE -->
+<div class="divider"></div>
+
+<!-- WHAT WE MEASURE -->
+<div class="sec" id="dimensions">
+  <div class="sec-label">Scoring Model</div>
+  <div class="sec-title">Five dimensions of trust</div>
+  <div class="sec-desc">Each dimension evaluates a different facet of on-chain behavior. Combined into one composite score. Model v2.1.0.</div>
+  <div class="dims">
+    <div class="dim">
+      <h3>Reliability</h3>
+      <div class="dim-q">"Does this agent follow through?"</div>
+      <p>Consistency and predictability of transaction behavior over time.</p>
+    </div>
+    <div class="dim">
+      <h3>Viability</h3>
+      <div class="dim-q">"Can this agent actually pay?"</div>
+      <p>Financial health, balance stability, and economic sustainability.</p>
+    </div>
+    <div class="dim">
+      <h3>Identity</h3>
+      <div class="dim-q">"Is this a real, unique agent?"</div>
+      <p>Network diversity, relationship structure, and sybil resistance signals.</p>
+    </div>
+    <div class="dim">
+      <h3>Behavior</h3>
+      <div class="dim-q">"Does this agent act like a real one?"</div>
+      <p>Transaction timing patterns, organic rhythms, and anomaly detection.</p>
+    </div>
+    <div class="dim">
+      <h3>Capability</h3>
+      <div class="dim-q">"Is this agent economically active?"</div>
+      <p>x402 revenue earned, services operated, and agent economy participation.</p>
+    </div>
+    <div class="dim" style="text-align:center;display:flex;flex-direction:column;justify-content:center">
+      <h3 style="color:var(--accent)">Integrity Systems</h3>
+      <p>Two detection engines &mdash; sybil detection and gaming detection &mdash; apply multiplicative penalties that stack. Flags floor at a 0.10x multiplier.</p>
+    </div>
+  </div>
+  <div class="tiers">
+    <div class="tier-seg t-unv"><div class="tn">Unverified</div></div>
+    <div class="tier-seg t-emg"><div class="tn">Emerging</div></div>
+    <div class="tier-seg t-est"><div class="tn">Established</div></div>
+    <div class="tier-seg t-tru"><div class="tn">Trusted</div></div>
+    <div class="tier-seg t-eli"><div class="tn">Elite</div></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- INTEGRATION -->
 <div class="sec" id="api-ref">
   <div class="sec-label">Integration</div>
-  <div class="sec-title">Add trust to your agent in one call</div>
+  <div class="sec-title">Add trust in one API call</div>
   <div class="sec-desc">Score the recipient before every transaction. Gate payments on the recommendation field.</div>
   <div class="code"><div class="code-l">JavaScript</div><pre><span class="c">// Before sending USDC, check the recipient's reputation</span>
 <span class="k">const</span> wallet = <span class="s">"0xRecipientAddress"</span>;
@@ -584,36 +515,24 @@ footer{border-top:1px solid var(--border);padding:28px 0 36px;margin-top:60px}
 } <span class="k">else</span> {
   <span class="f">log</span>(<span class="s">`Blocked: ${recommendation}`</span>);
 }</pre></div>
-  <div class="code" style="margin-top:12px"><div class="code-l">cURL</div><pre><span class="c"># Free basic lookup</span>
-curl <span class="s">"https://djd-agent-score.fly.dev/v1/score/basic?wallet=0x..."</span>
-
-<span class="c"># Sample response:</span>
-<span class="c"># {</span>
-<span class="c">#   "score": 67,</span>
-<span class="c">#   "tier": "Established",</span>
-<span class="c">#   "confidence": 0.42,</span>
-<span class="c">#   "recommendation": "proceed_with_caution",</span>
-<span class="c">#   "modelVersion": "2.1.0"</span>
-<span class="c"># }</span></pre></div>
 </div>
 
-<!-- API -->
+<!-- API ENDPOINTS -->
 <div class="sec">
   <div class="sec-label">Endpoints</div>
   <div class="sec-title">API reference</div>
-  <div class="sec-desc">Paid endpoints use x402 micropayment on Base. No API keys, no accounts.</div>
+  <div class="sec-desc">Paid endpoints use x402 micropayments on Base. No API keys, no accounts.</div>
   <div class="api">
     <div class="api-r hdr"><div>Endpoint</div><div style="text-align:right">Price</div><div style="text-align:right">Method</div></div>
-    <div class="api-r"><div><div class="api-ep">/v1/score/basic?wallet=</div><div class="api-d">Composite score, tier, confidence, recommendation, model version</div></div><div class="api-p api-f">Free tier</div><div class="api-m">GET</div></div>
-    <div class="api-r"><div><div class="api-ep">/v1/score/full?wallet=</div><div class="api-d">Full dimension breakdown, integrity flags, data quality assessment</div></div><div class="api-p">$0.10</div><div class="api-m">GET</div></div>
-    <div class="api-r"><div><div class="api-ep">/v1/score/refresh?wallet=</div><div class="api-d">Force re-score with latest chain data, full breakdown returned</div></div><div class="api-p">$0.25</div><div class="api-m">GET</div></div>
-    <div class="api-r"><div><div class="api-ep">POST /v1/report</div><div class="api-d">Submit fraud report with evidence (target wallet + tx hashes)</div></div><div class="api-p">$0.02</div><div class="api-m">POST</div></div>
-    <div class="api-r"><div><div class="api-ep">/v1/data/fraud/blacklist</div><div class="api-d">Check if wallet has active fraud reports filed against it</div></div><div class="api-p">$0.05</div><div class="api-m">GET</div></div>
-    <div class="api-r"><div><div class="api-ep">/v1/badge/{wallet}.svg</div><div class="api-d">Embeddable SVG score badge for READMEs and websites</div></div><div class="api-p api-f">Free</div><div class="api-m">GET</div></div>
-    <div class="api-r"><div><div class="api-ep">/v1/leaderboard</div><div class="api-d">Top-scored wallets in the ecosystem</div></div><div class="api-p api-f">Free</div><div class="api-m">GET</div></div>
-    <div class="api-r"><div><div class="api-ep">POST /v1/agent/register</div><div class="api-d">Register a wallet with name, description, and GitHub URL for a score boost</div></div><div class="api-p api-f">Free</div><div class="api-m">POST</div></div>
-    <div class="api-r"><div><div class="api-ep">/v1/webhooks/subscribe</div><div class="api-d">Subscribe to score changes, fraud reports, and registration events</div></div><div class="api-p api-f">Free (API key)</div><div class="api-m">POST</div></div>
-    <div class="api-r"><div><div class="api-ep">/health</div><div class="api-d">System status, database stats, indexer state, job stats</div></div><div class="api-p api-f">Free</div><div class="api-m">GET</div></div>
+    <div class="api-r"><div><div class="api-ep">/v1/score/basic?wallet=</div><div class="api-d">Composite score, tier, confidence, recommendation</div></div><div class="api-p api-f">Free tier</div><div class="api-m">GET</div></div>
+    <div class="api-r"><div><div class="api-ep">/v1/score/full?wallet=</div><div class="api-d">Full dimension breakdown, integrity flags, data quality</div></div><div class="api-p">$0.10</div><div class="api-m">GET</div></div>
+    <div class="api-r"><div><div class="api-ep">/v1/score/refresh?wallet=</div><div class="api-d">Force re-score with latest chain data</div></div><div class="api-p">$0.25</div><div class="api-m">GET</div></div>
+    <div class="api-r"><div><div class="api-ep">POST /v1/report</div><div class="api-d">Submit fraud report with evidence</div></div><div class="api-p">$0.02</div><div class="api-m">POST</div></div>
+    <div class="api-r"><div><div class="api-ep">/v1/data/fraud/blacklist</div><div class="api-d">Check if wallet has active fraud reports</div></div><div class="api-p">$0.05</div><div class="api-m">GET</div></div>
+    <div class="api-r"><div><div class="api-ep">/v1/badge/{wallet}.svg</div><div class="api-d">Embeddable SVG score badge</div></div><div class="api-p api-f">Free</div><div class="api-m">GET</div></div>
+    <div class="api-r"><div><div class="api-ep">/v1/leaderboard</div><div class="api-d">Top-scored wallets</div></div><div class="api-p api-f">Free</div><div class="api-m">GET</div></div>
+    <div class="api-r"><div><div class="api-ep">POST /v1/agent/register</div><div class="api-d">Register wallet with name, description, GitHub</div></div><div class="api-p api-f">Free</div><div class="api-m">POST</div></div>
+    <div class="api-r"><div><div class="api-ep">/v1/webhooks/subscribe</div><div class="api-d">Subscribe to score changes and events</div></div><div class="api-p api-f">Free</div><div class="api-m">POST</div></div>
   </div>
 </div>
 
@@ -624,34 +543,38 @@ curl <span class="s">"https://djd-agent-score.fly.dev/v1/score/basic?wallet=0x..
   <div class="sec-desc">Use Agent Score from any language or AI framework.</div>
   <div class="api">
     <div class="api-r hdr"><div>Package</div><div style="text-align:right">Install</div><div style="text-align:right">Type</div></div>
-    <div class="api-r"><div><div class="api-ep"><a href="https://www.npmjs.com/package/djd-agent-score" style="color:inherit;text-decoration:underline">djd-agent-score</a></div><div class="api-d">TypeScript/JavaScript SDK with full type safety</div></div><div class="api-p api-f" style="font-family:monospace;font-size:0.75rem">npm i djd-agent-score</div><div class="api-m">SDK</div></div>
-    <div class="api-r"><div><div class="api-ep"><a href="https://pypi.org/project/agentscore/" style="color:inherit;text-decoration:underline">agentscore</a></div><div class="api-d">Python SDK with LangChain and CrewAI integrations</div></div><div class="api-p api-f" style="font-family:monospace;font-size:0.75rem">pip install agentscore</div><div class="api-m">SDK</div></div>
-    <div class="api-r"><div><div class="api-ep"><a href="https://www.npmjs.com/package/djd-agent-score-mcp" style="color:inherit;text-decoration:underline">djd-agent-score-mcp</a></div><div class="api-d">MCP server — use Agent Score from Claude, GPT, or any MCP-compatible AI</div></div><div class="api-p api-f" style="font-family:monospace;font-size:0.75rem">npx djd-agent-score-mcp</div><div class="api-m">MCP</div></div>
+    <div class="api-r"><div><div class="api-ep"><a href="https://www.npmjs.com/package/djd-agent-score" style="color:inherit;text-decoration:underline">djd-agent-score</a></div><div class="api-d">TypeScript/JavaScript SDK with full type safety</div></div><div class="api-p api-f" style="font-family:monospace;font-size:0.72rem">npm i djd-agent-score</div><div class="api-m">SDK</div></div>
+    <div class="api-r"><div><div class="api-ep"><a href="https://pypi.org/project/agentscore/" style="color:inherit;text-decoration:underline">agentscore</a></div><div class="api-d">Python SDK with LangChain and CrewAI integrations</div></div><div class="api-p api-f" style="font-family:monospace;font-size:0.72rem">pip install agentscore</div><div class="api-m">SDK</div></div>
+    <div class="api-r"><div><div class="api-ep"><a href="https://www.npmjs.com/package/djd-agent-score-mcp" style="color:inherit;text-decoration:underline">djd-agent-score-mcp</a></div><div class="api-d">MCP server for Claude, GPT, or any MCP-compatible AI</div></div><div class="api-p api-f" style="font-family:monospace;font-size:0.72rem">npx djd-agent-score-mcp</div><div class="api-m">MCP</div></div>
   </div>
 </div>
+
+<div class="divider"></div>
 
 <!-- LEADERBOARD -->
 <div class="sec" id="leaderboard">
   <div class="sec-label">Live Data</div>
-  <div class="sec-title">Leaderboard</div>
-  <div class="sec-desc">Top wallets by composite score. Refreshed periodically.</div>
+  <div class="sec-title">Agent leaderboard</div>
+  <div class="sec-desc">Top wallets by composite score. Scores published to the <a href="https://basescan.org/address/0x8004BAa17C55a88189AE136b182e5fdA19dE9b63" target="_blank">ERC-8004 Reputation Registry</a> on Base.</div>
   <div class="lb" id="lbT"><div class="lb-r hdr"><div>#</div><div>Wallet</div><div style="text-align:right">Score</div><div style="text-align:right">Tier</div></div><div class="lb-e" id="lbE">Loading...</div></div>
 </div>
+
+<div class="divider"></div>
 
 <!-- FEEDBACK -->
 <div class="sec" id="feedback">
   <div class="sec-label">Improve the Model</div>
   <div class="sec-title">Submit feedback</div>
-  <div class="sec-desc">Your feedback directly influences how we tune the model, adjust detection systems, and prioritize new features. Every submission is reviewed.</div>
+  <div class="sec-desc">Your feedback directly influences how we tune the model and prioritize new features.</div>
   <div class="fb">
     <div class="fb-row">
       <label>Feedback Type</label>
       <select id="fbType">
         <option value="">Select a category...</option>
-        <option value="score-accuracy">Score seems wrong (too high or too low for a wallet)</option>
-        <option value="false-flag">False integrity flag (wallet incorrectly flagged)</option>
-        <option value="missed-flag">Missed integrity issue (suspicious wallet not flagged)</option>
-        <option value="new-signal">Suggest a new data source or signal</option>
+        <option value="score-accuracy">Score seems wrong</option>
+        <option value="false-flag">False integrity flag</option>
+        <option value="missed-flag">Missed integrity issue</option>
+        <option value="new-signal">Suggest a new signal</option>
         <option value="feature-request">Feature request</option>
         <option value="bug">Bug report</option>
         <option value="integration">Integration help</option>
@@ -659,35 +582,30 @@ curl <span class="s">"https://djd-agent-score.fly.dev/v1/score/basic?wallet=0x..
       </select>
     </div>
     <div class="fb-row">
-      <label>Wallet Address (if applicable)</label>
-      <input type="text" id="fbWallet" placeholder="0x... (optional)" spellcheck="false" autocomplete="off">
+      <label>Wallet Address (optional)</label>
+      <input type="text" id="fbWallet" placeholder="0x..." spellcheck="false" autocomplete="off">
     </div>
     <div class="fb-row">
       <label>Details</label>
-      <textarea id="fbDetails" placeholder="Be specific. If reporting a score issue: what score did you see, what did you expect, and why? If suggesting a signal: what data source and what would it improve?"></textarea>
+      <textarea id="fbDetails" placeholder="Be specific. What did you see, what did you expect, and why?"></textarea>
     </div>
     <div class="fb-row">
       <label>Your Contact (optional)</label>
-      <input type="text" id="fbContact" placeholder="Email, wallet address, or X handle for follow-up">
+      <input type="text" id="fbContact" placeholder="Email, wallet, or X handle for follow-up">
     </div>
     <button class="fb-submit" onclick="submitFeedback()">Submit Feedback</button>
     <div class="fb-msg" id="fbMsg"></div>
   </div>
 </div>
 
-<!-- ONE-SENTENCE SUMMARY -->
-<div class="summary">
-  <p>Before your AI agent sends money, it asks us: <em>"Is this wallet legit?"</em> We check the blockchain and answer in milliseconds.</p>
-</div>
-
 <!-- FOOTER -->
 <footer>
   <div class="ft-disc">
-    <strong>Disclaimer:</strong> DJD Agent Score is experimental. All scores are algorithmically generated from publicly available blockchain data and unverified third-party submissions. Scores are not financial advice, credit assessments, investment recommendations, or guarantees of agent behavior or creditworthiness. The scoring model is unvalidated and may produce inaccurate, incomplete, or misleading results. Do not use scores as the sole basis for financial or transactional decisions. This service is not a "consumer report" as defined by the Fair Credit Reporting Act (15 U.S.C. &sect; 1681 et seq.) and the operator is not a "consumer reporting agency." Fraud reports are unverified third-party submissions and do not constitute accusations, findings, or determinations of wrongdoing by the operator. By using this service you agree to the <a href="/terms">Terms of Service</a> and acknowledge the <a href="/privacy">Privacy Policy</a>.
+    <strong>Disclaimer:</strong> DJD Agent Score is experimental. All scores are algorithmically generated from publicly available blockchain data and unverified third-party submissions. Scores are not financial advice, credit assessments, investment recommendations, or guarantees. The scoring model is unvalidated and may produce inaccurate results. This service is not a "consumer report" as defined by the FCRA. By using this service you agree to the <a href="/terms">Terms of Service</a> and acknowledge the <a href="/privacy">Privacy Policy</a>.
   </div>
   <div class="ft-bot">
     <div class="ft-l">&copy; 2026 DJD Agent Score LLC &middot; Built on Base &middot; Powered by x402</div>
-    <div class="ft-links"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/health">Status</a></div>
+    <div class="ft-links"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/blog">Blog</a><a href="/health">Status</a></div>
   </div>
 </footer>
 
@@ -697,7 +615,6 @@ curl <span class="s">"https://djd-agent-score.fly.dev/v1/score/basic?wallet=0x..
 const A=window.location.origin;
 const fmt=n=>n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':String(n);
 
-/* DOM helper — avoids unsafe HTML injection patterns */
 function mkEl(tag, cls, text) {
   var el = document.createElement(tag);
   if (cls) el.className = cls;
@@ -714,7 +631,7 @@ async function loadStats(){
   document.getElementById('sS').textContent=d.indexer.running?'LIVE':'DOWN';
   }catch(e){document.getElementById('sS').textContent='ERR'}}
 
-/* ── Leaderboard (DOM-built, no raw HTML injection) ── */
+/* ── Leaderboard ── */
 async function loadLB(){
   try{var d=await(await fetch(A+'/v1/leaderboard')).json();
   var t=document.getElementById('lbT'),e=document.getElementById('lbE');
@@ -773,7 +690,7 @@ function copyBadge(){
   }).catch(function(){inp.select();document.execCommand('copy')});
 }
 
-/* ── Feedback (uses textContent — no HTML injection) ── */
+/* ── Feedback ── */
 function submitFeedback(){
   var type=document.getElementById('fbType').value;
   var wallet=document.getElementById('fbWallet').value.trim();
@@ -794,102 +711,45 @@ function submitFeedback(){
 
 /* ── Animated Explainer ── */
 var expIdx=0, expTimers=[];
-
-function clearExpTimers(){
-  expTimers.forEach(function(t){clearTimeout(t)});
-  expTimers=[];
-}
-
-function expAt(ms, fn){
-  expTimers.push(setTimeout(fn, ms));
-}
+function clearExpTimers(){expTimers.forEach(function(t){clearTimeout(t)});expTimers=[]}
+function expAt(ms, fn){expTimers.push(setTimeout(fn, ms))}
 
 function switchScenario(idx){
-  clearExpTimers();
-  expIdx=idx;
-
-  /* Reset all scenarios */
+  clearExpTimers();expIdx=idx;
   document.querySelectorAll('.exp-scenario').forEach(function(s){
     s.style.display='none';
-    s.querySelectorAll('.exp-card').forEach(function(c){
-      c.classList.remove('vis','scanning','selected','rejected');
-    });
+    s.querySelectorAll('.exp-card').forEach(function(c){c.classList.remove('vis','scanning','selected','rejected')});
     s.querySelector('.exp-result').classList.remove('vis');
   });
-
-  /* Activate current */
   var sc=document.querySelector('[data-scenario="'+idx+'"]');
   sc.style.display='block';
   var winnerIdx=parseInt(sc.dataset.winner);
-
-  /* Update tabs & dots */
-  document.querySelectorAll('.exp-tab').forEach(function(t,i){
-    t.classList.toggle('active',i===idx);
-  });
-  document.querySelectorAll('.exp-dot').forEach(function(d,i){
-    d.classList.toggle('active',i===idx);
-  });
-
+  document.querySelectorAll('.exp-tab').forEach(function(t,i){t.classList.toggle('active',i===idx)});
+  document.querySelectorAll('.exp-dot').forEach(function(d,i){d.classList.toggle('active',i===idx)});
   var cards=sc.querySelectorAll('.exp-card');
   var result=sc.querySelector('.exp-result');
-
-  /* Phase 1: Cards fade in (staggered) */
-  cards.forEach(function(c,i){
-    expAt(i*300, function(){c.classList.add('vis')});
-  });
-
-  /* Phase 2: Scanning sweep */
+  cards.forEach(function(c,i){expAt(i*300, function(){c.classList.add('vis')})});
   cards.forEach(function(c,i){
     expAt(1500+i*1200, function(){c.classList.add('scanning')});
     expAt(1500+i*1200+800, function(){c.classList.remove('scanning')});
   });
-
-  /* Phase 3: Decision */
-  expAt(5500, function(){
-    cards.forEach(function(c,i){
-      if(i===winnerIdx) c.classList.add('selected');
-      else c.classList.add('rejected');
-    });
-  });
-
-  /* Phase 4: Result narrative */
+  expAt(5500, function(){cards.forEach(function(c,i){if(i===winnerIdx)c.classList.add('selected');else c.classList.add('rejected')})});
   expAt(6500, function(){result.classList.add('vis')});
-
-  /* Auto-advance after pause */
   expAt(12000, function(){switchScenario((idx+1)%3)});
 }
 
-/* Tab click handlers */
-document.querySelectorAll('.exp-tab').forEach(function(tab){
-  tab.addEventListener('click', function(){
-    switchScenario(parseInt(this.dataset.exp));
-  });
-});
-
-/* Dot click handlers */
-document.querySelectorAll('.exp-dot').forEach(function(dot){
-  dot.addEventListener('click', function(){
-    switchScenario(parseInt(this.dataset.expDot));
-  });
-});
-
-/* Replay button */
-document.getElementById('expReplay').addEventListener('click', function(){
-  switchScenario(expIdx);
-});
+document.querySelectorAll('.exp-tab').forEach(function(tab){tab.addEventListener('click',function(){switchScenario(parseInt(this.dataset.exp))})});
+document.querySelectorAll('.exp-dot').forEach(function(dot){dot.addEventListener('click',function(){switchScenario(parseInt(this.dataset.expDot))})});
+document.getElementById('expReplay').addEventListener('click',function(){switchScenario(expIdx)});
 
 /* ── Init ── */
 document.getElementById('wI').addEventListener('keydown',function(e){if(e.key==='Enter')doScore()});
 loadStats();loadLB();setInterval(loadStats,30000);
-
-/* Start the explainer */
 switchScenario(0);
 
-/* Auto-score if ?wallet= param is present */
 var qw=new URLSearchParams(location.search).get('wallet');
 if(qw){document.getElementById('wI').value=qw;doScore(false);}
 
-/* Replace code-example domain with actual origin for local dev */
 if(window.location.hostname==='localhost'){
   document.querySelectorAll('pre .s').forEach(function(el){
     el.textContent=el.textContent.replace(/https:\/\/djd-agent-score\.fly\.dev/g,A);
