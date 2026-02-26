@@ -165,14 +165,16 @@ let _thresholdsCachedAt = 0
 function refreshThresholds(): void {
   if (Date.now() - _thresholdsCachedAt < 60_000) return
   try {
-    const raw = db
-      .prepare('SELECT value FROM indexer_state WHERE key = ?')
-      .get('tier_threshold_adjustments') as { value: string } | undefined
+    const raw = db.prepare('SELECT value FROM indexer_state WHERE key = ?').get('tier_threshold_adjustments') as
+      | { value: string }
+      | undefined
     if (raw?.value) {
       const parsed = JSON.parse(raw.value) as { thresholds: typeof _tierThresholds }
       if (parsed.thresholds) _tierThresholds = parsed.thresholds
     }
-  } catch { /* use defaults */ }
+  } catch {
+    /* use defaults */
+  }
   _thresholdsCachedAt = Date.now()
 }
 

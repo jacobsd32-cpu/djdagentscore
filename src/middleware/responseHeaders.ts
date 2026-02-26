@@ -26,7 +26,12 @@ export const responseHeadersMiddleware: MiddlewareHandler = async (c, next) => {
   const path = c.req.path
   const isDocsRoute = path.startsWith('/docs')
   const isHtmlPage =
-    path === '/' || path === '/leaderboard' || path === '/explorer' || path === '/terms' || path === '/privacy' || path.startsWith('/agent/')
+    path === '/' ||
+    path === '/leaderboard' ||
+    path === '/explorer' ||
+    path === '/terms' ||
+    path === '/privacy' ||
+    path.startsWith('/agent/')
   if (isDocsRoute) {
     c.res.headers.set(
       'Content-Security-Policy',
