@@ -1,5 +1,5 @@
-import { verifyAttestation } from 'insumer-verify'
 import type { VerifyResult } from 'insumer-verify'
+import { verifyAttestation } from 'insumer-verify'
 import { log } from './logger.js'
 
 // ---------- Config ----------
@@ -89,7 +89,7 @@ export async function fetchAndVerifyAttestation(
     })
 
     if (!res.ok) {
-      const text = await res.text().catch(() => 'unknown')
+      await res.text().catch(() => 'unknown')
       log.warn('insumer', `InsumerAPI attest call failed: HTTP ${res.status}`)
       return { ...EMPTY_RESULT, error: `InsumerAPI HTTP ${res.status}` }
     }
@@ -111,7 +111,7 @@ export async function fetchAndVerifyAttestation(
         conditionMet,
         checks: verification.checks,
         merkleProof: !!options.merkle,
-        error: 'Verification failed: ' + describeFailures(verification),
+        error: `Verification failed: ${describeFailures(verification)}`,
       }
     }
 
