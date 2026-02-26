@@ -7,6 +7,7 @@ import { paymentMiddlewareFromConfig } from '@x402/hono'
 import { HTTPFacilitatorClient } from '@x402/core/server'
 import type { Network } from '@x402/core/types'
 import { declareDiscoveryExtension } from '@x402/extensions/bazaar'
+import { ExactEvmScheme } from '@x402/evm/exact/server'
 
 import healthRoute from './routes/health.js'
 import scoreRoute from './routes/score.js'
@@ -287,6 +288,7 @@ const x402Middleware = paymentMiddlewareFromConfig(
     },
   },
   facilitatorClient,
+  [{ network: NETWORK, server: new ExactEvmScheme() }],
 )
 
 app.use(async (c, next) => {
