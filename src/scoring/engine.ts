@@ -15,6 +15,7 @@ import {
   getWalletUSDCData,
   hasBasename,
 } from '../blockchain.js'
+import { queueWebhookEvent } from '../jobs/webhookDelivery.js'
 import {
   countPriorQueries,
   countReportsAfterDate,
@@ -420,6 +421,13 @@ export async function getOrCalculateScore(
               sybilFlag: result.sybilFlag,
             },
           )
+          queueWebhookEvent('score.updated', {
+            wallet,
+            score: result.composite,
+            tier: scoreToTier(result.composite),
+            confidence: result.confidence,
+            recommendation: result.recommendation,
+          })
         })
         .catch(() => {
           /* ignore background refresh errors */
@@ -460,6 +468,13 @@ export async function getOrCalculateScore(
         gamingIndicators: result.gamingIndicators,
       },
     )
+    queueWebhookEvent('score.updated', {
+      wallet,
+      score: result.composite,
+      tier,
+      confidence: result.confidence,
+      recommendation: result.recommendation,
+    })
 
     const history = getScoreHistory(wallet)
     const calculatedAt = new Date().toISOString()

@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { getRegistration, updateGithubVerification, upsertRegistration } from '../db.js'
 import { ErrorCodes, errorResponse } from '../errors.js'
+import { queueWebhookEvent } from '../jobs/webhookDelivery.js'
 import { log } from '../logger.js'
 import type { Address, AgentRegistrationBody, AgentRegistrationResponse } from '../types.js'
 import { isValidAddress } from '../types.js'
@@ -190,6 +191,14 @@ register.post('/', async (c) => {
     github_stars: row.github_stars ?? null,
     github_pushed_at: row.github_pushed_at ?? null,
   }
+
+  queueWebhookEvent('agent.registered', {
+    wallet: normalizedWallet,
+    status: isNew ? 'registered' : 'updated',
+    registeredAt: row.registered_at,
+    name: row.name ?? null,
+    github_url: row.github_url ?? null,
+  })
 
   return c.json(response, isNew ? 201 : 200)
 })

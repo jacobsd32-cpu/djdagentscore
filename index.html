@@ -28,7 +28,8 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .mono{font-family:'JetBrains Mono',monospace}
 
 nav{padding:18px 0;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
-.logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:17px;color:var(--accent);letter-spacing:-0.5px}
+.logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:17px;color:var(--accent);letter-spacing:-0.5px;display:flex;align-items:center;gap:8px}
+.logo img{width:28px;height:28px;border-radius:6px}
 .logo span{color:var(--text-dim);font-weight:400}
 .nav-links{display:flex;gap:18px;flex-wrap:wrap}
 .nav-links a{color:var(--text-muted);text-decoration:none;font-size:12px;font-family:'JetBrains Mono',monospace;transition:color .2s}
@@ -240,7 +241,7 @@ footer{border-top:1px solid var(--border);padding:28px 0 36px;margin-top:60px}
 <div class="wrap">
 
 <nav>
-  <div class="logo">DJD<span> Agent Score</span></div>
+  <div class="logo"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAIAAAAiOjnJAAAE4UlEQVR42u3dzXEbORAGUBx9cwbKYC+OxDm4yvlvBLsJ2NL8oIHuxlN9R5GaAV59PZwSyfHt23eR6RmWQMASsAQsEbAELAFLBKxt+fX7X4sA1j0xc2NJB0ZrAhZMkIFVytNRwgZPhIHVzVNjYYMnwsA6glQPXgMpvMDaTOrHj594NYQVjWZW8CoDKzOjLdTAykVqsadoYWDtVDWRxcfHP9mQgbWa1AM0s7JeGFgrVK2XNMVZM1ujDalUmN4g68FrNFCV39MDYdVtjdKqynm6K6yerdGPVAlPt4RV5DXKqepHKo7XobAmqmpA6gqvQrZGFVWHkIrgdRCsKaoak/qSV35bQ1GprvKwFNU51TUKqTqW1Oe8ctoaCVUpqujqagKLqgNt5YKF1LKxWB4WVWfaGlSxVQzWY1WsvOe13dagiq0ysKhiaycsqvLYKgCLKrbmw6KKrfmwqGJrGyyqkttKB4sqtubDMgQNxG2wqDqqtAZVbEXYGlSxFWELLLDywaKKrT2wqKpuawOsu3VlUxPaiiutoa6UViJYVLEFlhSBRRVb+2HZwh5X8eGw1JXS2g/L5h1bWkNdgRVha6grtrLDUlftSysElrpSWtdtgSW5YVF1iK3JsNQVWLdsDZftEnEJP8xBiZiGwxyUiGk4zEGJmIbDHJSIaTjMQYmYhmBJSlhUmYZgSRpY5iBYz2yNTjca/rv5M/eZo4+h1k2H0WkOgpVnGoIFFlhggQUWWGCBBRZYYIEFFlhggQUWWGCBBRZYYFV/M8XcRxV6MwVYYIEFFlhggQWWgCVggQXWNlhsUfUQltICy4eCCFgCFlhg+QxSmaxqGyyl5SWhz3mXdXMQLMkKiy1zECzJBMs0BMs3rMr+Gw2+E1qi5qBvsZeQORgCiy1zcBospWUOPoRlGoJ1XdVMWGypK7AkEyyX8C7br1OZCUtpqasVsNhqVleBsJSWukoBi60z6+oJLKWlrlLAYuvAunoIiy2qwJJSsNiiahssV/ENrtk3wFJa6mobLLZKq9oGiy2qwAKrFCy2qIqCxRZVO2GxVUVVIlhKS11FwWKLqp2w2Go/BOfDYouqKFhsURUFiy2qNsNiK4mqMrDYOlxVICy2TlYVC+uNLbwek8qgKhwWW2eqWgGLrQNVpYP1R1t4XSF1S1UTWGydpmodrLu2jMWI8bdM1VJYU2ydzOt9US1TtRrWLFun8frbIqRVtQGW6updVJthqa6uRbUf1gNb5/CaRWqXqs2w5trqweuTsyukaj+sZ7Za8ppLaq+qFLCCeFUR9vkpVCSVC9ZjW1/yyinsy2N+vBpJdjMRrDe2rvDKIOzKQb5ZhDxbmQvWe14Xha1EdvF4Xp51tk3MCOu9reu8Ipzd/dPvTzbhDuYFNYvXA2Gf45v4bFPOLu3epYY1y1YEso2Y8qsqACuC17ph048//5bVgBXEK4ha6HFW2axKsBbw+hLfxr9ea5vqwdrOC6nOsA7hVXdrasNqzKv6pnSA1UlYm71oBauusH5b0BNWFWGNV745rJzCTljwU2BtR3baIp8IawE1SwrWPX8WASwBS8ASAUvAErBEwJI9+R8Q1gw8vPId5wAAAABJRU5ErkJggg==" alt="DJD Agent Score" />DJD<span> Agent Score</span></div>
   <div class="nav-links">
     <a href="#explainer">Demo</a>
     <a href="#lookup">Score</a>
@@ -610,7 +611,21 @@ curl <span class="s">"https://djd-agent-score.fly.dev/v1/score/basic?wallet=0x..
     <div class="api-r"><div><div class="api-ep">/v1/badge/{wallet}.svg</div><div class="api-d">Embeddable SVG score badge for READMEs and websites</div></div><div class="api-p api-f">Free</div><div class="api-m">GET</div></div>
     <div class="api-r"><div><div class="api-ep">/v1/leaderboard</div><div class="api-d">Top-scored wallets in the ecosystem</div></div><div class="api-p api-f">Free</div><div class="api-m">GET</div></div>
     <div class="api-r"><div><div class="api-ep">POST /v1/agent/register</div><div class="api-d">Register a wallet with name, description, and GitHub URL for a score boost</div></div><div class="api-p api-f">Free</div><div class="api-m">POST</div></div>
+    <div class="api-r"><div><div class="api-ep">/v1/webhooks/subscribe</div><div class="api-d">Subscribe to score changes, fraud reports, and registration events</div></div><div class="api-p api-f">Free (API key)</div><div class="api-m">POST</div></div>
     <div class="api-r"><div><div class="api-ep">/health</div><div class="api-d">System status, database stats, indexer state, job stats</div></div><div class="api-p api-f">Free</div><div class="api-m">GET</div></div>
+  </div>
+</div>
+
+<!-- SDKs -->
+<div class="sec">
+  <div class="sec-label">Integrate</div>
+  <div class="sec-title">SDKs &amp; tools</div>
+  <div class="sec-desc">Use Agent Score from any language or AI framework.</div>
+  <div class="api">
+    <div class="api-r hdr"><div>Package</div><div style="text-align:right">Install</div><div style="text-align:right">Type</div></div>
+    <div class="api-r"><div><div class="api-ep"><a href="https://www.npmjs.com/package/djd-agent-score" style="color:inherit;text-decoration:underline">djd-agent-score</a></div><div class="api-d">TypeScript/JavaScript SDK with full type safety</div></div><div class="api-p api-f" style="font-family:monospace;font-size:0.75rem">npm i djd-agent-score</div><div class="api-m">SDK</div></div>
+    <div class="api-r"><div><div class="api-ep"><a href="https://pypi.org/project/agentscore/" style="color:inherit;text-decoration:underline">agentscore</a></div><div class="api-d">Python SDK with LangChain and CrewAI integrations</div></div><div class="api-p api-f" style="font-family:monospace;font-size:0.75rem">pip install agentscore</div><div class="api-m">SDK</div></div>
+    <div class="api-r"><div><div class="api-ep"><a href="https://www.npmjs.com/package/djd-agent-score-mcp" style="color:inherit;text-decoration:underline">djd-agent-score-mcp</a></div><div class="api-d">MCP server — use Agent Score from Claude, GPT, or any MCP-compatible AI</div></div><div class="api-p api-f" style="font-family:monospace;font-size:0.75rem">npx djd-agent-score-mcp</div><div class="api-m">MCP</div></div>
   </div>
 </div>
 
