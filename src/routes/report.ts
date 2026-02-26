@@ -4,6 +4,7 @@ import { insertReport, getScore, applyReportPenalty, scoreToTier, countReporterR
 import { isValidAddress, REPORT_REASONS } from '../types.js'
 import type { Address, ReportReason, ReportBody } from '../types.js'
 import { errorResponse, ErrorCodes } from '../errors.js'
+import { queueWebhookEvent } from '../jobs/webhookDelivery.js'
 import type { AppEnv } from '../types/hono-env.js'
 
 const PENALTY_PER_REPORT = 5
@@ -84,6 +85,15 @@ report.post('/', async (c) => {
 
   const updatedRow = getScore(target.toLowerCase())
   const targetCurrentScore = updatedRow?.composite_score ?? 0
+
+  queueWebhookEvent('fraud.reported', {
+    reportId,
+    target: target.toLowerCase(),
+    reporter: actualReporter,
+    reason,
+    penaltyApplied: PENALTY_PER_REPORT,
+    targetCurrentScore,
+  })
 
   return c.json(
     {
