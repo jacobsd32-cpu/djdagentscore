@@ -795,3 +795,64 @@ export const indexTransferBatch: Transaction<(transfers: IndexedTransfer[]) => v
     }
   },
 )
+
+// ---------- ERC-8004 Reputation Publications ----------
+
+export interface ReputationPublication {
+  wallet: string
+  composite_score: number
+  model_version: string
+  tx_hash: string | null
+  published_at: string
+}
+
+const stmtGetPublication = db.prepare<[string], ReputationPublication>(
+  `SELECT * FROM reputation_publications WHERE wallet = ?`,
+)
+
+const stmtUpsertPublication = db.prepare(`
+  INSERT INTO reputation_publications (wallet, composite_score, model_version, tx_hash, published_at)
+  VALUES (@wallet, @composite_score, @model_version, @tx_hash, @published_at)
+  ON CONFLICT(wallet) DO UPDATE SET
+    composite_score = excluded.composite_score,
+    model_version   = excluded.model_version,
+    tx_hash         = excluded.tx_hash,
+    published_at    = excluded.published_at
+`)
+
+export function getPublication(wallet: string): ReputationPublication | undefined {
+  return stmtGetPublication.get(wallet)
+}
+
+export function upsertPublication(pub: {
+  wallet: string
+  composite_score: number
+  model_version: string
+  tx_hash: string | null
+}) {
+  stmtUpsertPublication.run({
+    wallet: pub.wallet,
+    composite_score: pub.composite_score,
+    model_version: pub.model_version,
+    tx_hash: pub.tx_hash,
+    published_at: new Date().toISOString(),
+  })
+}
+
+/**
+ * Find scores eligible for on-chain publication:
+ * - Confidence above the minimum threshold
+ * - Score has changed by at least `scoreDelta` since last publication (or never published)
+ */
+export function getScoresNeedingPublication(minConfidence: number, scoreDelta: number, limit: number): ScoreRow[] {
+  return db
+    .prepare<[number, number, number], ScoreRow>(
+      `SELECT s.* FROM scores s
+       LEFT JOIN reputation_publications rp ON rp.wallet = s.wallet
+       WHERE s.confidence >= ?
+         AND (rp.wallet IS NULL OR ABS(s.composite_score - rp.composite_score) >= ?)
+       ORDER BY s.confidence DESC
+       LIMIT ?`,
+    )
+    .all(minConfidence, scoreDelta, limit)
+}

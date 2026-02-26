@@ -52,8 +52,11 @@ export function getPublicClient(): Client {
 
 export const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const
 
-// ERC-8004 is a hypothetical agent registry — update this when/if deployed
+// ERC-8004 Identity Registry — placeholder until deployed
 const ERC8004_REGISTRY = '0x0000000000000000000000000000000000000000' as const
+
+// ERC-8004 Reputation Registry — live on Base mainnet
+export const ERC8004_REPUTATION_REGISTRY = '0x8004BAa17C55a88189AE136b182e5fdA19dE9b63' as const
 
 // Basenames — ENS infrastructure deployed on Base mainnet
 const BASE_ENS_REGISTRY = '0xb94704422c2a1e396835a571837aa5ae53285a95' as const
