@@ -124,7 +124,7 @@ footer a{color:var(--muted)}
     <a href="/">Home</a>
     <a href="/leaderboard">Leaderboard</a>
     <a href="/docs">API Docs</a>
-    <a href="https://github.com/djd-agent-score/djd-agent-score">GitHub</a>
+    <a href="https://github.com/jacobsd32-cpu/djdagentscore">GitHub</a>
   </div>
 </nav>
 <div class="wrap">
@@ -182,7 +182,7 @@ footer a{color:var(--muted)}
 <footer>
   DJD Agent Score &middot; Trust infrastructure for the agent economy &middot;
   <a href="/v1/leaderboard">API</a> &middot;
-  <a href="https://github.com/djd-agent-score/djd-agent-score">GitHub</a> &middot;
+  <a href="https://github.com/jacobsd32-cpu/djdagentscore">GitHub</a> &middot;
   <a href="/terms">Terms</a>
 </footer>
 <script>

@@ -10,9 +10,9 @@
 :root {
   --bg: #0a1628; --bg2: #0d1b2a; --bg3: #132238;
   --surface: #162740; --surface2: #1a3050;
-  --border: rgba(212,168,83,0.10); --border-hi: rgba(212,168,83,0.18);
+  --border: rgba(99,102,241,0.10); --border-hi: rgba(99,102,241,0.18);
   --text: #f0f2f5; --text-dim: #94a3b8; --text-muted: #4b5c73;
-  --accent: #d4a853; --accent-dim: rgba(212,168,83,0.08);
+  --accent: #6366f1; --accent-dim: rgba(99,102,241,0.08);
   --green: #34d399; --green-dim: rgba(52,211,153,0.08);
   --yellow: #fbbf24; --yellow-dim: rgba(251,191,36,0.08);
   --red: #f87171; --red-dim: rgba(248,113,113,0.08);
@@ -90,10 +90,10 @@ nav{max-width:1080px;margin:0 auto;padding:0 32px;height:64px;display:flex;align
 .exp-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
 .exp-card{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:22px;opacity:0;transform:translateY(10px);transition:all .4s ease}
 .exp-card.vis{opacity:1;transform:translateY(0)}
-.exp-card.scanning{border-color:var(--accent);box-shadow:0 0 24px rgba(212,168,83,0.12),inset 0 0 14px rgba(212,168,83,0.04);animation:expPulse .8s ease-in-out}
+.exp-card.scanning{border-color:var(--accent);box-shadow:0 0 24px rgba(99,102,241,0.12),inset 0 0 14px rgba(99,102,241,0.04);animation:expPulse .8s ease-in-out}
 .exp-card.selected{border-color:var(--green);box-shadow:0 0 24px rgba(52,211,153,0.12);background:var(--green-dim)}
 .exp-card.rejected{opacity:.25;filter:grayscale(.5)}
-@keyframes expPulse{0%{box-shadow:0 0 5px rgba(212,168,83,.08)}50%{box-shadow:0 0 30px rgba(212,168,83,.2),inset 0 0 16px rgba(212,168,83,.05)}100%{box-shadow:0 0 5px rgba(212,168,83,.08)}}
+@keyframes expPulse{0%{box-shadow:0 0 5px rgba(99,102,241,.08)}50%{box-shadow:0 0 30px rgba(99,102,241,.2),inset 0 0 16px rgba(99,102,241,.05)}100%{box-shadow:0 0 5px rgba(99,102,241,.08)}}
 .exp-card-name{font-weight:700;font-size:14px;margin-bottom:4px}
 .exp-card-price{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:14px}
 .exp-card-score{font-family:'JetBrains Mono',monospace;font-size:12px;margin-bottom:4px;display:flex;align-items:baseline;gap:8px}
@@ -206,7 +206,7 @@ nav{max-width:1080px;margin:0 auto;padding:0 32px;height:64px;display:flex;align
 .t-emg{background:rgba(251,146,60,0.05);color:var(--orange)}
 .t-est{background:rgba(251,191,36,0.05);color:var(--yellow)}
 .t-tru{background:rgba(52,211,153,0.05);color:var(--green)}
-.t-eli{background:rgba(212,168,83,0.05);color:var(--accent)}
+.t-eli{background:rgba(99,102,241,0.05);color:var(--accent)}
 
 /* ── Footer ── */
 footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
@@ -247,7 +247,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
     <a href="/blog">Blog</a>
     <a href="#lookup">Score</a>
     <a href="#api-ref">API</a>
-    <a href="https://github.com/djd-agent-score" target="_blank">GitHub</a>
+    <a href="https://github.com/jacobsd32-cpu/djdagentscore" target="_blank">GitHub</a>
     <a class="nav-cta" href="#lookup">Try It Free</a>
   </div>
 </nav>
@@ -604,7 +604,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
     <strong>Disclaimer:</strong> DJD Agent Score is experimental. All scores are algorithmically generated from publicly available blockchain data and unverified third-party submissions. Scores are not financial advice, credit assessments, investment recommendations, or guarantees. The scoring model is unvalidated and may produce inaccurate results. This service is not a "consumer report" as defined by the FCRA. By using this service you agree to the <a href="/terms">Terms of Service</a> and acknowledge the <a href="/privacy">Privacy Policy</a>.
   </div>
   <div class="ft-bot">
-    <div class="ft-l">&copy; 2026 DJD Agent Score LLC &middot; Built on Base &middot; Powered by x402</div>
+    <div class="ft-l">&copy; 2026 DJD Agent Score LLC &middot; Built on Base &middot; Powered by x402 &middot; Identity attestation by <a href="https://insumermodel.com" target="_blank" style="color:var(--text-dim);text-decoration:underline">Insumer Model</a></div>
     <div class="ft-links"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/blog">Blog</a><a href="/health">Status</a></div>
   </div>
 </footer>
