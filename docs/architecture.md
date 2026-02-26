@@ -44,8 +44,8 @@ src/
 │   ├── docs.ts                     # Swagger UI at /docs
 │   └── openapi.ts                  # GET /openapi.json
 ├── scoring/
-│   ├── dimensions.ts               # Reliability, Viability, Identity, Capability
-│   ├── behavior.ts                 # Behavior dimension (transaction patterns)
+│   ├── dimensions.ts               # Reliability, Viability, Identity, Capability (+ counterparties, longevity)
+│   ├── behavior.ts                 # Behavior dimension (transaction patterns, Bayesian blending)
 │   ├── engine.ts                   # Orchestration, caching, fraud penalties
 │   ├── integrity.ts                # Sybil + gaming integrity modifier
 │   ├── sybil.ts                    # Sybil detection heuristics
@@ -65,6 +65,7 @@ src/
     ├── intentMatcher.ts            # Pre/post payment intent matching
     ├── outcomeMatcher.ts           # Payment outcome reconciliation
     ├── dailyAggregator.ts          # Daily wallet metrics aggregation
+    ├── autoRecalibration.ts        # Auto-adjust tier thresholds from outcome data
     ├── jobStats.ts                 # Background job statistics
     ├── webhookDelivery.ts          # Webhook event delivery + retries
     └── githubReverify.ts           # Periodic GitHub verification refresh
@@ -81,12 +82,14 @@ The scoring engine orchestrates the full scoring pipeline:
 3. **Gaming checks** (DB + balance) — detects window-dressing and burst-and-stop patterns
 4. **Dimension scoring** — calculates all 5 dimensions with sybil caps and gaming penalties applied
 5. **Integrity multiplier** — multiplicative modifier from sybil + gaming + fraud reports
-6. **Confidence scoring** — based on tx count, wallet age, unique partners, prior queries
+6. **Confidence scoring** — multi-factor confidence estimate
 7. **Recommendation** — human-readable recommendation based on score + confidence + flags
 
-Dimensions are weighted: Reliability (30%) + Viability (25%) + Identity (20%) + Behavior (15%) + Capability (10%).
+Dimensions are weighted across Reliability, Viability, Identity, Behavior, and Capability. Weights and sub-signal point budgets are defined in `dimensions.ts`.
 
-The integrity multiplier is a blunt instrument applied to the composite score. It stacks: `pow(0.85, sybilIndicators) * pow(0.92, gamingIndicators) * pow(0.90, fraudReports)`.
+The Behavior dimension uses statistical blending for wallets with limited transaction history. The Capability dimension includes ecosystem participation signals. Tier thresholds are dynamically adjusted by the auto-recalibration job based on outcome data.
+
+The integrity multiplier applies multiplicative penalties from sybil indicators, gaming indicators, and fraud reports. See `integrity.ts` for constants.
 
 ### Blockchain indexer (`src/jobs/blockchainIndexer.ts`)
 
@@ -133,5 +136,6 @@ SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached vol
 | Outcome matcher | Every 6 hours | Reconcile payment outcomes |
 | Anomaly detector | Every 15 min | Flag anomalous wallet behavior |
 | Sybil monitor | Every 5 min | Enhanced sybil detection |
+| Auto-recalibration | Every 6 hours | Adjust tier thresholds from outcome data |
 | Daily aggregator | Daily | Aggregate wallet metrics |
 | GitHub re-verify | Daily | Refresh GitHub verification status |

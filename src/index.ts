@@ -38,6 +38,7 @@ import { runIntentMatcher } from './jobs/intentMatcher.js'
 import { runOutcomeMatcher } from './jobs/outcomeMatcher.js'
 import { runAnomalyDetector, runSybilMonitor } from './jobs/anomalyDetector.js'
 import { runDailyAggregator } from './jobs/dailyAggregator.js'
+import { runAutoRecalibration } from './scoring/autoRecalibration.js'
 import { runGithubReverify } from './jobs/githubReverify.js'
 import { processWebhookQueue } from './jobs/webhookDelivery.js'
 import { jobStats } from './jobs/jobStats.js'
@@ -317,6 +318,25 @@ server = serve({ fetch: app.fetch, port: PORT }, (info) => {
       }, 6 * 60 * 60 * 1000),
     )
   }, 90_000)
+
+  // ── 4b. Auto-recalibration (every 6 hours, after outcome matcher, start after 120s) ─
+  let recalRunning = false
+  setTimeout(() => {
+    runAutoRecalibration(db).catch((err) => log.error('recalibration', 'Startup error', err))
+    intervals.push(
+      setInterval(async () => {
+        if (recalRunning) return
+        recalRunning = true
+        try {
+          await runAutoRecalibration(db)
+        } catch (e) {
+          log.error('recalibration', 'Error in autoRecalibration', e)
+        } finally {
+          recalRunning = false
+        }
+      }, 6 * 60 * 60 * 1000),
+    )
+  }, 120_000)
 
   // ── 5. Anomaly detector (every 15 min) ─────────────────────────────────────
   let anomalyRunning = false

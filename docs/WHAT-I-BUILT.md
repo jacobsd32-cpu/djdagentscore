@@ -5,6 +5,10 @@
 > across 24 files), CI/CD (GitHub Actions), admin auth (X-ADMIN-KEY), structured logging,
 > rate limiting on paid endpoints, monitoring (Prometheus /metrics), and the addition of
 > API key auth, webhooks, historical score API, and certified agent badges.
+> Additionally, three scoring engine gaps have been closed: (1) Behavior dimension now uses
+> Bayesian blending for low-data wallets instead of flat defaults, (2) Capability dimension
+> expanded with unique counterparties and service longevity signals, (3) Auto-recalibration
+> feedback loop dynamically adjusts tier thresholds based on outcome data.
 > See [architecture.md](architecture.md) for the current state of the codebase.
 
 > Written: 2026-02-23
@@ -27,31 +31,17 @@ It's an interesting idea. The execution is a mix of thoughtful design decisions 
 
 ### The Scoring Model (v2.0.0)
 
-Five dimensions, weighted and summed, then multiplied by an integrity factor:
+Five dimensions, weighted and summed, then multiplied by an integrity factor. Each dimension scores 0–100 points across multiple sub-signals. The integrity multiplier applies multiplicative penalties from sybil, gaming, and fraud indicators.
 
-```
-Score = floor((Reliability×0.30 + Viability×0.25 + Identity×0.20 + Behavior×0.15 + Capability×0.10) × IntegrityMultiplier)
-```
+Tiers: Elite (90+), Trusted (75-89), Established (50-74), Emerging (25-49), Unverified (0-24). Thresholds auto-adjust from outcome data.
 
-| Dimension | Weight | What It Measures | Max Points |
-|-----------|--------|------------------|------------|
-| Reliability | 30% | Transaction history, success rate, recency | 100 |
-| Viability | 25% | ETH/USDC balance, income ratio, wallet age | 100 |
-| Identity | 20% | Basename, GitHub, registration, age | 100 |
-| Behavior | 15% | Temporal transaction patterns (CV, entropy, gaps) | 100 |
-| Capability | 10% | x402 revenue, services operated | 100 |
-
-Tiers: Elite (90+), Trusted (75-89), Established (50-74), Emerging (25-49), Unverified (0-24).
-
-**What's good:** The behavior dimension is genuinely clever — using inter-arrival coefficient of variation, hourly entropy, and max gap hours to distinguish organic agents from bots is a real signal that's hard to game. The piecewise-log curves in reliability/viability avoid cliff edges. The integrity multiplier (multiplicative dampening from sybil/gaming/fraud flags) is elegant — it composes cleanly and has a floor of 0.10 so you never completely zero out a score.
+**What's good:** The behavior dimension uses temporal pattern analysis to distinguish organic agents from bots — a real signal that's hard to game. The scoring curves avoid cliff edges. The integrity multiplier composes cleanly and floors at a minimum so you never completely zero out a score.
 
 ### Sybil & Gaming Detection
 
-Seven sybil heuristics (closed-loop trading, symmetric transactions, coordinated creation, single-partner dependency, volume without diversity, funding chain detection, tight cluster analysis) that run entirely from the SQLite relationship graph — no extra RPC calls needed.
+Multiple sybil heuristics run entirely from the SQLite relationship graph — no extra RPC calls needed. Separate gaming detectors use balance snapshots and query logs.
 
-Five gaming detectors (velocity spike, deposit-and-score, burst-and-stop, balance window-dressing, wash trading) that use balance snapshots and query logs.
-
-**What's good:** The two-layer approach (per-dimension caps from sybil checks + multiplicative integrity dampening from gaming flags) means a sybil wallet gets punished twice — once in the raw dimension scores and again in the final multiplier. That's hard to evade because you'd need clean signals in *every* dimension simultaneously.
+**What's good:** The two-layer approach (per-dimension caps from sybil checks + multiplicative integrity dampening from gaming flags) means a sybil wallet gets punished at multiple levels. That's hard to evade because you'd need clean signals across the board.
 
 ### x402 Micropayment Paywall
 
@@ -102,15 +92,15 @@ This is an ambitious project that does several things well but suffers from **sc
 
 **Strengths:**
 - The five-dimension model with explicit point budgets per sub-signal is transparent and debuggable
-- Piecewise-log interpolation avoids cliff edges and rewards diminishing returns naturally
+- Scoring curves avoid cliff edges and reward diminishing returns naturally
 - The behavior dimension (temporal fingerprinting) is genuinely novel
-- The integrity multiplier is mathematically clean: `product(factor_i)` with a 0.10 floor
+- The integrity multiplier is mathematically clean with a bounded floor
 
 **Weaknesses:**
-- **Capability dimension is 60% unimplemented.** `domainsOwned` and `successfulReplications` are both hardcoded to 0. The remaining 100 points are split between just x402 services (50 pts) and revenue (50 pts), making this dimension trivially gameable — send yourself $500 in USDC through x402 and you max out.
+- **Capability dimension was 60% unimplemented.** `domainsOwned` and `successfulReplications` remain hardcoded to 0, but the dimension has been expanded with two new signals derived from raw transaction data: unique counterparties (15 pts) and service longevity (15 pts). Points rebalanced to services (35 pts), revenue (35 pts), counterparties (15 pts), longevity (15 pts). Still gameable but requires sustained diverse activity over time, not just a single self-payment.
 - **Identity dimension has phantom infrastructure.** ERC-8004 is declared, commented as "NOT YET DEPLOYED," and hardcoded to `false`. The code is well-commented about why, but the `IdentityData` interface still carries `erc8004Registered` and `constitutionHashVerified` fields that are always false. This leaks implementation aspirations into the API contract.
-- **No backtesting or calibration data.** You built a scoring model with hand-tuned thresholds ("calibrated against real Base mainnet activity patterns observed Dec 2024-Jan 2025") but there's no recorded evidence of this calibration. The `calibration_reports` table exists but the report generation is stubbed. You can't answer "how accurate is this model?" because you never set up a way to measure accuracy.
-- **Double-counting wash trading.** The `wash_trading` indicator appears in both sybil factors (×0.50) and gaming factors (×0.50). If both fire, you get `0.50 × 0.50 = 0.25` — a 75% penalty from a single signal. This might be intentional, but it's undocumented and looks like a bug.
+- **Calibration data was missing, now partially addressed.** Thresholds were originally hand-tuned ("calibrated against real Base mainnet activity patterns observed Dec 2024-Jan 2025") with no recorded evidence. The `calibration_reports` table and report generator now feed an auto-recalibration job that adjusts tier thresholds every 6 hours based on outcome data (±2 pts/cycle, min 5-pt gap, min 20 wallets). This closes the feedback loop, but the system still can't answer "how accurate is this model?" rigorously — it only self-adjusts thresholds, it doesn't validate the dimension weights or sub-signal point budgets.
+- **Double-counting wash trading.** The `wash_trading` indicator appears in both sybil and gaming factors, resulting in a stacked penalty from a single signal. This might be intentional, but it's undocumented and looks like a bug.
 - **Confidence score is questionable.** It weights `priorQueryCount` at 15% — meaning a wallet that's been queried more often is rated as "higher confidence." That's circular: popular wallets seem more trustworthy because they've been checked more, not because the data is better.
 
 ---
@@ -189,7 +179,7 @@ This is an ambitious project that does several things well but suffers from **sc
 
 | Feature | Claimed | Reality |
 |---------|---------|---------|
-| 5-dimension scoring | Yes | 4.5 — Capability is 60% stub |
+| 5-dimension scoring | Yes | Yes — Capability expanded with counterparties + longevity signals |
 | Sybil detection | Yes | Yes, but untested |
 | Gaming detection | Yes | Yes, but untested and double-counts wash trading |
 | ERC-8004 integration | In types | Placeholder only — zero address, always false |
@@ -198,8 +188,8 @@ This is an ambitious project that does several things well but suffers from **sc
 | Badges system | Table exists | Completely unimplemented |
 | Monitoring/webhooks | Table + job exists | Webhook delivery unimplemented |
 | Admin panel | Route file exists | 50 lines, no auth, minimal functionality |
-| Calibration reports | Table + generator exists | Generates report, stores it, but no automated analysis loop |
-| Outcome tracking | Table + job exists | Populates data but nobody reads it |
+| Calibration reports | Table + generator exists | Auto-recalibration job reads reports and adjusts tier thresholds every 6h |
+| Outcome tracking | Table + job exists | Fed into auto-recalibration loop — thresholds adjust from outcomes |
 | Economy metrics | Table exists | Never populated (daily aggregator may partially fill it) |
 | Test suite | 9 files | Covers ~15% of the codebase, zero coverage on critical paths |
 

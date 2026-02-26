@@ -9,4 +9,5 @@ export const jobStats = {
   outcomeMatcher: { lastRun: '', outcomesRecorded: 0 },
   anomalyDetector: { lastRun: '', anomaliesFound: 0 },
   dailyAggregator: { lastRun: '' },
+  autoRecalibration: { lastRun: '', adjustmentsApplied: 0 },
 }

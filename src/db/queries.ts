@@ -157,11 +157,31 @@ const stmtUpdateGithub = db.prepare(`
 
 const TTL_MS = 60 * 60 * 1000 // 1 hour
 
+// Threshold cache — refreshed every 60s so auto-recalibration adjustments
+// propagate without a DB hit on every scoreToTier call.
+let _tierThresholds = { Elite: 90, Trusted: 75, Established: 50, Emerging: 25 }
+let _thresholdsCachedAt = 0
+
+function refreshThresholds(): void {
+  if (Date.now() - _thresholdsCachedAt < 60_000) return
+  try {
+    const raw = db
+      .prepare('SELECT value FROM indexer_state WHERE key = ?')
+      .get('tier_threshold_adjustments') as { value: string } | undefined
+    if (raw?.value) {
+      const parsed = JSON.parse(raw.value) as { thresholds: typeof _tierThresholds }
+      if (parsed.thresholds) _tierThresholds = parsed.thresholds
+    }
+  } catch { /* use defaults */ }
+  _thresholdsCachedAt = Date.now()
+}
+
 export function scoreToTier(score: number): Tier {
-  if (score >= 90) return 'Elite'
-  if (score >= 75) return 'Trusted'
-  if (score >= 50) return 'Established'
-  if (score >= 25) return 'Emerging'
+  refreshThresholds()
+  if (score >= _tierThresholds.Elite) return 'Elite'
+  if (score >= _tierThresholds.Trusted) return 'Trusted'
+  if (score >= _tierThresholds.Established) return 'Established'
+  if (score >= _tierThresholds.Emerging) return 'Emerging'
   return 'Unverified'
 }
 
@@ -443,6 +463,41 @@ export function getWalletX402Stats(wallet: string): {
     x402FirstSeen: row?.first_seen ?? null,
     x402LastSeen: row?.last_seen ?? null,
   }
+}
+
+/**
+ * Count distinct counterparty wallets from raw_transactions.
+ * A counterparty is any wallet that this wallet has sent to or received from.
+ */
+export function countUniqueCounterparties(wallet: string): number {
+  const w = wallet.toLowerCase()
+  const row = db
+    .prepare<[string, string, string, string], { count: number }>(
+      `SELECT COUNT(DISTINCT counterparty) as count FROM (
+         SELECT to_wallet as counterparty FROM raw_transactions WHERE from_wallet = ?
+         UNION
+         SELECT from_wallet as counterparty FROM raw_transactions WHERE to_wallet = ?
+       ) WHERE counterparty != ? AND counterparty != ?`,
+    )
+    .get(w, w, w, w)
+  return row?.count ?? 0
+}
+
+/**
+ * Service longevity: days between first and last transaction in raw_transactions.
+ * Returns 0 if the wallet has fewer than 2 transactions.
+ */
+export function getServiceLongevityDays(wallet: string): number {
+  const w = wallet.toLowerCase()
+  const row = db
+    .prepare<[string, string], { first_ts: string | null; last_ts: string | null }>(
+      `SELECT MIN(timestamp) as first_ts, MAX(timestamp) as last_ts
+       FROM raw_transactions WHERE from_wallet = ? OR to_wallet = ?`,
+    )
+    .get(w, w)
+  if (!row?.first_ts || !row?.last_ts) return 0
+  const days = (new Date(row.last_ts).getTime() - new Date(row.first_ts).getTime()) / 86_400_000
+  return Math.round(days * 10) / 10
 }
 
 export function getWalletFirstX402Seen(wallet: string): string | null {
