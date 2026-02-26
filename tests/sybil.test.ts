@@ -38,7 +38,7 @@ function createSybilDb(): Database.Database {
       block_number INTEGER,
       from_wallet TEXT,
       to_wallet TEXT,
-      amount REAL,
+      amount_usdc REAL,
       timestamp TEXT,
       facilitator TEXT
     );
@@ -209,10 +209,10 @@ describe('detectSybil', () => {
 
     // Earliest transaction: 0xfunder → WALLET
     db.prepare(
-      `INSERT INTO raw_transactions (tx_hash, from_wallet, to_wallet, amount, timestamp) VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO raw_transactions (tx_hash, from_wallet, to_wallet, amount_usdc, timestamp) VALUES (?, ?, ?, ?, ?)`,
     ).run('0xtx1', '0xfunder', WALLET, 500, '2025-01-01T00:00:01Z')
     db.prepare(
-      `INSERT INTO raw_transactions (tx_hash, from_wallet, to_wallet, amount, timestamp) VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO raw_transactions (tx_hash, from_wallet, to_wallet, amount_usdc, timestamp) VALUES (?, ?, ?, ?, ?)`,
     ).run('0xtx2', '0xother', WALLET, 10, '2025-02-01T00:00:00Z')
 
     const result = detectSybil(WALLET, db)
@@ -270,7 +270,7 @@ describe('detectSybil', () => {
     ).run(WALLET, '0xmaster', 1000, 200)
 
     db.prepare(
-      `INSERT INTO raw_transactions (tx_hash, from_wallet, to_wallet, amount, timestamp) VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO raw_transactions (tx_hash, from_wallet, to_wallet, amount_usdc, timestamp) VALUES (?, ?, ?, ?, ?)`,
     ).run('0xtx1', '0xmaster', WALLET, 500, '2025-01-01T00:00:01Z')
 
     const result = detectSybil(WALLET, db)
