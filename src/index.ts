@@ -21,6 +21,7 @@ import docsRoute from './routes/docs.js'
 import metricsRoute from './routes/metrics.js'
 import historyRoute from './routes/history.js'
 import certificationRoute from './routes/certification.js'
+import explorerRoute from './routes/explorer.js'
 import { adminWebhooks, publicWebhooks } from './routes/webhooks.js'
 import { requestIdMiddleware } from './middleware/requestId.js'
 import { paidRateLimitMiddleware } from './middleware/paidRateLimit.js'
@@ -111,6 +112,7 @@ app.use('/v1/score/basic', freeTierMiddleware)
 app.route('/', legal)
 app.route('/v1/agent/register', registerRoute)
 app.route('/v1/badge', badgeRoute)          // free — must be before paymentMiddleware
+app.route('/explorer', explorerRoute)        // free — wallet explorer page
 app.route('/agent', agentRoute)             // free — agent profile pages
 app.route('/openapi.json', openapiRoute)    // free — API spec
 app.route('/v1/data/economy', economyRoute)  // free — ecosystem health metrics
