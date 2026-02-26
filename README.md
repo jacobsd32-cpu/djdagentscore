@@ -30,7 +30,7 @@ Returns:
   "tier": "Emerging",
   "confidence": 0.16,
   "recommendation": "insufficient_history",
-  "modelVersion": "2.1.0",
+  "modelVersion": "2.3.0",
   "lastUpdated": "2026-02-25T04:12:50.000Z",
   "computedAt": "2026-02-25T04:12:50.000Z",
   "scoreFreshness": 0.85,
@@ -113,7 +113,7 @@ curl "https://djd-agent-score.fly.dev/v1/score/full?wallet=0x…" \
 
 ## How scoring works
 
-> **Model v2.1.0** — Improved scoring accuracy for low-data wallets. Expanded capability signals. Auto-recalibrating tier thresholds from outcome data.
+> **Model v2.3.0** — Insumer token-gating attestation for identity verification. Improved scoring accuracy for low-data wallets. Expanded capability signals. Auto-recalibrating tier thresholds from outcome data.
 
 Every wallet is evaluated across five weighted dimensions based on its USDC transaction history on Base:
 
@@ -121,7 +121,7 @@ Every wallet is evaluated across five weighted dimensions based on its USDC tran
 |---|---|---|
 | **Payment Reliability** | 30% | Transaction history and consistency on Base |
 | **Economic Viability** | 25% | Financial health signals from USDC activity |
-| **Identity** | 20% | Verifiable identity markers (Basename, GitHub, registration) |
+| **Identity** | 20% | Verifiable identity markers (Basename, GitHub, registration, [Insumer](https://insumer.ai) token-gating) |
 | **Behavior** | 15% | Transaction timing patterns and anomaly detection |
 | **Capability** | 10% | Demonstrated service delivery and ecosystem participation |
 
