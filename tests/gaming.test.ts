@@ -32,7 +32,7 @@ function createGamingDb(): Database.Database {
       block_number INTEGER,
       from_wallet TEXT,
       to_wallet TEXT,
-      amount REAL,
+      amount_usdc REAL,
       timestamp TEXT,
       facilitator TEXT
   )`).run()
@@ -148,7 +148,7 @@ describe('detectGaming', () => {
     // But >20 transactions in the 1-24 hour window
     for (let i = 0; i < 25; i++) {
       db.prepare(
-        `INSERT INTO raw_transactions (tx_hash, from_wallet, to_wallet, amount, timestamp) VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO raw_transactions (tx_hash, from_wallet, to_wallet, amount_usdc, timestamp) VALUES (?, ?, ?, ?, ?)`,
       ).run(`0xtx${i}`, WALLET, '0xrecipient', 10, hoursAgo(2 + Math.random() * 20))
     }
 
@@ -181,12 +181,12 @@ describe('detectGaming', () => {
     // A->B 100 and B->A 100 within 7 days -> wash_volume=100, total_volume=200 -> 50% > 40%
     for (let i = 0; i < 5; i++) {
       db.prepare(
-        `INSERT INTO raw_transactions (tx_hash, from_wallet, to_wallet, amount, timestamp) VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO raw_transactions (tx_hash, from_wallet, to_wallet, amount_usdc, timestamp) VALUES (?, ?, ?, ?, ?)`,
       ).run(`0xout${i}`, WALLET, '0xpeer', 20, hoursAgo(24 + i))
     }
     for (let i = 0; i < 5; i++) {
       db.prepare(
-        `INSERT INTO raw_transactions (tx_hash, from_wallet, to_wallet, amount, timestamp) VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO raw_transactions (tx_hash, from_wallet, to_wallet, amount_usdc, timestamp) VALUES (?, ?, ?, ?, ?)`,
       ).run(`0xin${i}`, '0xpeer', WALLET, 20, hoursAgo(24 + i))
     }
 
@@ -201,11 +201,11 @@ describe('detectGaming', () => {
     // Out: 100 total to peer, In: only 20 back -> 20/120 = 17% < 40%
     for (let i = 0; i < 5; i++) {
       db.prepare(
-        `INSERT INTO raw_transactions (tx_hash, from_wallet, to_wallet, amount, timestamp) VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO raw_transactions (tx_hash, from_wallet, to_wallet, amount_usdc, timestamp) VALUES (?, ?, ?, ?, ?)`,
       ).run(`0xout${i}`, WALLET, '0xpeer', 20, hoursAgo(24 + i))
     }
     db.prepare(
-      `INSERT INTO raw_transactions (tx_hash, from_wallet, to_wallet, amount, timestamp) VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO raw_transactions (tx_hash, from_wallet, to_wallet, amount_usdc, timestamp) VALUES (?, ?, ?, ?, ?)`,
     ).run('0xin1', '0xpeer', WALLET, 20, hoursAgo(24))
 
     const result = detectGaming(WALLET, 100, db)

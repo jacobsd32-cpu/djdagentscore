@@ -18,7 +18,7 @@ export function createTestDb(): Database.Database {
       block_number INTEGER,
       from_wallet TEXT,
       to_wallet TEXT,
-      amount REAL,
+      amount_usdc REAL,
       timestamp TEXT,
       facilitator TEXT
     );
