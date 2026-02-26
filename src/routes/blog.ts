@@ -16,9 +16,9 @@ const blogHead = (title: string, description: string) => `<!DOCTYPE html>
 :root {
   --bg: #0a1628; --bg2: #0d1b2a; --bg3: #132238;
   --surface: #162740; --surface2: #1a3050;
-  --border: rgba(212,168,83,0.10); --border-hi: rgba(212,168,83,0.18);
+  --border: rgba(99,102,241,0.10); --border-hi: rgba(99,102,241,0.18);
   --text: #f0f2f5; --text-dim: #94a3b8; --text-muted: #4b5c73;
-  --accent: #d4a853; --accent-dim: rgba(212,168,83,0.08);
+  --accent: #6366f1; --accent-dim: rgba(99,102,241,0.08);
   --green: #34d399; --green-dim: rgba(52,211,153,0.08);
   --yellow: #fbbf24; --red: #f87171; --red-dim: rgba(248,113,113,0.08);
   --orange: #fb923c; --purple: #a78bfa;
@@ -69,7 +69,7 @@ const blogNav = `
     <a href="/blog" class="active">Blog</a>
     <a href="/#lookup">Score</a>
     <a href="/#api-ref">API</a>
-    <a href="https://github.com/djd-agent-score" target="_blank">GitHub</a>
+    <a href="https://github.com/jacobsd32-cpu/djdagentscore" target="_blank">GitHub</a>
     <a class="nav-cta" href="/#lookup">Try It Free</a>
   </div>
 </nav>
@@ -79,7 +79,7 @@ const blogNav = `
 const blogFooter = `
 <footer>
 <div class="ft-bot">
-  <div class="ft-l">&copy; 2026 DJD Agent Score</div>
+  <div class="ft-l">&copy; 2026 DJD Agent Score &middot; Identity attestation by <a href="https://insumermodel.com" target="_blank" style="color:var(--text-dim);text-decoration:underline">Insumer Model</a></div>
   <div class="ft-links">
     <a href="/">Home</a>
     <a href="/blog">Blog</a>
@@ -186,7 +186,7 @@ const sybilPostHtml = `${blogHead(
 
 .cta-box{background:var(--accent-dim);border:1px solid var(--border-hi);border-radius:var(--radius);padding:32px;margin:48px 0;text-align:center}
 .cta-box p{font-size:14px;color:var(--text-dim);line-height:1.75;margin-bottom:8px}
-.cta-box code{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);background:rgba(212,168,83,0.08);padding:2px 8px;border-radius:4px}
+.cta-box code{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);background:rgba(99,102,241,0.08);padding:2px 8px;border-radius:4px}
 .cta-box .btn{display:inline-flex;align-items:center;gap:6px;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;background:var(--accent);color:var(--bg);text-decoration:none;margin-top:16px;transition:all .2s}
 .cta-box .btn:hover{opacity:.9;transform:translateY(-1px);text-decoration:none}
 
