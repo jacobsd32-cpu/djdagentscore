@@ -44,6 +44,7 @@ import { runDailyAggregator } from './jobs/dailyAggregator.js'
 import { runAutoRecalibration } from './scoring/autoRecalibration.js'
 import { runGithubReverify } from './jobs/githubReverify.js'
 import { processWebhookQueue } from './jobs/webhookDelivery.js'
+import { runReputationPublisher } from './jobs/reputationPublisher.js'
 import { jobStats } from './jobs/jobStats.js'
 import { db, getIndexerState, setIndexerState } from './db.js'
 import { log } from './logger.js'
@@ -523,6 +524,25 @@ server = serve({ fetch: app.fetch, port: PORT }, (info) => {
       }
     }, 30_000),
   )
+
+  // ── 9. ERC-8004 reputation publisher (every 4 hours, start after 150s) ────
+  let publisherRunning = false
+  setTimeout(() => {
+    runReputationPublisher().catch((err) => log.error('erc8004-publisher', 'Startup error', err))
+    intervals.push(
+      setInterval(async () => {
+        if (publisherRunning) return
+        publisherRunning = true
+        try {
+          await runReputationPublisher()
+        } catch (e) {
+          log.error('erc8004-publisher', 'Error in reputationPublisher', e)
+        } finally {
+          publisherRunning = false
+        }
+      }, 4 * 60 * 60 * 1000),
+    )
+  }, 150_000)
 
   log.info('jobs', 'All background processes registered')
 

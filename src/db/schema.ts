@@ -415,3 +415,14 @@ db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_certs_wallet_active ON certifications(wallet)
     WHERE is_active = 1;
 `)
+
+// ── ERC-8004 Reputation Publications ────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS reputation_publications (
+    wallet          TEXT PRIMARY KEY,
+    composite_score INTEGER NOT NULL,
+    model_version   TEXT NOT NULL,
+    tx_hash         TEXT,
+    published_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`)
