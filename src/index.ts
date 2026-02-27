@@ -447,7 +447,7 @@ server = serve({ fetch: app.fetch, port: PORT }, (info) => {
   // ── 4b. Auto-recalibration (every 6 hours, after outcome matcher, start after 120s) ─
   let recalRunning = false
   setTimeout(() => {
-    runAutoRecalibration(db).catch((err) => log.error('recalibration', 'Startup error', err))
+    runAutoRecalibration(db).catch((err: unknown) => log.error('recalibration', 'Startup error', err))
     intervals.push(
       setInterval(async () => {
         if (recalRunning) return
