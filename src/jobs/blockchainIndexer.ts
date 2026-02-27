@@ -29,11 +29,23 @@
  */
 import { parseAbiItem } from 'viem'
 import { getPublicClient, USDC_ADDRESS } from '../blockchain.js'
+import { BLOCKCHAIN_INDEXER_CONFIG } from '../config/constants.js'
 import type { IndexedTransfer } from '../db.js'
 import { getIndexerState, indexTransferBatch, setIndexerState } from '../db.js'
 import { log } from '../logger.js'
+import { BASE_GENESIS_BLOCK, BASE_GENESIS_TS_MS, blockToIsoTimestamp, iterateChunks } from './indexerUtils.js'
 
 // ---------- Constants ----------
+
+const {
+  BACKFILL_BLOCKS,
+  MAX_X402_AMOUNT_USDC,
+  POLL_INTERVAL_MS,
+  RETRY_DELAY_MS,
+  LOG_CHUNK_SIZE,
+  EVENT_LOOP_YIELD_MS,
+  MAX_CATCHUP_BLOCKS,
+} = BLOCKCHAIN_INDEXER_CONFIG
 
 const TRANSFER_EVENT = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)')
 
@@ -43,16 +55,6 @@ const AUTHORIZATION_USED_EVENT = parseAbiItem(
   'event AuthorizationUsed(address indexed authorizer, bytes32 indexed nonce)',
 )
 
-// Backfill ~28 hours of history on first run (~50k blocks at 2s/block).
-// This provides enough relationship graph data for sybil detection without
-// risking OOM on a 1GB machine from fetching ALL Base USDC transfers.
-const BACKFILL_BLOCKS = 50_000n
-
-// x402 is a micro-payment protocol — realistic API prices are $0.01–$0.50.
-// Transfers above this threshold are almost certainly DeFi (Morpho, Aave, etc.)
-// that also emits AuthorizationUsed but at much larger amounts.
-const MAX_X402_AMOUNT_USDC = 1.0
-
 // EOA that submits transferWithAuthorization on behalf of the OpenX402 facilitator.
 // Source: https://facilitator.openx402.ai/discovery/resources → signers["eip155:*"]
 // Set FACILITATOR_ADDRESS env var to override; set to empty string to disable filter.
@@ -60,33 +62,9 @@ const FACILITATOR_ADDRESS = (
   process.env.FACILITATOR_ADDRESS ?? '0x97316FA4730BC7d3B295234F8e4D04a0a4C093e8'
 ).toLowerCase()
 
-// Base produces ~1 block every 2 seconds.
-// Fallback genesis anchor (block 1, Feb 23 2023 18:33:23 UTC) is used only
-// when the RPC block fetch fails. Normally we fetch the real chunk start block
-// timestamp in parallel with getLogs, eliminating the ~3-month drift.
-const BASE_GENESIS_BLOCK = 1n
-const BASE_GENESIS_TS_MS = 1677177203_000n
-
-const POLL_INTERVAL_MS = 12_000 // 12 s between polls
-const RETRY_DELAY_MS = 30_000 // 30 s on RPC error
-const LOG_CHUNK_SIZE = 2_000n // Reduced from 10k to avoid massive RPC responses on Base
-const EVENT_LOOP_YIELD_MS = 50 // Yield event loop between chunks so health checks can be served
-
 const STATE_KEY = 'last_indexed_block'
 
 // ---------- Helpers ----------
-
-/**
- * Convert a block number to an ISO timestamp.
- * @param blockNumber - the block to timestamp
- * @param anchorBlock - a block whose real timestamp we know (chunk start)
- * @param anchorTsMs  - that block's real timestamp in milliseconds
- */
-function blockToIsoTimestamp(blockNumber: bigint, anchorBlock: bigint, anchorTsMs: bigint): string {
-  // Interpolate ±2s/block from the real anchor
-  const ms = anchorTsMs + (blockNumber - anchorBlock) * 2000n
-  return new Date(Number(ms)).toISOString()
-}
 
 /**
  * Fetch and index a single chunk [start, end].
@@ -199,55 +177,14 @@ async function fetchAndIndexChunk(start: bigint, end: bigint): Promise<number> {
   return transfers.length
 }
 
-/**
- * Extract the suggested safe end-block from a BlastAPI "too many results" error.
- * Error message format: "query exceeds max results 20000, retry with the range START-END"
- */
-function parseSuggestedEnd(err: unknown): bigint | null {
-  const msg =
-    (err as { details?: string; message?: string })?.details ?? (err as { message?: string })?.message ?? String(err)
-  const m = msg.match(/retry with the range \d+-(\d+)/)
-  return m ? BigInt(m[1]) : null
-}
-
 async function fetchAndIndexRange(fromBlock: bigint, toBlock: bigint): Promise<number> {
-  let total = 0
-  let chunkSize = LOG_CHUNK_SIZE
-
-  let start = fromBlock
-  while (start <= toBlock) {
-    const end = start + chunkSize - 1n > toBlock ? toBlock : start + chunkSize - 1n
-
-    try {
-      const count = await fetchAndIndexChunk(start, end)
-      total += count
-      start = end + 1n
-      // After a successful chunk, gradually restore the chunk size
-      if (chunkSize < LOG_CHUNK_SIZE) {
-        chunkSize = chunkSize * 2n > LOG_CHUNK_SIZE ? LOG_CHUNK_SIZE : chunkSize * 2n
-      }
-      // Yield the event loop so HTTP health checks can be served
-      await new Promise((r) => setTimeout(r, EVENT_LOOP_YIELD_MS))
-    } catch (err) {
-      // BlastAPI tells us the max safe range — use it directly
-      const suggestedEnd = parseSuggestedEnd(err)
-      if (suggestedEnd !== null && suggestedEnd > start) {
-        const newSize = suggestedEnd - start + 1n
-        if (newSize < chunkSize) {
-          chunkSize = newSize
-          continue // retry same start with smaller chunk
-        }
-      }
-      // Generic fallback: halve the chunk size
-      if (chunkSize > 50n) {
-        chunkSize = chunkSize / 2n
-        continue // retry same start with smaller chunk
-      }
-      throw err // chunk is already tiny, give up
-    }
-  }
-
-  return total
+  return iterateChunks({
+    fromBlock,
+    toBlock,
+    chunkSize: LOG_CHUNK_SIZE,
+    yieldMs: EVENT_LOOP_YIELD_MS,
+    processChunk: fetchAndIndexChunk,
+  })
 }
 
 // ---------- State ----------
@@ -267,11 +204,6 @@ export async function startBlockchainIndexer(): Promise<void> {
   // Determine starting block
   const stored = getIndexerState(STATE_KEY)
   const currentBlock = await getPublicClient().getBlockNumber()
-
-  // Max gap we're willing to index on startup: 1 day of blocks.
-  // If the stored state is further behind than this, skip to current block
-  // to avoid fetching months of ALL Base USDC transfers (OOM risk).
-  const MAX_CATCHUP_BLOCKS = 43_200n // 1 day
 
   if (stored) {
     const storedBlock = BigInt(stored)

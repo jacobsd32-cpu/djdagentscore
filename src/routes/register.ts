@@ -4,7 +4,7 @@ import { ErrorCodes, errorResponse } from '../errors.js'
 import { queueWebhookEvent } from '../jobs/webhookDelivery.js'
 import { log } from '../logger.js'
 import type { Address, AgentRegistrationBody, AgentRegistrationResponse } from '../types.js'
-import { isValidAddress } from '../types.js'
+import { normalizeWallet } from '../utils/walletUtils.js'
 
 function isValidUrl(url: string): boolean {
   try {
@@ -97,12 +97,12 @@ const register = new Hono()
 
 // GET /v1/agent/register?wallet=0x...
 register.get('/', (c) => {
-  const wallet = c.req.query('wallet')
-  if (!wallet || !isValidAddress(wallet)) {
+  const wallet = normalizeWallet(c.req.query('wallet'))
+  if (!wallet) {
     return c.json(errorResponse(ErrorCodes.INVALID_WALLET, 'Invalid or missing wallet address'), 400)
   }
 
-  const row = getRegistration(wallet.toLowerCase())
+  const row = getRegistration(wallet)
   if (!row) {
     return c.json(errorResponse(ErrorCodes.WALLET_NOT_FOUND, 'Wallet not registered'), 404)
   }
@@ -132,9 +132,10 @@ register.post('/', async (c) => {
     return c.json(errorResponse(ErrorCodes.INVALID_JSON, 'Invalid JSON body'), 400)
   }
 
-  const { wallet, name, description, github_url, website_url } = body
+  const { wallet: rawWallet, name, description, github_url, website_url } = body
 
-  if (!wallet || !isValidAddress(wallet)) {
+  const normalizedWallet = normalizeWallet(rawWallet)
+  if (!normalizedWallet) {
     return c.json(errorResponse(ErrorCodes.INVALID_WALLET, 'Invalid or missing wallet address'), 400)
   }
 
@@ -150,8 +151,6 @@ register.post('/', async (c) => {
   if (website_url !== undefined && !isValidUrl(website_url)) {
     return c.json(errorResponse(ErrorCodes.INVALID_REGISTRATION, 'website_url must be a valid HTTPS URL'), 400)
   }
-
-  const normalizedWallet = wallet.toLowerCase()
   const existing = getRegistration(normalizedWallet)
   const isNew = !existing
 

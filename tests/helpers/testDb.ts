@@ -24,31 +24,45 @@ export function createTestDb(): Database.Database {
     );
 
     CREATE TABLE IF NOT EXISTS wallet_index (
-      wallet TEXT PRIMARY KEY,
-      first_seen TEXT,
-      last_seen TEXT,
-      total_tx_count INTEGER DEFAULT 0,
-      total_volume_in REAL DEFAULT 0,
-      total_volume_out REAL DEFAULT 0,
-      unique_partners INTEGER DEFAULT 0
+      wallet                  TEXT PRIMARY KEY,
+      first_seen              TEXT,
+      last_seen               TEXT,
+      total_tx_count          INTEGER DEFAULT 0,
+      total_volume_in         REAL DEFAULT 0,
+      total_volume_out        REAL DEFAULT 0,
+      unique_partners         INTEGER DEFAULT 0,
+      is_proactively_indexed  INTEGER DEFAULT 1,
+      is_scored               INTEGER DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS relationship_graph (
-      wallet_a TEXT,
-      wallet_b TEXT,
-      tx_count INTEGER DEFAULT 0,
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      wallet_a            TEXT NOT NULL,
+      wallet_b            TEXT NOT NULL,
+      tx_count_a_to_b     INTEGER DEFAULT 0,
+      tx_count_b_to_a     INTEGER DEFAULT 0,
       total_volume_a_to_b REAL DEFAULT 0,
       total_volume_b_to_a REAL DEFAULT 0,
-      first_interaction TEXT,
-      last_interaction TEXT,
-      PRIMARY KEY (wallet_a, wallet_b)
+      first_interaction   TEXT,
+      last_interaction    TEXT,
+      UNIQUE(wallet_a, wallet_b)
     );
 
     CREATE TABLE IF NOT EXISTS wallet_metrics (
-      wallet TEXT PRIMARY KEY,
-      tx_count_24h INTEGER DEFAULT 0,
-      tx_count_7d INTEGER DEFAULT 0,
-      updated_at TEXT
+      wallet              TEXT PRIMARY KEY,
+      tx_count_24h        INTEGER DEFAULT 0,
+      tx_count_7d         INTEGER DEFAULT 0,
+      tx_count_30d        INTEGER DEFAULT 0,
+      volume_in_24h       REAL DEFAULT 0,
+      volume_in_7d        REAL DEFAULT 0,
+      volume_in_30d       REAL DEFAULT 0,
+      volume_out_24h      REAL DEFAULT 0,
+      volume_out_7d       REAL DEFAULT 0,
+      volume_out_30d      REAL DEFAULT 0,
+      income_burn_ratio   REAL DEFAULT 0,
+      balance_trend_7d    TEXT DEFAULT 'stable',
+      unique_partners_30d INTEGER DEFAULT 0,
+      last_updated        TEXT
     );
 
     CREATE TABLE IF NOT EXISTS wallet_snapshots (
@@ -59,30 +73,41 @@ export function createTestDb(): Database.Database {
     );
 
     CREATE TABLE IF NOT EXISTS query_log (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      target_wallet TEXT,
-      endpoint TEXT,
-      timestamp TEXT
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      requester_wallet  TEXT,
+      target_wallet     TEXT,
+      endpoint          TEXT NOT NULL DEFAULT '/score',
+      tier_requested    TEXT,
+      target_score      INTEGER,
+      target_tier       TEXT,
+      response_source   TEXT,
+      response_time_ms  INTEGER,
+      user_agent        TEXT,
+      price_paid        REAL DEFAULT 0,
+      is_free_tier      INTEGER DEFAULT 0,
+      timestamp         TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
     CREATE TABLE IF NOT EXISTS scores (
-      wallet TEXT PRIMARY KEY,
-      composite_score INTEGER,
-      reliability_score INTEGER,
-      viability_score INTEGER,
-      identity_score INTEGER,
-      capability_score INTEGER,
-      tier TEXT,
-      confidence REAL,
-      recommendation TEXT,
-      sybil_flag INTEGER DEFAULT 0,
-      gaming_detected INTEGER DEFAULT 0,
-      model_version TEXT,
-      raw_data TEXT,
-      meta TEXT,
-      scored_at TEXT,
-      updated_at TEXT
+      wallet              TEXT PRIMARY KEY,
+      composite_score     INTEGER NOT NULL,
+      reliability_score   INTEGER NOT NULL,
+      viability_score     INTEGER NOT NULL,
+      identity_score      INTEGER NOT NULL,
+      capability_score    INTEGER NOT NULL,
+      tier                TEXT NOT NULL,
+      confidence          REAL DEFAULT 0.0,
+      recommendation      TEXT DEFAULT 'insufficient_history',
+      sybil_flag          INTEGER DEFAULT 0,
+      sybil_indicators    TEXT DEFAULT '[]',
+      gaming_indicators   TEXT DEFAULT '[]',
+      behavior_score      INTEGER,
+      model_version       TEXT DEFAULT '1.0.0',
+      raw_data            TEXT NOT NULL,
+      calculated_at       TEXT NOT NULL,
+      expires_at          TEXT NOT NULL
     );
+    CREATE INDEX IF NOT EXISTS idx_scores_expires ON scores(expires_at);
 
     CREATE TABLE IF NOT EXISTS score_outcomes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,15 +125,15 @@ export function createTestDb(): Database.Database {
     );
 
     CREATE TABLE IF NOT EXISTS fraud_reports (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      reporter_wallet TEXT,
-      target_wallet TEXT,
-      reason TEXT,
-      evidence TEXT,
-      status TEXT DEFAULT 'pending',
-      created_at TEXT,
-      resolved_at TEXT
+      id              TEXT PRIMARY KEY,
+      target_wallet   TEXT NOT NULL,
+      reporter_wallet TEXT NOT NULL,
+      reason          TEXT NOT NULL,
+      details         TEXT NOT NULL DEFAULT '',
+      created_at      TEXT NOT NULL,
+      penalty_applied INTEGER NOT NULL DEFAULT 0
     );
+    CREATE INDEX IF NOT EXISTS idx_reports_target ON fraud_reports(target_wallet);
 
     CREATE TABLE IF NOT EXISTS usdc_transfers (
       tx_hash TEXT UNIQUE,
@@ -227,6 +252,49 @@ export function createTestDb(): Database.Database {
     );
     CREATE INDEX IF NOT EXISTS idx_certs_wallet ON certifications(wallet);
     CREATE INDEX IF NOT EXISTS idx_certs_active ON certifications(is_active, expires_at);
+
+    CREATE TABLE IF NOT EXISTS intent_signals (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      requester_wallet  TEXT NOT NULL,
+      target_wallet     TEXT NOT NULL,
+      query_timestamp   TEXT NOT NULL,
+      followed_by_tx    INTEGER DEFAULT 0,
+      tx_hash           TEXT,
+      tx_timestamp      TEXT,
+      time_to_tx_ms     INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_intent_requester ON intent_signals(requester_wallet, query_timestamp DESC);
+
+    CREATE TABLE IF NOT EXISTS economy_metrics (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      period_start        TEXT NOT NULL,
+      period_end          TEXT NOT NULL,
+      period_type         TEXT NOT NULL,
+      total_wallets       INTEGER DEFAULT 0,
+      new_wallets         INTEGER DEFAULT 0,
+      dead_wallets        INTEGER DEFAULT 0,
+      active_wallets      INTEGER DEFAULT 0,
+      total_tx_count      INTEGER DEFAULT 0,
+      total_volume        REAL DEFAULT 0,
+      avg_tx_size         REAL DEFAULT 0,
+      median_score        INTEGER DEFAULT 0,
+      avg_score           REAL DEFAULT 0,
+      elite_count         INTEGER DEFAULT 0,
+      trusted_count       INTEGER DEFAULT 0,
+      established_count   INTEGER DEFAULT 0,
+      emerging_count      INTEGER DEFAULT 0,
+      unverified_count    INTEGER DEFAULT 0,
+      total_fraud_reports INTEGER DEFAULT 0,
+      total_queries       INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS reputation_publications (
+      wallet          TEXT PRIMARY KEY,
+      composite_score INTEGER NOT NULL,
+      model_version   TEXT NOT NULL,
+      tx_hash         TEXT,
+      published_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `)
 
   return db

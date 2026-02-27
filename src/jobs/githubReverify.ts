@@ -9,10 +9,12 @@
  * GitHub's unauthenticated limit of 60 req/hr (or 5000 if GITHUB_TOKEN set).
  */
 
+import { GITHUB_REVERIFY_CONFIG } from '../config/constants.js'
 import { getAllRegistrationsWithGithub, updateGithubVerification } from '../db.js'
 import { log } from '../logger.js'
+import { withRetry } from '../utils/retry.js'
 
-const INTER_CALL_DELAY_MS = 2_000
+const { INTER_CALL_DELAY_MS } = GITHUB_REVERIFY_CONFIG
 
 function parseGithubUrl(url: string): { owner: string; repo: string } | null {
   try {
@@ -41,10 +43,19 @@ async function fetchGithubRepo(
     if (process.env.GITHUB_TOKEN) {
       headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
     }
-    const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-      headers,
-      signal: AbortSignal.timeout(10_000), // 10s timeout
-    })
+    const resp = await withRetry(
+      async () => {
+        const r = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+          headers,
+          signal: AbortSignal.timeout(10_000),
+        })
+        // Don't retry 4xx — they're deterministic, not transient
+        if (r.status >= 400 && r.status < 500) return r
+        if (!r.ok) throw new Error(`GitHub API ${r.status}`)
+        return r
+      },
+      { attempts: 2, baseDelayMs: 2_000, tag: 'github-reverify' },
+    )
     if (resp.status === 404 || resp.status === 451) return 'not_found'
     if (!resp.ok) return null
     const data = (await resp.json()) as { private: boolean; stargazers_count: number; pushed_at: string }

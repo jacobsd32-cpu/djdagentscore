@@ -3,6 +3,7 @@ import type { Context } from 'hono'
 import { Hono } from 'hono'
 import { db } from '../db.js'
 import { errorResponse } from '../errors.js'
+import { adminAuth } from '../middleware/adminAuth.js'
 import type { AppEnv } from '../types/hono-env.js'
 import { isValidWebhookUrl } from '../types.js'
 
@@ -17,15 +18,7 @@ const MAX_WEBHOOKS_PER_WALLET = 10
 // ---------- Admin routes ----------
 const adminWebhooks = new Hono()
 
-adminWebhooks.use('*', async (c, next) => {
-  const adminKey = process.env.ADMIN_KEY
-  if (!adminKey) return c.json({ error: 'Admin key not configured' }, 503)
-  const key = c.req.header('x-admin-key')
-  if (!key || key.length !== adminKey.length || !crypto.timingSafeEqual(Buffer.from(key), Buffer.from(adminKey))) {
-    return c.json({ error: 'Unauthorized' }, 401)
-  }
-  await next()
-})
+adminWebhooks.use('*', adminAuth)
 
 // POST / — Create webhook
 adminWebhooks.post('/', async (c) => {

@@ -6,9 +6,9 @@
  * Protected by x402 ($0.15 USDC) or API key auth.
  */
 import { Hono } from 'hono'
-import { isAddress } from 'viem'
 import { db } from '../db.js'
 import { errorResponse } from '../errors.js'
+import { normalizeWallet } from '../utils/walletUtils.js'
 
 const history = new Hono()
 
@@ -62,12 +62,13 @@ function calculateTrend(rows: ScoreHistoryRow[]): TrendAnalysis | null {
 }
 
 history.get('/', (c) => {
-  const wallet = c.req.query('wallet')
-  if (!wallet || !isAddress(wallet)) {
+  const wallet = normalizeWallet(c.req.query('wallet'))
+  if (!wallet) {
     return c.json(errorResponse('invalid_wallet', 'Valid Ethereum wallet address required'), 400)
   }
 
-  const limitParam = Math.min(Math.max(Number(c.req.query('limit') ?? 50), 1), 100)
+  const parsedLimit = Number.parseInt(c.req.query('limit') ?? '50', 10)
+  const limitParam = Math.min(Math.max(Number.isNaN(parsedLimit) ? 50 : parsedLimit, 1), 100)
   const after = c.req.query('after') // ISO date string
   const before = c.req.query('before') // ISO date string
 
@@ -81,7 +82,7 @@ history.get('/', (c) => {
 
   // Build dynamic query
   let sql = 'SELECT * FROM score_history WHERE wallet = ?'
-  const args: (string | number)[] = [wallet.toLowerCase()]
+  const args: (string | number)[] = [wallet]
 
   if (after) {
     sql += ' AND calculated_at >= ?'
@@ -103,7 +104,7 @@ history.get('/', (c) => {
 
   // Get total count for the wallet
   let countSql = 'SELECT COUNT(*) as count FROM score_history WHERE wallet = ?'
-  const countArgs: (string | number)[] = [wallet.toLowerCase()]
+  const countArgs: (string | number)[] = [wallet]
   if (after) {
     countSql += ' AND calculated_at >= ?'
     countArgs.push(after)
@@ -117,7 +118,7 @@ history.get('/', (c) => {
   const trend = calculateTrend(rows)
 
   return c.json({
-    wallet: wallet.toLowerCase(),
+    wallet,
     history: rows.map((r) => ({
       score: r.score,
       confidence: r.confidence,

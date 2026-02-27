@@ -1,20 +1,20 @@
 import { Hono, type Context } from 'hono'
 import { getOrCalculateScore } from '../scoring/engine.js'
 import { submitJob, getJob } from '../jobs/scoreQueue.js'
-import { isValidAddress } from '../types.js'
 import type { Address, BasicScoreResponse } from '../types.js'
 import { errorResponse, ErrorCodes } from '../errors.js'
+import { normalizeWallet } from '../utils/walletUtils.js'
 
 const score = new Hono()
 
 // GET /v1/score/basic?wallet=0x...
 score.get('/basic', async (c) => {
-  const wallet = c.req.query('wallet')
-  if (!wallet || !isValidAddress(wallet)) {
+  const wallet = normalizeWallet(c.req.query('wallet'))
+  if (!wallet) {
     return c.json(errorResponse(ErrorCodes.INVALID_WALLET, 'Invalid or missing wallet address'), 400)
   }
 
-  const result = await getOrCalculateScore(wallet.toLowerCase() as Address)
+  const result = await getOrCalculateScore(wallet)
 
   const response: BasicScoreResponse & { stale?: boolean } = {
     wallet: result.wallet,
@@ -26,6 +26,7 @@ score.get('/basic', async (c) => {
     lastUpdated: result.lastUpdated,
     computedAt: result.computedAt,
     scoreFreshness: result.scoreFreshness,
+    ...(result.dataSource ? { dataSource: result.dataSource } : {}),
     ...(result.stale ? { stale: true } : {}),
   }
 
@@ -34,24 +35,24 @@ score.get('/basic', async (c) => {
 
 // GET /v1/score/full?wallet=0x...
 score.get('/full', async (c) => {
-  const wallet = c.req.query('wallet')
-  if (!wallet || !isValidAddress(wallet)) {
+  const wallet = normalizeWallet(c.req.query('wallet'))
+  if (!wallet) {
     return c.json(errorResponse(ErrorCodes.INVALID_WALLET, 'Invalid or missing wallet address'), 400)
   }
 
-  const result = await getOrCalculateScore(wallet.toLowerCase() as Address)
+  const result = await getOrCalculateScore(wallet)
   return c.json(result)
 })
 
 // POST /v1/score/refresh — forces a live recalculation (mutation → POST is correct)
 // Also accepts GET for backward compatibility (deprecated).
 async function handleRefresh(c: Context) {
-  const wallet = c.req.query('wallet')
-  if (!wallet || !isValidAddress(wallet)) {
+  const wallet = normalizeWallet(c.req.query('wallet'))
+  if (!wallet) {
     return c.json(errorResponse(ErrorCodes.INVALID_WALLET, 'Invalid or missing wallet address'), 400)
   }
 
-  const result = await getOrCalculateScore(wallet.toLowerCase() as Address, true)
+  const result = await getOrCalculateScore(wallet, true)
   return c.json(result)
 }
 score.post('/refresh', handleRefresh)
@@ -62,23 +63,24 @@ score.get('/refresh', handleRefresh) // deprecated — prefer POST
 // Free — useful when the caller can't wait 20-150s for the synchronous endpoints.
 // Accepts wallet from JSON body { wallet: "0x..." } or query param ?wallet=0x... (deprecated).
 score.post('/compute', async (c) => {
-  let wallet: string | undefined = c.req.query('wallet')
+  let raw: string | undefined = c.req.query('wallet')
 
   // Prefer body over query param for POST requests
-  if (!wallet) {
+  if (!raw) {
     try {
       const body = await c.req.json<{ wallet?: string }>()
-      wallet = body?.wallet
+      raw = body?.wallet
     } catch {
       // no body — fall through to validation
     }
   }
 
-  if (!wallet || !isValidAddress(wallet)) {
+  const wallet = normalizeWallet(raw)
+  if (!wallet) {
     return c.json(errorResponse(ErrorCodes.INVALID_WALLET, 'Invalid or missing wallet address'), 400)
   }
 
-  const jobId = submitJob(wallet.toLowerCase() as Address)
+  const jobId = submitJob(wallet)
   return c.json(
     { jobId, status: 'pending', wallet, pollUrl: `/v1/score/job/${jobId}` },
     202,
@@ -154,24 +156,23 @@ score.post('/batch', async (c) => {
     )
   }
 
-  // Validate all addresses upfront
-  const invalid = wallets.filter((w) => typeof w !== 'string' || !isValidAddress(w))
-  if (invalid.length > 0) {
+  // Validate and normalize all addresses upfront
+  const normalized = wallets.map((w) => (typeof w === 'string' ? normalizeWallet(w) : null))
+  const invalidCount = normalized.filter((w) => w === null).length
+  if (invalidCount > 0) {
     return c.json(
       errorResponse(
         ErrorCodes.INVALID_WALLET,
-        `${invalid.length} invalid wallet address(es)`,
-        { invalidCount: invalid.length },
+        `${invalidCount} invalid wallet address(es)`,
+        { invalidCount },
       ),
       400,
     )
   }
 
-  const normalized = wallets.map((w) => (w as string).toLowerCase() as Address)
-
   // Score all wallets in parallel
   const results = await Promise.all(
-    normalized.map(async (wallet) => {
+    (normalized as Address[]).map(async (wallet) => {
       const result = await getOrCalculateScore(wallet)
       const basic: BasicScoreResponse = {
         wallet: result.wallet,
@@ -183,6 +184,7 @@ score.post('/batch', async (c) => {
         lastUpdated: result.lastUpdated,
         computedAt: result.computedAt,
         scoreFreshness: result.scoreFreshness,
+        ...(result.dataSource ? { dataSource: result.dataSource } : {}),
       }
       return basic
     }),

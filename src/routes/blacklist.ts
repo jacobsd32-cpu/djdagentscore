@@ -5,18 +5,16 @@
 import { Hono } from 'hono'
 import { db } from '../db.js'
 import { ErrorCodes, errorResponse } from '../errors.js'
-import { isValidAddress } from '../types.js'
+import { normalizeWallet } from '../utils/walletUtils.js'
 
 const blacklist = new Hono()
 
 blacklist.get('/', (c) => {
-  const wallet = c.req.query('wallet')
+  const wallet = normalizeWallet(c.req.query('wallet'))
 
-  if (!wallet || !isValidAddress(wallet)) {
+  if (!wallet) {
     return c.json(errorResponse(ErrorCodes.INVALID_WALLET, 'Invalid or missing wallet address'), 400)
   }
-
-  const normalized = wallet.toLowerCase()
 
   const reports = db
     .prepare<[string], { reason: string; created_at: string }>(
@@ -25,7 +23,7 @@ blacklist.get('/', (c) => {
        WHERE target_wallet = ?
        ORDER BY created_at DESC`,
     )
-    .all(normalized)
+    .all(wallet)
 
   const reasons = [...new Set(reports.map((r) => r.reason))]
   const mostRecentDate = reports[0]?.created_at ?? null
