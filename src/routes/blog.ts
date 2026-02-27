@@ -4,13 +4,21 @@ const blog = new Hono()
 
 // ─── Shared head / design tokens (matches index.html gold/navy system) ───
 
-const blogHead = (title: string, description: string) => `<!DOCTYPE html>
+const blogHead = (title: string, description: string, slug = '') => `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${title} — DJD Agent Score</title>
 <meta name="description" content="${description}">
+<meta property="og:type" content="article">
+<meta property="og:title" content="${title} — DJD Agent Score">
+<meta property="og:description" content="${description}">
+<meta property="og:url" content="https://djd-agent-score.fly.dev/blog${slug ? `/${slug}` : ''}">
+<meta property="og:site_name" content="DJD Agent Score">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${title} — DJD Agent Score">
+<meta name="twitter:description" content="${description}">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -128,6 +136,30 @@ ${blogNav}
 
 <div class="posts">
 
+  <a href="/blog/what-is-erc-8004" class="post-card">
+    <div>
+      <div class="post-meta">
+        <span class="post-date">Feb 27, 2026</span>
+        <span class="post-tag">Infrastructure</span>
+      </div>
+      <div class="post-title">What is ERC-8004? On-Chain Reputation for AI Agents</div>
+      <p class="post-excerpt">A deep dive into the Ethereum standard that puts AI agent reputation on-chain &mdash; how it works, why it matters, and how DJD Agent Score publishes to the registry on Base.</p>
+    </div>
+    <div class="post-read">Read &rarr;</div>
+  </a>
+
+  <a href="/blog/cold-start-problem" class="post-card">
+    <div>
+      <div class="post-meta">
+        <span class="post-date">Feb 27, 2026</span>
+        <span class="post-tag">Analysis</span>
+      </div>
+      <div class="post-title">The Cold Start Problem for AI Agents</div>
+      <p class="post-excerpt">Every new agent wallet starts at zero. How do you bootstrap trust when there&rsquo;s no history? We break down the cold start problem and the scoring strategies that solve it.</p>
+    </div>
+    <div class="post-read">Read &rarr;</div>
+  </a>
+
   <a href="/blog/sybil-patterns" class="post-card">
     <div>
       <div class="post-meta">
@@ -149,6 +181,7 @@ ${blogFooter}`
 const sybilPostHtml = `${blogHead(
   '5 On-Chain Patterns That Reveal Sybil Agents',
   'How DJD Agent Score uses on-chain behavioral forensics to separate real AI agents from manufactured identities.',
+  'sybil-patterns',
 )}
 .article{max-width:720px;margin:0 auto;padding:120px 32px 0}
 .article-back{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:40px;transition:color .2s}
@@ -297,9 +330,280 @@ ${blogNav}
 
 ${blogFooter}`
 
+// ─── Individual article: ERC-8004 ───
+
+const erc8004PostHtml = `${blogHead(
+  'What is ERC-8004? On-Chain Reputation for AI Agents',
+  'A deep dive into the Ethereum standard that puts AI agent reputation on-chain — how it works, why it matters, and how DJD Agent Score publishes to the registry on Base.',
+  'what-is-erc-8004',
+)}
+.article{max-width:720px;margin:0 auto;padding:120px 32px 0}
+.article-back{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:40px;transition:color .2s}
+.article-back:hover{color:var(--accent);text-decoration:none}
+.article-meta{display:flex;gap:12px;align-items:center;margin-bottom:24px}
+.article-date{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted)}
+.article-tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--accent);background:var(--accent-dim);border:1px solid var(--border-hi);padding:3px 10px;border-radius:100px;text-transform:uppercase;letter-spacing:.5px}
+.article h1{font-family:'Instrument Serif',serif;font-size:clamp(30px,4.5vw,46px);font-weight:400;line-height:1.15;margin-bottom:20px;letter-spacing:-0.5px}
+.article .lead{font-size:18px;color:var(--text-dim);line-height:1.8;margin-bottom:48px;padding-bottom:40px;border-bottom:1px solid var(--border)}
+.prose h2{font-family:'Instrument Serif',serif;font-size:clamp(22px,3vw,30px);font-weight:400;margin-top:56px;margin-bottom:8px;letter-spacing:-0.3px}
+.prose h3{font-size:16px;font-weight:700;margin-top:32px;margin-bottom:8px;color:var(--text)}
+.prose p{font-size:15px;color:var(--text-dim);line-height:1.85;margin-bottom:16px}
+.prose strong{color:var(--text);font-weight:600}
+.prose em{color:var(--accent);font-style:italic}
+.signal{background:var(--bg2);border-left:3px solid var(--accent);border-radius:0 12px 12px 0;padding:20px 24px;margin:20px 0;font-size:14px;color:var(--text-dim);line-height:1.75}
+.signal strong{color:var(--text)}
+.pattern-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin:24px 0}
+.pattern-num{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.pattern-card h3{margin-top:0;margin-bottom:12px}
+.pattern-card p{margin-bottom:12px}
+.pattern-card p:last-child{margin-bottom:0}
+.code-block{background:#060e1a;border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin:20px 0;overflow-x:auto}
+.code-block code{font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.65;color:var(--text-dim);white-space:pre}
+.prose ul{list-style:none;padding:0;margin:16px 0}
+.prose ul li{position:relative;padding-left:20px;font-size:14px;color:var(--text-dim);line-height:1.75;margin-bottom:10px}
+.prose ul li::before{content:'';position:absolute;left:0;top:10px;width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.5}
+.cta-box{background:var(--accent-dim);border:1px solid var(--border-hi);border-radius:var(--radius);padding:32px;margin:48px 0;text-align:center}
+.cta-box p{font-size:14px;color:var(--text-dim);line-height:1.75;margin-bottom:8px}
+.cta-box code{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);background:rgba(99,102,241,0.08);padding:2px 8px;border-radius:4px}
+.cta-box .btn{display:inline-flex;align-items:center;gap:6px;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;background:var(--accent);color:var(--bg);text-decoration:none;margin-top:16px;transition:all .2s}
+.cta-box .btn:hover{opacity:.9;transform:translateY(-1px);text-decoration:none}
+.article-footer{margin-top:56px;padding-top:32px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted);line-height:1.65;font-style:italic}
+@media(max-width:768px){.article{padding:100px 20px 0}}
+${blogNav}
+
+<article class="article">
+  <a href="/blog" class="article-back">&larr; All posts</a>
+  <div class="article-meta">
+    <span class="article-date">Feb 27, 2026</span>
+    <span class="article-tag">Infrastructure</span>
+  </div>
+  <h1>What is ERC-8004? On-Chain Reputation for AI Agents</h1>
+  <p class="lead">AI agents are starting to transact autonomously. But smart contracts can&rsquo;t Google someone&rsquo;s reputation. <em>ERC-8004 puts reputation where contracts can read it &mdash; on-chain.</em></p>
+
+  <div class="prose">
+
+    <p>When a human hires a freelancer, they check reviews, ratings, and work history. When a smart contract routes a task to an AI agent, it has none of that context. The agent is just a wallet address. ERC-8004 changes that by creating a <strong>standardized, on-chain reputation registry</strong> that any contract can query.</p>
+
+    <h2>The Problem: Reputation Lives Off-Chain</h2>
+
+    <p>Today, reputation data for AI agents is scattered across proprietary APIs, centralized databases, and siloed platforms. This creates three problems:</p>
+
+    <ul>
+      <li><strong>Smart contracts can&rsquo;t access it.</strong> A DeFi protocol can&rsquo;t call an HTTP API mid-transaction to check if an agent is trustworthy.</li>
+      <li><strong>It&rsquo;s not composable.</strong> Reputation earned on one platform doesn&rsquo;t transfer to another.</li>
+      <li><strong>It&rsquo;s censorable.</strong> A centralized provider can revoke or manipulate scores at will.</li>
+    </ul>
+
+    <p>For the agent economy to scale, reputation needs to be <strong>on-chain, permissionless, and standardized</strong> &mdash; just like token balances or ENS names.</p>
+
+    <h2>How ERC-8004 Works</h2>
+
+    <p>ERC-8004 defines a minimal interface for a <em>Reputation Registry</em> &mdash; a smart contract that maps wallet addresses to reputation summaries. The core function is simple:</p>
+
+    <div class="code-block"><code>function getSummary(address wallet)
+  returns (
+    uint8 score,       // 0-100 composite score
+    uint8 confidence,  // 0-100 data confidence
+    uint32 lastUpdate, // unix timestamp
+    bytes metadata     // flexible payload
+  )</code></div>
+
+    <p>Any contract on the same chain can call <code class="mono">getSummary()</code> to get a wallet&rsquo;s reputation in a single read &mdash; no oracle, no API key, no off-chain dependency.</p>
+
+    <div class="pattern-card">
+      <div class="pattern-num">Key Design Decisions</div>
+      <h3>Why These Four Fields?</h3>
+      <p><strong>Score (0-100):</strong> A universal, human-readable trust signal. Protocols can set their own thresholds &mdash; &ldquo;only accept agents above 60&rdquo; or &ldquo;require 80+ for high-value tasks.&rdquo;</p>
+      <p><strong>Confidence (0-100):</strong> Separates &ldquo;we don&rsquo;t know&rdquo; from &ldquo;we know they&rsquo;re bad.&rdquo; A new wallet with score 40 and confidence 15 is very different from an established wallet with score 40 and confidence 90.</p>
+      <p><strong>Last Update:</strong> Staleness detection. Protocols can require scores updated within the last 7 days.</p>
+      <p><strong>Metadata:</strong> Flexible bytes field for publisher-specific data &mdash; dimension breakdowns, flag arrays, attestation hashes.</p>
+    </div>
+
+    <h2>DJD Agent Score + ERC-8004</h2>
+
+    <p>DJD Agent Score is one of the first publishers to the ERC-8004 registry on <strong>Base mainnet</strong>. When you score a wallet through our API, we publish the result on-chain:</p>
+
+    <div class="code-block"><code>Registry: 0x8004BAa17C55a88189AE136b182e5fdA19dE9b63
+Network:  Base (Chain ID 8453)
+Standard: ERC-8004 Reputation Registry</code></div>
+
+    <p>This means any protocol on Base can check an agent&rsquo;s DJD score without calling our API. The data is already there, on-chain, waiting to be read.</p>
+
+    <h2>What This Enables</h2>
+
+    <p>With reputation on-chain, new patterns become possible:</p>
+
+    <ul>
+      <li><strong>Gated access:</strong> A DeFi protocol requires agents to have a score above 50 before granting borrowing privileges.</li>
+      <li><strong>Tiered pricing:</strong> An x402 service charges lower fees to high-reputation agents (less risk = lower cost).</li>
+      <li><strong>Automated trust:</strong> A multi-agent workflow checks counterparty reputation before delegating sensitive tasks &mdash; no human in the loop.</li>
+      <li><strong>Sybil resistance:</strong> A governance protocol weighs votes by reputation score, making sybil attacks economically impractical.</li>
+    </ul>
+
+    <h2>The Bigger Picture</h2>
+
+    <p>ERC-8004 isn&rsquo;t just about DJD Agent Score. The standard is designed for <strong>multiple publishers</strong> to coexist. Different scoring engines can publish to the same registry, and consumers can choose which publisher they trust &mdash; or aggregate across several.</p>
+
+    <p>This is how internet reputation should work: <strong>open, composable, and owned by no one.</strong> The same way ERC-20 standardized tokens and ERC-721 standardized NFTs, ERC-8004 standardizes reputation. The agent economy needs this primitive.</p>
+
+    <div class="cta-box">
+      <p>Query the ERC-8004 registry directly on Base, or score a wallet through our API:</p>
+      <p><code>0x8004BAa17C55a88189AE136b182e5fdA19dE9b63</code></p>
+      <a href="/#lookup" class="btn">Score a Wallet</a>
+    </div>
+
+    <p class="article-footer">DJD Agent Score publishes to the ERC-8004 Reputation Registry on Base mainnet. Scores are paid via x402 micropayments. Registry reads are free and permissionless.</p>
+
+  </div>
+</article>
+
+${blogFooter}`
+
+// ─── Individual article: Cold Start Problem ───
+
+const coldStartPostHtml = `${blogHead(
+  'The Cold Start Problem for AI Agents',
+  'Every new agent wallet starts at zero. How do you bootstrap trust when there is no history? We break down the cold start problem and the scoring strategies that solve it.',
+  'cold-start-problem',
+)}
+.article{max-width:720px;margin:0 auto;padding:120px 32px 0}
+.article-back{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:40px;transition:color .2s}
+.article-back:hover{color:var(--accent);text-decoration:none}
+.article-meta{display:flex;gap:12px;align-items:center;margin-bottom:24px}
+.article-date{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted)}
+.article-tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--accent);background:var(--accent-dim);border:1px solid var(--border-hi);padding:3px 10px;border-radius:100px;text-transform:uppercase;letter-spacing:.5px}
+.article h1{font-family:'Instrument Serif',serif;font-size:clamp(30px,4.5vw,46px);font-weight:400;line-height:1.15;margin-bottom:20px;letter-spacing:-0.5px}
+.article .lead{font-size:18px;color:var(--text-dim);line-height:1.8;margin-bottom:48px;padding-bottom:40px;border-bottom:1px solid var(--border)}
+.prose h2{font-family:'Instrument Serif',serif;font-size:clamp(22px,3vw,30px);font-weight:400;margin-top:56px;margin-bottom:8px;letter-spacing:-0.3px}
+.prose h3{font-size:16px;font-weight:700;margin-top:32px;margin-bottom:8px;color:var(--text)}
+.prose p{font-size:15px;color:var(--text-dim);line-height:1.85;margin-bottom:16px}
+.prose strong{color:var(--text);font-weight:600}
+.prose em{color:var(--accent);font-style:italic}
+.signal{background:var(--bg2);border-left:3px solid var(--accent);border-radius:0 12px 12px 0;padding:20px 24px;margin:20px 0;font-size:14px;color:var(--text-dim);line-height:1.75}
+.signal strong{color:var(--text)}
+.pattern-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin:24px 0}
+.pattern-num{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.pattern-card h3{margin-top:0;margin-bottom:12px}
+.pattern-card p{margin-bottom:12px}
+.pattern-card p:last-child{margin-bottom:0}
+.code-block{background:#060e1a;border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin:20px 0;overflow-x:auto}
+.code-block code{font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.65;color:var(--text-dim);white-space:pre}
+.prose ul{list-style:none;padding:0;margin:16px 0}
+.prose ul li{position:relative;padding-left:20px;font-size:14px;color:var(--text-dim);line-height:1.75;margin-bottom:10px}
+.prose ul li::before{content:'';position:absolute;left:0;top:10px;width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.5}
+.cta-box{background:var(--accent-dim);border:1px solid var(--border-hi);border-radius:var(--radius);padding:32px;margin:48px 0;text-align:center}
+.cta-box p{font-size:14px;color:var(--text-dim);line-height:1.75;margin-bottom:8px}
+.cta-box code{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);background:rgba(99,102,241,0.08);padding:2px 8px;border-radius:4px}
+.cta-box .btn{display:inline-flex;align-items:center;gap:6px;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;background:var(--accent);color:var(--bg);text-decoration:none;margin-top:16px;transition:all .2s}
+.cta-box .btn:hover{opacity:.9;transform:translateY(-1px);text-decoration:none}
+.article-footer{margin-top:56px;padding-top:32px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted);line-height:1.65;font-style:italic}
+@media(max-width:768px){.article{padding:100px 20px 0}}
+${blogNav}
+
+<article class="article">
+  <a href="/blog" class="article-back">&larr; All posts</a>
+  <div class="article-meta">
+    <span class="article-date">Feb 27, 2026</span>
+    <span class="article-tag">Analysis</span>
+  </div>
+  <h1>The Cold Start Problem for AI Agents</h1>
+  <p class="lead">Every new agent wallet starts with a score of zero. No transactions, no counterparties, no history. <em>How do you earn trust when you have nothing to show?</em></p>
+
+  <div class="prose">
+
+    <p>The cold start problem is familiar territory in tech &mdash; Uber needed drivers before riders, Airbnb needed listings before guests. For AI agents, the problem is sharper: an agent with no on-chain history is <strong>indistinguishable from a sybil</strong>. Both have empty wallets, zero transactions, and no reputation.</p>
+
+    <p>At DJD Agent Score, cold start isn&rsquo;t an edge case &mdash; it&rsquo;s the default state. Every wallet we score started at zero. Here&rsquo;s how our scoring engine handles it.</p>
+
+    <h2>Why Cold Start Is Hard</h2>
+
+    <p>Our scoring engine evaluates wallets across five dimensions: <strong>Activity, Reliability, Identity, Consistency, and Integrity</strong>. Each dimension draws on behavioral data. When there&rsquo;s no behavior to analyze, the system faces a choice:</p>
+
+    <div class="pattern-card">
+      <div class="pattern-num">The Dilemma</div>
+      <h3>Score Low or Score Unknown?</h3>
+      <p><strong>Option A: Default to zero.</strong> Safe, but punishes legitimate new agents. Nobody would use a service that brands every newcomer as untrustworthy.</p>
+      <p><strong>Option B: Default to neutral.</strong> Generous, but sybils exploit it immediately. A score of 50 on day one means fake agents start with credibility they haven&rsquo;t earned.</p>
+      <p><strong>Our approach: Score honestly, but signal confidence separately.</strong> A new wallet gets a low score <em>and</em> a low confidence rating. The score reflects limited data. The confidence tells consumers how much to trust that score.</p>
+    </div>
+
+    <h2>The Confidence Signal</h2>
+
+    <p>This is why the ERC-8004 standard includes a <strong>confidence field</strong> alongside the score. A wallet with score 35 and confidence 12 means: &ldquo;we think this agent is in the low-to-mid range, but we have very little data.&rdquo;</p>
+
+    <p>Protocols consuming our scores can use confidence to set policy:</p>
+
+    <div class="code-block"><code>// Conservative: require both high score AND high confidence
+if (score >= 60 && confidence >= 70) allow();
+
+// Permissive: accept low confidence for low-stakes tasks
+if (score >= 30 || confidence < 20) allowWithLimits();</code></div>
+
+    <p>This lets new agents participate in the economy immediately &mdash; just with appropriate guardrails.</p>
+
+    <h2>Three Paths Out of Cold Start</h2>
+
+    <p>New agents aren&rsquo;t stuck at zero forever. Our scoring engine recognizes three acceleration paths:</p>
+
+    <div class="pattern-card">
+      <div class="pattern-num">Path 1</div>
+      <h3>Identity Verification</h3>
+      <p>Register on the <strong>ERC-8004 registry</strong> and verify a GitHub account. This doesn&rsquo;t require any transaction history &mdash; it&rsquo;s a pure identity signal. A wallet that&rsquo;s registered and GitHub-verified immediately gains points in the Identity dimension.</p>
+      <p>This is the fastest path from zero. It costs gas for registration plus a GitHub verification, and it signals that the operator is willing to invest in their agent&rsquo;s identity.</p>
+    </div>
+
+    <div class="pattern-card">
+      <div class="pattern-num">Path 2</div>
+      <h3>Organic Transaction History</h3>
+      <p>Transact with <strong>diverse, established counterparties</strong>. The Activity and Reliability dimensions reward wallets that interact with many different addresses over time. A wallet with 10 transactions across 8 unique counterparties over 30 days builds a meaningfully different profile than one with 10 transactions to the same address.</p>
+      <p>This is the natural path &mdash; agents that are actually doing useful work accumulate reputation as a byproduct.</p>
+    </div>
+
+    <div class="pattern-card">
+      <div class="pattern-num">Path 3</div>
+      <h3>Consistent Behavior Over Time</h3>
+      <p>The Consistency dimension rewards <strong>predictable, sustained activity</strong>. An agent that transacts regularly over weeks scores higher than one with sporadic bursts. This dimension is specifically designed to be hard for sybils to fake &mdash; maintaining consistent activity across many fake wallets is expensive.</p>
+      <p>Time is the one resource that can&rsquo;t be manufactured. An agent that&rsquo;s been consistently active for 60 days has earned something that money alone can&rsquo;t buy.</p>
+    </div>
+
+    <h2>Why We Don&rsquo;t Offer &ldquo;Reputation Bootstrapping&rdquo;</h2>
+
+    <p>Some reputation systems let you pay to bootstrap a score &mdash; essentially buying credibility. We deliberately avoid this. If you can buy a high score, sybils can too, and the score becomes meaningless.</p>
+
+    <p>Our design principle is simple: <strong>reputation must be earned through observable behavior, not purchased.</strong> Identity verification is the one exception &mdash; and even that only affects a single dimension, not the overall score.</p>
+
+    <p>The cold start period is a feature, not a bug. It&rsquo;s the cost of entry into a trust network. By making reputation expensive to earn and impossible to buy, we make it <em>meaningful</em>.</p>
+
+    <h2>What This Means for Agent Builders</h2>
+
+    <p>If you&rsquo;re deploying a new AI agent, here&rsquo;s the practical playbook:</p>
+
+    <ul>
+      <li><strong>Day 1:</strong> Register on ERC-8004 and verify GitHub. Immediate Identity boost.</li>
+      <li><strong>Week 1-2:</strong> Start transacting with real services. Focus on diversity of counterparties over volume.</li>
+      <li><strong>Month 1+:</strong> Maintain consistent activity. The Consistency dimension compounds over time.</li>
+      <li><strong>Ongoing:</strong> Avoid patterns that look like wash trading or sybil behavior (see our post on <a href="/blog/sybil-patterns">sybil patterns</a>).</li>
+    </ul>
+
+    <p>Your score will climb naturally as your agent builds real history. There are no shortcuts &mdash; and that&rsquo;s exactly the point.</p>
+
+    <div class="cta-box">
+      <p>Check where your agent stands today:</p>
+      <a href="/#lookup" class="btn">Score a Wallet</a>
+    </div>
+
+    <p class="article-footer">DJD Agent Score evaluates AI agent wallets across five behavioral dimensions. Scores are published to the ERC-8004 Reputation Registry on Base mainnet.</p>
+
+  </div>
+</article>
+
+${blogFooter}`
+
 // ─── Routes ───
 
 blog.get('/', (c) => c.html(listingHtml))
 blog.get('/sybil-patterns', (c) => c.html(sybilPostHtml))
+blog.get('/what-is-erc-8004', (c) => c.html(erc8004PostHtml))
+blog.get('/cold-start-problem', (c) => c.html(coldStartPostHtml))
 
 export default blog

@@ -31,7 +31,8 @@ export const responseHeadersMiddleware: MiddlewareHandler = async (c, next) => {
     path === '/explorer' ||
     path === '/terms' ||
     path === '/privacy' ||
-    path.startsWith('/agent/')
+    path.startsWith('/agent/') ||
+    path.startsWith('/blog')
   if (isDocsRoute) {
     c.res.headers.set(
       'Content-Security-Policy',
