@@ -41,7 +41,7 @@ export const responseHeadersMiddleware: MiddlewareHandler = async (c, next) => {
   } else if (isHtmlPage) {
     c.res.headers.set(
       'Content-Security-Policy',
-      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://djd-agent-score.fly.dev; connect-src 'self'; frame-ancestors 'none'",
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://djdagentscore.dev; connect-src 'self'; frame-ancestors 'none'",
     )
   } else {
     c.res.headers.set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'")
