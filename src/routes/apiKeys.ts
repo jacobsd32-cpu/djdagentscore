@@ -2,21 +2,11 @@ import crypto from 'node:crypto'
 import { Hono } from 'hono'
 import { db } from '../db.js'
 import { errorResponse } from '../errors.js'
+import { adminAuth } from '../middleware/adminAuth.js'
 
 const apiKeys = new Hono()
 
-// Admin auth middleware (same pattern as src/routes/admin.ts)
-apiKeys.use('*', async (c, next) => {
-  const adminKey = process.env.ADMIN_KEY
-  if (!adminKey) {
-    return c.json({ error: 'Admin key not configured' }, 503)
-  }
-  const key = c.req.header('x-admin-key')
-  if (!key || key.length !== adminKey.length || !crypto.timingSafeEqual(Buffer.from(key), Buffer.from(adminKey))) {
-    return c.json({ error: 'Unauthorized' }, 401)
-  }
-  await next()
-})
+apiKeys.use('*', adminAuth)
 
 function generateApiKey(): string {
   return `djd_live_${crypto.randomBytes(32).toString('hex')}`

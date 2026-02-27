@@ -6,45 +6,57 @@ export function isValidAddress(addr: string): addr is Address {
 }
 
 /**
- * Validates a webhook URL is safe to fetch (SSRF prevention — H1 fix).
- * Requires HTTPS and blocks internal/private network addresses.
+ * Validates a webhook URL is safe to fetch (SSRF prevention).
+ * Requires HTTPS and blocks internal/private network addresses,
+ * including non-standard IP encodings (decimal, octal, hex).
  */
 export function isValidWebhookUrl(url: string): boolean {
   try {
     const parsed = new URL(url)
     // Must be HTTPS
     if (parsed.protocol !== 'https:') return false
-    // Block internal/private IPs and hostnames
+
     const hostname = parsed.hostname.toLowerCase()
+
+    // Block known private/internal hostnames
     if (
       hostname === 'localhost' ||
-      hostname === '127.0.0.1' ||
-      hostname === '0.0.0.0' ||
-      hostname === '::1' ||
-      hostname.startsWith('10.') ||
-      hostname.startsWith('172.16.') ||
-      hostname.startsWith('172.17.') ||
-      hostname.startsWith('172.18.') ||
-      hostname.startsWith('172.19.') ||
-      hostname.startsWith('172.20.') ||
-      hostname.startsWith('172.21.') ||
-      hostname.startsWith('172.22.') ||
-      hostname.startsWith('172.23.') ||
-      hostname.startsWith('172.24.') ||
-      hostname.startsWith('172.25.') ||
-      hostname.startsWith('172.26.') ||
-      hostname.startsWith('172.27.') ||
-      hostname.startsWith('172.28.') ||
-      hostname.startsWith('172.29.') ||
-      hostname.startsWith('172.30.') ||
-      hostname.startsWith('172.31.') ||
-      hostname.startsWith('192.168.') ||
-      hostname === '169.254.169.254' ||
       hostname.endsWith('.internal') ||
-      hostname.endsWith('.local')
+      hostname.endsWith('.local') ||
+      hostname.endsWith('.localhost')
     ) {
       return false
     }
+
+    // Block IPv6 loopback and link-local (brackets stripped by URL parser)
+    if (hostname === '::1' || hostname === '[::1]' || hostname.startsWith('fe80:') || hostname.startsWith('[fe80:')) {
+      return false
+    }
+
+    // Block non-standard IP encodings: pure decimal (2130706433), hex (0x7f000001),
+    // octal (0177.0.0.1), or mixed forms. If the hostname is purely numeric or
+    // contains hex/octal prefixes, reject it — legitimate webhooks use domain names.
+    if (/^[0-9]+$/.test(hostname) || /^0x[0-9a-f]+$/i.test(hostname) || /^0[0-7]/.test(hostname)) {
+      return false
+    }
+
+    // Block dotted-decimal private/reserved ranges
+    const ipv4Match = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+    if (ipv4Match) {
+      const [, a, b] = ipv4Match.map(Number) as [number, number, number, number, number]
+      if (
+        a === 0 ||           // 0.0.0.0/8 (current network)
+        a === 10 ||          // 10.0.0.0/8 (private)
+        a === 127 ||         // 127.0.0.0/8 (loopback)
+        (a === 100 && b! >= 64 && b! <= 127) || // 100.64.0.0/10 (CGNAT)
+        (a === 169 && b === 254) ||              // 169.254.0.0/16 (link-local / cloud metadata)
+        (a === 172 && b! >= 16 && b! <= 31) ||   // 172.16.0.0/12 (private)
+        (a === 192 && b === 168)                 // 192.168.0.0/16 (private)
+      ) {
+        return false
+      }
+    }
+
     return true
   } catch {
     return false
@@ -152,6 +164,8 @@ export interface BasicScoreResponse {
   computedAt: string
   /** 0–1 freshness factor: 1 = just computed, decays linearly toward 0 at cache expiry. Consumers can use this to weight trust. */
   scoreFreshness: number
+  /** Where the score data originated: 'live' = fresh RPC computation, 'cached' = served from DB cache, 'unavailable' = blockchain data was unreachable. */
+  dataSource?: 'live' | 'cached' | 'unavailable'
   stale?: boolean
 }
 
@@ -323,4 +337,40 @@ export interface WalletUSDCData {
   transferCount: number
   firstBlockSeen: bigint | null
   lastBlockSeen: bigint | null
+}
+
+// ---------- Wallet Metrics (DB row) ----------
+
+export type BalanceTrend = 'freefall' | 'declining' | 'stable' | 'rising'
+
+export interface WalletMetricsRow {
+  wallet: string
+  tx_count_24h: number
+  tx_count_7d: number
+  tx_count_30d: number
+  volume_in_24h: number
+  volume_in_7d: number
+  volume_in_30d: number
+  volume_out_24h: number
+  volume_out_7d: number
+  volume_out_30d: number
+  income_burn_ratio: number
+  balance_trend_7d: BalanceTrend
+  unique_partners_30d: number
+  last_updated: string
+}
+
+// ---------- Scoring subsystem types ----------
+
+export interface SybilResult {
+  sybilFlag: boolean
+  indicators: string[]
+  caps: { reliability?: number; identity?: number }
+}
+
+export interface GamingResult {
+  gamingDetected: boolean
+  indicators: string[]
+  penalties: { composite: number; reliability: number; viability: number }
+  overrides: { useAvgBalance: boolean }
 }

@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { countCachedScores, countRegisteredAgents, getLeaderboard } from '../db.js'
+import { log } from '../logger.js'
 import type { LeaderboardEntry, LeaderboardResponse, Tier } from '../types.js'
 
 const leaderboard = new Hono()
@@ -16,8 +17,8 @@ leaderboard.get('/', (c) => {
     try {
       const raw = JSON.parse(row.raw_data) as { walletAgeDays?: number }
       daysAlive = raw.walletAgeDays ?? 0
-    } catch {
-      // ignore parse errors
+    } catch (err) {
+      log.warn('leaderboard', `Failed to parse raw_data for ${row.wallet}`, err)
     }
 
     return {

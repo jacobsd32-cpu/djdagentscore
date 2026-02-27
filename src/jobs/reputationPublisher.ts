@@ -19,21 +19,24 @@ import { createWalletClient, formatEther, http, keccak256, parseAbi, stringToHex
 import { privateKeyToAccount } from 'viem/accounts'
 import { base } from 'viem/chains'
 import { ERC8004_REPUTATION_REGISTRY, getPublicClient } from '../blockchain.js'
+import { REPUTATION_PUBLISHER_CONFIG } from '../config/constants.js'
 import { getScoresNeedingPublication, upsertPublication } from '../db.js'
 import { log } from '../logger.js'
+import { withRetry } from '../utils/retry.js'
 
 // ---------- Constants ----------
 
 const TAG = 'erc8004-publisher'
 
-const MIN_CONFIDENCE = 0.5
-const SCORE_DELTA = 5
-const BATCH_LIMIT = 10
-const TX_TIMEOUT_MS = 60_000
-const INTER_TX_DELAY_MS = 3_000
-const MIN_ETH_BALANCE = 1_000_000_000_000_000n // 0.001 ETH
-
-const SCORE_ENDPOINT = 'https://agentscore.ai/v1/score/full'
+const {
+  MIN_CONFIDENCE,
+  SCORE_DELTA,
+  BATCH_LIMIT,
+  TX_TIMEOUT_MS,
+  INTER_TX_DELAY_MS,
+  MIN_ETH_BALANCE,
+  SCORE_ENDPOINT,
+} = REPUTATION_PUBLISHER_CONFIG
 
 const GIVE_FEEDBACK_ABI = parseAbi([
   'function giveFeedback(uint256 agentId, int128 value, uint8 valueDecimals, string tag1, string tag2, string endpoint, string feedbackURI, bytes32 feedbackHash)',
@@ -135,22 +138,26 @@ export async function runReputationPublisher(): Promise<void> {
 
       log.info(TAG, `Publishing score for ${score.wallet}: ${score.composite_score} (confidence: ${score.confidence})`)
 
-      // Submit transaction
-      const txHash = await wallet.writeContract({
-        address: ERC8004_REPUTATION_REGISTRY,
-        abi: GIVE_FEEDBACK_ABI,
-        functionName: 'giveFeedback',
-        args: [
-          agentId,
-          BigInt(score.composite_score),
-          0, // valueDecimals — score is an integer 0-100
-          'djd-composite',
-          modelVersion,
-          SCORE_ENDPOINT,
-          '', // feedbackURI — all data available at the endpoint
-          feedbackHash,
-        ],
-      })
+      // Submit transaction (retry on transient RPC errors)
+      const txHash = await withRetry(
+        () =>
+          wallet.writeContract({
+            address: ERC8004_REPUTATION_REGISTRY,
+            abi: GIVE_FEEDBACK_ABI,
+            functionName: 'giveFeedback',
+            args: [
+              agentId,
+              BigInt(score.composite_score),
+              0, // valueDecimals — score is an integer 0-100
+              'djd-composite',
+              modelVersion,
+              SCORE_ENDPOINT,
+              '', // feedbackURI — all data available at the endpoint
+              feedbackHash,
+            ],
+          }),
+        { attempts: 2, baseDelayMs: 3_000, tag: 'erc8004-publisher' },
+      )
 
       log.info(TAG, `Tx submitted: ${txHash} — waiting for receipt...`)
 

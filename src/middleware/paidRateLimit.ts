@@ -4,29 +4,12 @@
  * 120 requests/hour per payer wallet.
  */
 import type { MiddlewareHandler } from 'hono'
+import { RATE_LIMIT_CONFIG } from '../config/constants.js'
 import { db } from '../db.js'
 import { errorResponse, ErrorCodes } from '../errors.js'
+import { getPayerWallet } from '../utils/paymentUtils.js'
 
-const MAX_REQUESTS_PER_HOUR = 120
-
-/**
- * Extract the payer wallet from the x402 X-PAYMENT header.
- * Reuses the same parsing logic as queryLogger.
- */
-function extractPayerWallet(header: string | undefined): string | null {
-  if (!header) return null
-  try {
-    const json = JSON.parse(Buffer.from(header, 'base64').toString('utf8'))
-    return (
-      json?.payload?.authorization?.from ??
-      json?.payer ??
-      json?.from ??
-      null
-    )
-  } catch {
-    return null
-  }
-}
+const { MAX_REQUESTS_PER_HOUR } = RATE_LIMIT_CONFIG
 
 function getCurrentWindow(): string {
   const now = new Date()
@@ -50,11 +33,7 @@ export function cleanupRateLimits(): void {
 }
 
 export const paidRateLimitMiddleware: MiddlewareHandler = async (c, next) => {
-  const paymentHeader =
-    c.req.header('X-PAYMENT') ?? c.req.header('x-payment') ?? undefined
-  // Also check for API key wallet so API key users are rate-limited too (H8 fix)
-  const apiKeyWallet = (c.get('apiKeyWallet') as string | null) ?? null
-  const wallet = apiKeyWallet ?? extractPayerWallet(paymentHeader)
+  const wallet = getPayerWallet(c)
 
   // If no payer wallet identified, let through (free tier or other checks handle it)
   if (!wallet) {
@@ -65,22 +44,19 @@ export const paidRateLimitMiddleware: MiddlewareHandler = async (c, next) => {
   const key = wallet.toLowerCase()
   const window = getCurrentWindow()
 
-  // Increment and get current count (atomic via RETURNING)
-  const row = upsertStmt.get(key, window) as { count: number } | undefined
-  const currentCount = row?.count ?? (getCountStmt.get(key, window)?.count ?? 1)
+  // Check current count BEFORE incrementing to avoid charging for rejected requests
+  const currentCount = getCountStmt.get(key, window)?.count ?? 0
 
-  // Set rate limit headers on ALL responses
-  const remaining = Math.max(0, MAX_REQUESTS_PER_HOUR - currentCount)
   const resetDate = new Date()
   resetDate.setUTCMinutes(0, 0, 0)
   resetDate.setUTCHours(resetDate.getUTCHours() + 1)
   const resetTimestamp = Math.floor(resetDate.getTime() / 1000)
 
   c.header('RateLimit-Limit', String(MAX_REQUESTS_PER_HOUR))
-  c.header('RateLimit-Remaining', String(remaining))
   c.header('RateLimit-Reset', String(resetTimestamp))
 
-  if (currentCount > MAX_REQUESTS_PER_HOUR) {
+  if (currentCount >= MAX_REQUESTS_PER_HOUR) {
+    c.header('RateLimit-Remaining', '0')
     c.header('Retry-After', String(resetTimestamp - Math.floor(Date.now() / 1000)))
     return c.json(
       errorResponse(
@@ -91,6 +67,10 @@ export const paidRateLimitMiddleware: MiddlewareHandler = async (c, next) => {
       429,
     )
   }
+
+  // Increment only after confirming the request is within limits
+  upsertStmt.get(key, window)
+  c.header('RateLimit-Remaining', String(Math.max(0, MAX_REQUESTS_PER_HOUR - currentCount - 1)))
 
   await next()
 }

@@ -10,12 +10,13 @@
  */
 import { createHash } from 'node:crypto'
 import type { MiddlewareHandler } from 'hono'
+import { RATE_LIMIT_CONFIG } from '../config/constants.js'
 import { countFreeTierUsesToday } from '../db.js'
 import { getOrCalculateScore, MODEL_VERSION } from '../scoring/engine.js'
 import type { Address } from '../types.js'
 import { isValidAddress } from '../types.js'
 
-const FREE_DAILY_LIMIT = 10
+const { FREE_DAILY_LIMIT } = RATE_LIMIT_CONFIG
 
 /**
  * Derive a rate-limit key from the client IP.

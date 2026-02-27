@@ -10,8 +10,18 @@
  * TODO: Add webhook notification when monitoring_subscriptions is implemented.
  */
 import type { Database as DatabaseType } from 'better-sqlite3'
+import { ANOMALY_DETECTOR_CONFIG } from '../config/constants.js'
 import { log } from '../logger.js'
 import { jobStats } from './jobStats.js'
+
+const {
+  SCORE_CHANGE_THRESHOLD,
+  HIGH_SEVERITY_THRESHOLD,
+  BALANCE_FREEFALL_RATIO,
+  LOOKBACK_MINUTES,
+  SYBIL_CHECK_MINUTES,
+  SYBIL_WALLET_LIMIT,
+} = ANOMALY_DETECTOR_CONFIG
 
 interface Anomaly {
   wallet: string
@@ -44,7 +54,7 @@ export async function runAnomalyDetector(db: DatabaseType): Promise<void> {
   log.info('anomaly', 'Starting anomaly detector...')
 
   try {
-    const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString()
+    const fifteenMinAgo = new Date(Date.now() - LOOKBACK_MINUTES * 60 * 1000).toISOString()
     const detectedAt = new Date().toISOString()
     const anomalies: Anomaly[] = []
 
@@ -68,12 +78,12 @@ export async function runAnomalyDetector(db: DatabaseType): Promise<void> {
         const diff = rows[0].composite_score - rows[1].composite_score
         const absDiff = Math.abs(diff)
 
-        if (absDiff > 10) {
+        if (absDiff > SCORE_CHANGE_THRESHOLD) {
           anomalies.push({
             wallet,
             type: diff < 0 ? 'score_drop' : 'score_spike',
             details: `Score changed ${diff > 0 ? '+' : ''}${diff} points (${rows[1].composite_score} → ${rows[0].composite_score})`,
-            severity: absDiff > 20 ? 'high' : 'medium',
+            severity: absDiff > HIGH_SEVERITY_THRESHOLD ? 'high' : 'medium',
             detected_at: detectedAt,
           })
         }
@@ -116,7 +126,7 @@ export async function runAnomalyDetector(db: DatabaseType): Promise<void> {
 
       if (snaps.length === 2 && snaps[1].usdc_balance > 0) {
         const ratio = snaps[0].usdc_balance / snaps[1].usdc_balance
-        if (ratio < 0.5) {
+        if (ratio < BALANCE_FREEFALL_RATIO) {
           anomalies.push({
             wallet,
             type: 'balance_freefall',
@@ -162,11 +172,11 @@ export async function runAnomalyDetector(db: DatabaseType): Promise<void> {
  */
 export async function runSybilMonitor(db: DatabaseType): Promise<void> {
   try {
-    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+    const fiveMinAgo = new Date(Date.now() - SYBIL_CHECK_MINUTES * 60 * 1000).toISOString()
 
     // Re-check sybil-flagged wallets for new transactions since last check
     const flaggedWallets = db
-      .prepare<[], { wallet: string }>(`SELECT wallet FROM scores WHERE sybil_flag = 1 LIMIT 500`)
+      .prepare<[], { wallet: string }>(`SELECT wallet FROM scores WHERE sybil_flag = 1 LIMIT ${SYBIL_WALLET_LIMIT}`)
       .all()
       .map((r) => r.wallet)
 

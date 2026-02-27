@@ -10,14 +10,16 @@
  */
 import { parseAbi } from 'viem'
 import { getPublicClient, USDC_ADDRESS } from '../blockchain.js'
-import { db, getExpiredWallets } from '../db.js'
+import { JOB_CONFIG } from '../config/constants.js'
+import { db, getExpiredWallets, pruneWalletSnapshots } from '../db.js'
 import { log } from '../logger.js'
+import type { BalanceTrend } from '../types.js'
 import { getOrCalculateScore } from '../scoring/engine.js'
 import type { Address } from '../types.js'
+import { withRetry } from '../utils/retry.js'
 import { jobStats } from './jobStats.js'
 
-const REFRESH_BATCH_SIZE = 50
-const INTER_WALLET_DELAY_MS = 200
+const { REFRESH_BATCH_SIZE, INTER_WALLET_DELAY_MS } = JOB_CONFIG
 
 const BALANCE_OF_ABI = parseAbi(['function balanceOf(address) returns (uint256)'])
 
@@ -50,98 +52,130 @@ async function snapshotAndUpdateMetrics(wallet: string): Promise<void> {
   const d7ago = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
   const d30ago = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
-  // ── Fetch and snapshot current USDC balance ──────────────────────────────
-  let currentBalance = 0
+  // ── Fetch current USDC balance (async RPC — outside transaction) ─────────
+  // Use null to signal "unknown" — avoids writing 0 to snapshots on RPC failure
+  // which would corrupt balance_trend_7d for wallets with real balances.
+  let currentBalance: number | null = null
   try {
-    const raw = await getPublicClient().readContract({
-      address: USDC_ADDRESS,
-      abi: BALANCE_OF_ABI,
-      functionName: 'balanceOf',
-      args: [wallet as `0x${string}`],
-    })
+    const raw = await withRetry(
+      () =>
+        getPublicClient().readContract({
+          address: USDC_ADDRESS,
+          abi: BALANCE_OF_ABI,
+          functionName: 'balanceOf',
+          args: [wallet as `0x${string}`],
+        }),
+      { attempts: 3, baseDelayMs: 1_000, tag: 'refresh' },
+    )
     currentBalance = Number(raw as bigint) / 1_000_000
-    db.prepare('INSERT INTO wallet_snapshots (wallet, usdc_balance, snapshot_at) VALUES (?, ?, ?)').run(
+  } catch (err) {
+    log.warn('refresh', `Balance fetch failed for ${wallet} after retries — skipping snapshot and trend`, err)
+  }
+
+  // ── All DB reads + writes in a single transaction for atomicity ──────────
+  // Ensures snapshot, metrics reads, trend computation, and metrics upsert
+  // are consistent — a crash mid-operation won't leave partial state.
+  const persistSnapshotAndMetrics = db.transaction(() => {
+    // Snapshot current balance (only when RPC succeeded)
+    if (currentBalance !== null) {
+      db.prepare('INSERT INTO wallet_snapshots (wallet, usdc_balance, snapshot_at) VALUES (?, ?, ?)').run(
+        wallet,
+        currentBalance,
+        nowStr,
+      )
+      // Prune old snapshots (keep last 50) — belongs here, not in score upsert
+      pruneWalletSnapshots(wallet)
+    }
+
+    // Compute per-period metrics
+    const m24 = getPeriodMetrics(wallet, h24ago)
+    const m7 = getPeriodMetrics(wallet, d7ago)
+    const m30 = getPeriodMetrics(wallet, d30ago)
+
+    const income_burn_ratio = m30.volume_in / Math.max(m30.volume_out, 0.01)
+
+    // Balance trend (compare current to snapshot 7 days ago)
+    // When currentBalance is null (RPC failed), preserve existing trend rather
+    // than incorrectly computing a trend from a fake zero balance.
+    let balance_trend_7d: BalanceTrend = 'stable'
+    if (currentBalance !== null) {
+      const oldSnap = db
+        .prepare<[string, string], { usdc_balance: number }>(
+          'SELECT usdc_balance FROM wallet_snapshots WHERE wallet = ? AND snapshot_at <= ? ORDER BY snapshot_at DESC LIMIT 1',
+        )
+        .get(wallet, d7ago)
+
+      if (oldSnap && oldSnap.usdc_balance > 0) {
+        const ratio = currentBalance / oldSnap.usdc_balance
+        if (ratio < 0.5) balance_trend_7d = 'freefall'
+        else if (ratio < 0.9) balance_trend_7d = 'declining'
+        else if (ratio > 1.1) balance_trend_7d = 'rising'
+      }
+    } else {
+      // RPC failed — use the existing stored trend if available
+      const existingMetrics = db
+        .prepare<[string], { balance_trend_7d: BalanceTrend }>(
+          'SELECT balance_trend_7d FROM wallet_metrics WHERE wallet = ?',
+        )
+        .get(wallet)
+      balance_trend_7d = existingMetrics?.balance_trend_7d ?? 'stable'
+    }
+
+    // Unique partners in last 30d
+    const partnersRow = db
+      .prepare<[string, string, string, string], { count: number }>(
+        `SELECT COUNT(DISTINCT CASE WHEN from_wallet = ? THEN to_wallet ELSE from_wallet END) as count
+         FROM raw_transactions
+         WHERE (from_wallet = ? OR to_wallet = ?) AND timestamp >= ?`,
+      )
+      .get(wallet, wallet, wallet, d30ago)
+    const unique_partners_30d = partnersRow?.count ?? 0
+
+    // Upsert wallet_metrics
+    db.prepare(
+      `INSERT INTO wallet_metrics
+         (wallet, tx_count_24h, tx_count_7d, tx_count_30d,
+          volume_in_24h, volume_in_7d, volume_in_30d,
+          volume_out_24h, volume_out_7d, volume_out_30d,
+          income_burn_ratio, balance_trend_7d, unique_partners_30d, last_updated)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(wallet) DO UPDATE SET
+         tx_count_24h        = excluded.tx_count_24h,
+         tx_count_7d         = excluded.tx_count_7d,
+         tx_count_30d        = excluded.tx_count_30d,
+         volume_in_24h       = excluded.volume_in_24h,
+         volume_in_7d        = excluded.volume_in_7d,
+         volume_in_30d       = excluded.volume_in_30d,
+         volume_out_24h      = excluded.volume_out_24h,
+         volume_out_7d       = excluded.volume_out_7d,
+         volume_out_30d      = excluded.volume_out_30d,
+         income_burn_ratio   = excluded.income_burn_ratio,
+         balance_trend_7d    = excluded.balance_trend_7d,
+         unique_partners_30d = excluded.unique_partners_30d,
+         last_updated        = excluded.last_updated`,
+    ).run(
       wallet,
-      currentBalance,
+      m24.tx_count,
+      m7.tx_count,
+      m30.tx_count,
+      m24.volume_in,
+      m7.volume_in,
+      m30.volume_in,
+      m24.volume_out,
+      m7.volume_out,
+      m30.volume_out,
+      income_burn_ratio,
+      balance_trend_7d,
+      unique_partners_30d,
       nowStr,
     )
-  } catch (err) {
-    log.warn('refresh', `Balance fetch failed for ${wallet}`, err)
-  }
+  })
 
-  // ── Compute per-period metrics ────────────────────────────────────────────
-  const m24 = getPeriodMetrics(wallet, h24ago)
-  const m7 = getPeriodMetrics(wallet, d7ago)
-  const m30 = getPeriodMetrics(wallet, d30ago)
-
-  const income_burn_ratio = m30.volume_in / Math.max(m30.volume_out, 0.01)
-
-  // ── Balance trend (compare current to snapshot 7 days ago) ───────────────
-  let balance_trend_7d = 'stable'
-  const oldSnap = db
-    .prepare<[string, string], { usdc_balance: number }>(
-      'SELECT usdc_balance FROM wallet_snapshots WHERE wallet = ? AND snapshot_at <= ? ORDER BY snapshot_at DESC LIMIT 1',
-    )
-    .get(wallet, d7ago)
-
-  if (oldSnap && oldSnap.usdc_balance > 0 && currentBalance >= 0) {
-    const ratio = currentBalance / oldSnap.usdc_balance
-    if (ratio < 0.5) balance_trend_7d = 'freefall'
-    else if (ratio < 0.9) balance_trend_7d = 'declining'
-    else if (ratio > 1.1) balance_trend_7d = 'rising'
-  }
-
-  // ── Unique partners in last 30d ───────────────────────────────────────────
-  const partnersRow = db
-    .prepare<[string, string, string, string], { count: number }>(
-      `SELECT COUNT(DISTINCT CASE WHEN from_wallet = ? THEN to_wallet ELSE from_wallet END) as count
-       FROM raw_transactions
-       WHERE (from_wallet = ? OR to_wallet = ?) AND timestamp >= ?`,
-    )
-    .get(wallet, wallet, wallet, d30ago)
-  const unique_partners_30d = partnersRow?.count ?? 0
-
-  // ── Upsert wallet_metrics ─────────────────────────────────────────────────
-  db.prepare(
-    `INSERT INTO wallet_metrics
-       (wallet, tx_count_24h, tx_count_7d, tx_count_30d,
-        volume_in_24h, volume_in_7d, volume_in_30d,
-        volume_out_24h, volume_out_7d, volume_out_30d,
-        income_burn_ratio, balance_trend_7d, unique_partners_30d, last_updated)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(wallet) DO UPDATE SET
-       tx_count_24h        = excluded.tx_count_24h,
-       tx_count_7d         = excluded.tx_count_7d,
-       tx_count_30d        = excluded.tx_count_30d,
-       volume_in_24h       = excluded.volume_in_24h,
-       volume_in_7d        = excluded.volume_in_7d,
-       volume_in_30d       = excluded.volume_in_30d,
-       volume_out_24h      = excluded.volume_out_24h,
-       volume_out_7d       = excluded.volume_out_7d,
-       volume_out_30d      = excluded.volume_out_30d,
-       income_burn_ratio   = excluded.income_burn_ratio,
-       balance_trend_7d    = excluded.balance_trend_7d,
-       unique_partners_30d = excluded.unique_partners_30d,
-       last_updated        = excluded.last_updated`,
-  ).run(
-    wallet,
-    m24.tx_count,
-    m7.tx_count,
-    m30.tx_count,
-    m24.volume_in,
-    m7.volume_in,
-    m30.volume_in,
-    m24.volume_out,
-    m7.volume_out,
-    m30.volume_out,
-    income_burn_ratio,
-    balance_trend_7d,
-    unique_partners_30d,
-    nowStr,
-  )
+  persistSnapshotAndMetrics()
 }
 
-function insertHourlyEconomyMetrics(hourStart: Date): void {
+/** Aggregate hourly economy metrics in a transaction for consistent reads. */
+const insertHourlyEconomyMetrics = db.transaction((hourStart: Date) => {
   const now = new Date()
   const hourStartStr = hourStart.toISOString()
   const nowStr = now.toISOString()
@@ -237,7 +271,7 @@ function insertHourlyEconomyMetrics(hourStart: Date): void {
     fraudThisHour,
     queriesThisHour,
   )
-}
+})
 
 // ---------- Public API ----------
 

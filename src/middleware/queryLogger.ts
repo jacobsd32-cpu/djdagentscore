@@ -5,19 +5,11 @@
  * post-next code sees context variables set by downstream handlers.
  */
 import type { MiddlewareHandler } from 'hono'
+import { ENDPOINT_PRICING } from '../config/constants.js'
 import { insertQueryLog } from '../db.js'
 import { log } from '../logger.js'
 import { incHttpRequest } from '../metrics.js'
-
-const ENDPOINT_PRICES: Record<string, number> = {
-  '/v1/score/full': 0.10,
-  '/v1/score/refresh': 0.25,
-  '/v1/report': 0.02,
-  '/v1/data/fraud/blacklist': 0.05,
-  '/v1/score/history': 0.15,
-  '/v1/score/batch': 0.50,
-  '/v1/certification/apply': 99.00,
-}
+import { getPayerWallet } from '../utils/paymentUtils.js'
 
 const FREE_ENDPOINTS = new Set([
   '/health',
@@ -33,26 +25,6 @@ const FREE_ENDPOINTS = new Set([
   '/v1/certification/badge',  // SVG badge is free
   '/v1/webhooks',             // webhook management is free (paid via subscription)
 ])
-
-/**
- * Attempt to extract the payer wallet from the x402 X-PAYMENT header.
- * The header is a base64-encoded JSON payload whose structure depends on
- * the facilitator version; we try common paths and fall back to null.
- */
-function extractPayerWallet(header: string | undefined): string | null {
-  if (!header) return null
-  try {
-    const json = JSON.parse(Buffer.from(header, 'base64').toString('utf8'))
-    return (
-      json?.payload?.authorization?.from ??
-      json?.payer ??
-      json?.from ??
-      null
-    )
-  } catch {
-    return null
-  }
-}
 
 function tierFromEndpoint(endpoint: string): string {
   if (endpoint.includes('/score/basic')) return 'basic'
@@ -78,18 +50,15 @@ export const queryLoggerMiddleware: MiddlewareHandler = async (c, next) => {
   // Run logging non-blocking so it never delays the response
   try {
     const path = c.req.path
-    const pricePaid = ENDPOINT_PRICES[path] ?? 0
+    const pricePaid = ENDPOINT_PRICING[path] ?? 0
     const isFreeEndpoint = FREE_ENDPOINTS.has(path) ? 1 : 0
     // freeTier middleware sets this context variable for free-tier basic lookups
     const isFreeByQuota = c.get('freeTier') ? 1 : 0
     const isFreeTier = isFreeEndpoint || isFreeByQuota
 
-    const paymentHeader =
-      c.req.header('X-PAYMENT') ?? c.req.header('x-payment') ?? undefined
-    // Prefer API key wallet if present (set by apiKeyAuth middleware)
-    const apiKeyWallet = c.get('apiKeyWallet') ?? null
-    const requesterWallet = apiKeyWallet ?? extractPayerWallet(paymentHeader)
+    const requesterWallet = getPayerWallet(c)
     const targetWallet = c.req.query('wallet') ?? null
+    const hasApiKey = !!c.get('apiKeyWallet')
 
     insertQueryLog({
       requester_wallet: requesterWallet,
@@ -98,7 +67,7 @@ export const queryLoggerMiddleware: MiddlewareHandler = async (c, next) => {
       tier_requested: tierFromEndpoint(path),
       target_score: null,  // populated by future outcome-matching job
       target_tier: null,
-      response_source: apiKeyWallet ? 'api_key' : isFreeTier ? 'free_tier' : 'paid',
+      response_source: hasApiKey ? 'api_key' : isFreeTier ? 'free_tier' : 'paid',
       response_time_ms: Date.now() - startTime,
       user_agent: c.req.header('user-agent') ?? null,
       price_paid: isFreeTier ? 0 : pricePaid,

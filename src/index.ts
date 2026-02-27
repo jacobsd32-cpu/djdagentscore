@@ -50,6 +50,13 @@ import { runReputationPublisher } from './jobs/reputationPublisher.js'
 import { jobStats } from './jobs/jobStats.js'
 import { db, getIndexerState, setIndexerState } from './db.js'
 import { log } from './logger.js'
+import {
+  API_CONFIG,
+  ENDPOINT_PRICING,
+  JOB_INTERVALS,
+  JOB_STARTUP_DELAYS,
+  JOB_CONFIG,
+} from './config/constants.js'
 import type { AppEnv } from './types/hono-env.js'
 
 // ---------- Env helpers ----------
@@ -64,7 +71,7 @@ function assertEnv(key: string, opts?: { minLength?: number }): string {
 
 // ---------- Config ----------
 
-const PORT = Number(process.env.PORT ?? 3000)
+const PORT = Number(process.env.PORT ?? API_CONFIG.DEFAULT_PORT)
 const PAY_TO = assertEnv('PAY_TO') as `0x${string}`
 if (!/^0x[0-9a-fA-F]{40}$/.test(PAY_TO)) throw new Error('PAY_TO must be a valid Ethereum address')
 
@@ -98,7 +105,7 @@ app.use('*', cors({
   allowHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
 }))
 app.use('*', bodyLimit({
-  maxSize: 100 * 1024, // 100 KB
+  maxSize: API_CONFIG.MAX_BODY_SIZE,
   onError: (c) => c.json(errorResponse('body_too_large', 'Request body too large'), 413),
 }))
 app.use('*', responseHeadersMiddleware)  // adds X-DJD-* headers to every response
@@ -131,17 +138,17 @@ app.route('/metrics', metricsRoute)             // free — Prometheus metrics
 // Each route now declares Bazaar discovery metadata so agents can find DJD via the x402 Bazaar.
 // Wrapped to skip x402 for valid API key authenticated requests (C2 fix).
 
-const payment = (price: string) => ({
+const payment = (price: number) => ({
   scheme: 'exact',
   payTo: PAY_TO,
-  price,
+  price: `$${price.toFixed(2)}`,
   network: NETWORK,
 })
 
 const x402Middleware = paymentMiddlewareFromConfig(
   {
     '/v1/score/full': {
-      accepts: [payment('$0.10')],
+      accepts: [payment(ENDPOINT_PRICING['/v1/score/full'])],
       description: 'Full agent reputation score with dimension breakdown — behavioral scoring for autonomous AI agents on Base',
       extensions: {
         ...declareDiscoveryExtension({
@@ -171,7 +178,7 @@ const x402Middleware = paymentMiddlewareFromConfig(
       },
     },
     '/v1/score/refresh': {
-      accepts: [payment('$0.25')],
+      accepts: [payment(ENDPOINT_PRICING['/v1/score/refresh'])],
       description: 'Force live recalculation of agent reputation score from on-chain data',
       extensions: {
         ...declareDiscoveryExtension({
@@ -187,7 +194,7 @@ const x402Middleware = paymentMiddlewareFromConfig(
       },
     },
     '/v1/report': {
-      accepts: [payment('$0.02')],
+      accepts: [payment(ENDPOINT_PRICING['/v1/report'])],
       description: 'Submit a fraud or misconduct report against an agent wallet',
       extensions: {
         ...declareDiscoveryExtension({
@@ -206,7 +213,7 @@ const x402Middleware = paymentMiddlewareFromConfig(
       },
     },
     '/v1/data/fraud/blacklist': {
-      accepts: [payment('$0.05')],
+      accepts: [payment(ENDPOINT_PRICING['/v1/data/fraud/blacklist'])],
       description: 'Check if a wallet has fraud reports filed against it',
       extensions: {
         ...declareDiscoveryExtension({
@@ -222,7 +229,7 @@ const x402Middleware = paymentMiddlewareFromConfig(
       },
     },
     '/v1/score/batch': {
-      accepts: [payment('$0.50')],
+      accepts: [payment(ENDPOINT_PRICING['/v1/score/batch'])],
       description: 'Batch score up to 20 agent wallets in a single request',
       extensions: {
         ...declareDiscoveryExtension({
@@ -245,7 +252,7 @@ const x402Middleware = paymentMiddlewareFromConfig(
       },
     },
     '/v1/score/history': {
-      accepts: [payment('$0.15')],
+      accepts: [payment(ENDPOINT_PRICING['/v1/score/history'])],
       description: 'Historical score data with trend analysis for an agent wallet',
       extensions: {
         ...declareDiscoveryExtension({
@@ -270,7 +277,7 @@ const x402Middleware = paymentMiddlewareFromConfig(
       },
     },
     '/v1/certification/apply': {
-      accepts: [payment('$99.00')],
+      accepts: [payment(ENDPOINT_PRICING['/v1/certification/apply'])],
       description: 'Apply for annual DJD Certified Agent badge — verified on-chain reputation',
       extensions: {
         ...declareDiscoveryExtension({
@@ -355,10 +362,10 @@ function shutdown() {
       process.exit(0)
     })
     setTimeout(() => {
-      log.warn('server', 'Forcing exit after 10s timeout')
+      log.warn('server', 'Forcing exit after timeout')
       db.close()
       process.exit(1)
-    }, 10_000).unref()
+    }, JOB_CONFIG.SHUTDOWN_TIMEOUT_MS).unref()
   } else {
     db.close()
     process.exit(0)
@@ -388,7 +395,7 @@ server = serve({ fetch: app.fetch, port: PORT }, (info) => {
     startUsdcTransferIndexer().catch((err) =>
       log.error('usdc-indexer', 'Fatal error, stopped', err),
     )
-  }, 30_000)
+  }, JOB_STARTUP_DELAYS.USDC_INDEXER_MS)
 
   // ── 2. Hourly score refresh + wallet snapshots + economy metrics ───────────
   let hourlyRunning = false
@@ -403,7 +410,7 @@ server = serve({ fetch: app.fetch, port: PORT }, (info) => {
       } finally {
         hourlyRunning = false
       }
-    }, 60 * 60 * 1000),
+    }, JOB_INTERVALS.HOURLY_REFRESH_MS),
   )
 
   // ── 3. Intent matcher (every 6 hours, start after 60s) ────────────────────
@@ -421,9 +428,9 @@ server = serve({ fetch: app.fetch, port: PORT }, (info) => {
         } finally {
           intentRunning = false
         }
-      }, 6 * 60 * 60 * 1000),
+      }, JOB_INTERVALS.INTENT_MATCHER_MS),
     )
-  }, 60_000)
+  }, JOB_STARTUP_DELAYS.INTENT_MATCHER_MS)
 
   // ── 4. Outcome matcher (every 6 hours, start after 90s) ───────────────────
   let outcomeRunning = false
@@ -440,9 +447,9 @@ server = serve({ fetch: app.fetch, port: PORT }, (info) => {
         } finally {
           outcomeRunning = false
         }
-      }, 6 * 60 * 60 * 1000),
+      }, JOB_INTERVALS.OUTCOME_MATCHER_MS),
     )
-  }, 90_000)
+  }, JOB_STARTUP_DELAYS.OUTCOME_MATCHER_MS)
 
   // ── 4b. Auto-recalibration (every 6 hours, after outcome matcher, start after 120s) ─
   let recalRunning = false
@@ -459,9 +466,9 @@ server = serve({ fetch: app.fetch, port: PORT }, (info) => {
         } finally {
           recalRunning = false
         }
-      }, 6 * 60 * 60 * 1000),
+      }, JOB_INTERVALS.AUTO_RECALIBRATION_MS),
     )
-  }, 120_000)
+  }, JOB_STARTUP_DELAYS.AUTO_RECALIBRATION_MS)
 
   // ── 5. Anomaly detector (every 15 min) ─────────────────────────────────────
   let anomalyRunning = false
@@ -476,7 +483,7 @@ server = serve({ fetch: app.fetch, port: PORT }, (info) => {
       } finally {
         anomalyRunning = false
       }
-    }, 15 * 60 * 1000),
+    }, JOB_INTERVALS.ANOMALY_DETECTOR_MS),
   )
 
   // ── 6. Enhanced Sybil monitoring (every 5 min) ────────────────────────────
@@ -492,7 +499,7 @@ server = serve({ fetch: app.fetch, port: PORT }, (info) => {
       } finally {
         sybilRunning = false
       }
-    }, 5 * 60 * 1000),
+    }, JOB_INTERVALS.SYBIL_MONITOR_MS),
   )
 
   // ── 7. Daily aggregator + GitHub re-verification (check every hour, run once per day) ──
@@ -515,7 +522,7 @@ server = serve({ fetch: app.fetch, port: PORT }, (info) => {
       } finally {
         dailyRunning = false
       }
-    }, 60 * 60 * 1000),
+    }, JOB_INTERVALS.DAILY_AGGREGATOR_MS),
   )
 
   // ── 8. Webhook delivery processor (every 30 seconds) ──────────────────────
@@ -526,7 +533,7 @@ server = serve({ fetch: app.fetch, port: PORT }, (info) => {
       } catch (e) {
         log.error('webhooks', 'Error in webhook delivery', e)
       }
-    }, 30_000),
+    }, JOB_INTERVALS.WEBHOOK_DELIVERY_MS),
   )
 
   // ── 9. ERC-8004 reputation publisher (every 4 hours, start after 150s) ────
@@ -544,9 +551,9 @@ server = serve({ fetch: app.fetch, port: PORT }, (info) => {
         } finally {
           publisherRunning = false
         }
-      }, 4 * 60 * 60 * 1000),
+      }, JOB_INTERVALS.REPUTATION_PUBLISHER_MS),
     )
-  }, 150_000)
+  }, JOB_STARTUP_DELAYS.REPUTATION_PUBLISHER_MS)
 
   log.info('jobs', 'All background processes registered')
 

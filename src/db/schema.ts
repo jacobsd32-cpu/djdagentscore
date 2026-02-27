@@ -216,6 +216,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_qlog_target     ON query_log(target_wallet,    timestamp DESC);
   CREATE INDEX IF NOT EXISTS idx_qlog_timestamp  ON query_log(timestamp DESC);
   CREATE INDEX IF NOT EXISTS idx_qlog_endpoint   ON query_log(endpoint,         timestamp DESC);
+  CREATE INDEX IF NOT EXISTS idx_qlog_free_tier  ON query_log(requester_wallet, endpoint, is_free_tier, timestamp DESC);
 
   CREATE TABLE IF NOT EXISTS intent_signals (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,

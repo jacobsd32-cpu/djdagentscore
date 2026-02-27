@@ -100,6 +100,47 @@ const blogFooter = `
 </body>
 </html>`
 
+// ─── Shared article CSS (used by all blog posts) ───
+
+const BLOG_ARTICLE_CSS = `
+.article{max-width:720px;margin:0 auto;padding:120px 32px 0}
+.article-back{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:40px;transition:color .2s}
+.article-back:hover{color:var(--accent);text-decoration:none}
+.article-meta{display:flex;gap:12px;align-items:center;margin-bottom:24px}
+.article-date{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted)}
+.article-tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--accent);background:var(--accent-dim);border:1px solid var(--border-hi);padding:3px 10px;border-radius:100px;text-transform:uppercase;letter-spacing:.5px}
+.article h1{font-family:'Instrument Serif',serif;font-size:clamp(30px,4.5vw,46px);font-weight:400;line-height:1.15;margin-bottom:20px;letter-spacing:-0.5px}
+.article .lead{font-size:18px;color:var(--text-dim);line-height:1.8;margin-bottom:48px;padding-bottom:40px;border-bottom:1px solid var(--border)}
+.prose h2{font-family:'Instrument Serif',serif;font-size:clamp(22px,3vw,30px);font-weight:400;margin-top:56px;margin-bottom:8px;letter-spacing:-0.3px}
+.prose h3{font-size:16px;font-weight:700;margin-top:32px;margin-bottom:8px;color:var(--text)}
+.prose p{font-size:15px;color:var(--text-dim);line-height:1.85;margin-bottom:16px}
+.prose strong{color:var(--text);font-weight:600}
+.prose em{color:var(--accent);font-style:italic}
+.signal{background:var(--bg2);border-left:3px solid var(--accent);border-radius:0 12px 12px 0;padding:20px 24px;margin:20px 0;font-size:14px;color:var(--text-dim);line-height:1.75}
+.signal strong{color:var(--text)}
+.pattern-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin:24px 0}
+.pattern-num{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.pattern-card h3{margin-top:0;margin-bottom:12px}
+.pattern-card p{margin-bottom:12px}
+.pattern-card p:last-child{margin-bottom:0}
+.code-block{background:#060e1a;border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin:20px 0;overflow-x:auto}
+.code-block code{font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.65;color:var(--text-dim);white-space:pre}
+.prose ul{list-style:none;padding:0;margin:16px 0}
+.prose ul li{position:relative;padding-left:20px;font-size:14px;color:var(--text-dim);line-height:1.75;margin-bottom:10px}
+.prose ul li::before{content:'';position:absolute;left:0;top:10px;width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.5}
+.cta-box{background:var(--accent-dim);border:1px solid var(--border-hi);border-radius:var(--radius);padding:32px;margin:48px 0;text-align:center}
+.cta-box p{font-size:14px;color:var(--text-dim);line-height:1.75;margin-bottom:8px}
+.cta-box code{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);background:rgba(99,102,241,0.08);padding:2px 8px;border-radius:4px}
+.cta-box .btn{display:inline-flex;align-items:center;gap:6px;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;background:var(--accent);color:var(--bg);text-decoration:none;margin-top:16px;transition:all .2s}
+.cta-box .btn:hover{opacity:.9;transform:translateY(-1px);text-decoration:none}
+.article-footer{margin-top:56px;padding-top:32px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted);line-height:1.65;font-style:italic}
+@media(max-width:768px){.article{padding:100px 20px 0}}
+`
+
+/** Generates head + shared article CSS for blog post pages. Pass extra CSS for post-specific styles. */
+const blogPostHead = (title: string, description: string, slug: string, extraCss = '') =>
+  `${blogHead(title, description, slug)}${BLOG_ARTICLE_CSS}${extraCss}`
+
 // ─── Blog listing page ───
 
 const listingHtml = `${blogHead(
@@ -191,53 +232,11 @@ ${blogFooter}`
 
 // ─── Individual article: Sybil Patterns ───
 
-const sybilPostHtml = `${blogHead(
+const sybilPostHtml = `${blogPostHead(
   '5 On-Chain Patterns That Reveal Sybil Agents',
   'How DJD Agent Score uses on-chain behavioral forensics to separate real AI agents from manufactured identities.',
   'sybil-patterns',
 )}
-.article{max-width:720px;margin:0 auto;padding:120px 32px 0}
-.article-back{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:40px;transition:color .2s}
-.article-back:hover{color:var(--accent);text-decoration:none}
-.article-meta{display:flex;gap:12px;align-items:center;margin-bottom:24px}
-.article-date{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted)}
-.article-tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--accent);background:var(--accent-dim);border:1px solid var(--border-hi);padding:3px 10px;border-radius:100px;text-transform:uppercase;letter-spacing:.5px}
-.article h1{font-family:'Instrument Serif',serif;font-size:clamp(30px,4.5vw,46px);font-weight:400;line-height:1.15;margin-bottom:20px;letter-spacing:-0.5px}
-.article .lead{font-size:18px;color:var(--text-dim);line-height:1.8;margin-bottom:48px;padding-bottom:40px;border-bottom:1px solid var(--border)}
-
-.prose h2{font-family:'Instrument Serif',serif;font-size:clamp(22px,3vw,30px);font-weight:400;margin-top:56px;margin-bottom:8px;letter-spacing:-0.3px}
-.prose h3{font-size:16px;font-weight:700;margin-top:32px;margin-bottom:8px;color:var(--text)}
-.prose p{font-size:15px;color:var(--text-dim);line-height:1.85;margin-bottom:16px}
-.prose strong{color:var(--text);font-weight:600}
-.prose em{color:var(--accent);font-style:italic}
-
-.signal{background:var(--bg2);border-left:3px solid var(--accent);border-radius:0 12px 12px 0;padding:20px 24px;margin:20px 0;font-size:14px;color:var(--text-dim);line-height:1.75}
-.signal strong{color:var(--text)}
-
-.pattern-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin:24px 0}
-.pattern-num{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-.pattern-card h3{margin-top:0;margin-bottom:12px}
-.pattern-card p{margin-bottom:12px}
-.pattern-card p:last-child{margin-bottom:0}
-
-.code-block{background:#060e1a;border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin:20px 0;overflow-x:auto}
-.code-block code{font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.65;color:var(--text-dim);white-space:pre}
-
-.prose ul{list-style:none;padding:0;margin:16px 0}
-.prose ul li{position:relative;padding-left:20px;font-size:14px;color:var(--text-dim);line-height:1.75;margin-bottom:10px}
-.prose ul li::before{content:'';position:absolute;left:0;top:10px;width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.5}
-
-.cta-box{background:var(--accent-dim);border:1px solid var(--border-hi);border-radius:var(--radius);padding:32px;margin:48px 0;text-align:center}
-.cta-box p{font-size:14px;color:var(--text-dim);line-height:1.75;margin-bottom:8px}
-.cta-box code{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);background:rgba(99,102,241,0.08);padding:2px 8px;border-radius:4px}
-.cta-box .btn{display:inline-flex;align-items:center;gap:6px;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;background:var(--accent);color:var(--bg);text-decoration:none;margin-top:16px;transition:all .2s}
-.cta-box .btn:hover{opacity:.9;transform:translateY(-1px);text-decoration:none}
-
-.article-footer{margin-top:56px;padding-top:32px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted);line-height:1.65;font-style:italic}
-
-@media(max-width:768px){
-  .article{padding:100px 20px 0}
-}
 ${blogNav}
 
 <article class="article">
@@ -345,43 +344,11 @@ ${blogFooter}`
 
 // ─── Individual article: ERC-8004 ───
 
-const erc8004PostHtml = `${blogHead(
+const erc8004PostHtml = `${blogPostHead(
   'What is ERC-8004? On-Chain Reputation for AI Agents',
   'A deep dive into the Ethereum standard that puts AI agent reputation on-chain — how it works, why it matters, and how DJD Agent Score publishes to the registry on Base.',
   'what-is-erc-8004',
 )}
-.article{max-width:720px;margin:0 auto;padding:120px 32px 0}
-.article-back{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:40px;transition:color .2s}
-.article-back:hover{color:var(--accent);text-decoration:none}
-.article-meta{display:flex;gap:12px;align-items:center;margin-bottom:24px}
-.article-date{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted)}
-.article-tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--accent);background:var(--accent-dim);border:1px solid var(--border-hi);padding:3px 10px;border-radius:100px;text-transform:uppercase;letter-spacing:.5px}
-.article h1{font-family:'Instrument Serif',serif;font-size:clamp(30px,4.5vw,46px);font-weight:400;line-height:1.15;margin-bottom:20px;letter-spacing:-0.5px}
-.article .lead{font-size:18px;color:var(--text-dim);line-height:1.8;margin-bottom:48px;padding-bottom:40px;border-bottom:1px solid var(--border)}
-.prose h2{font-family:'Instrument Serif',serif;font-size:clamp(22px,3vw,30px);font-weight:400;margin-top:56px;margin-bottom:8px;letter-spacing:-0.3px}
-.prose h3{font-size:16px;font-weight:700;margin-top:32px;margin-bottom:8px;color:var(--text)}
-.prose p{font-size:15px;color:var(--text-dim);line-height:1.85;margin-bottom:16px}
-.prose strong{color:var(--text);font-weight:600}
-.prose em{color:var(--accent);font-style:italic}
-.signal{background:var(--bg2);border-left:3px solid var(--accent);border-radius:0 12px 12px 0;padding:20px 24px;margin:20px 0;font-size:14px;color:var(--text-dim);line-height:1.75}
-.signal strong{color:var(--text)}
-.pattern-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin:24px 0}
-.pattern-num{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-.pattern-card h3{margin-top:0;margin-bottom:12px}
-.pattern-card p{margin-bottom:12px}
-.pattern-card p:last-child{margin-bottom:0}
-.code-block{background:#060e1a;border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin:20px 0;overflow-x:auto}
-.code-block code{font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.65;color:var(--text-dim);white-space:pre}
-.prose ul{list-style:none;padding:0;margin:16px 0}
-.prose ul li{position:relative;padding-left:20px;font-size:14px;color:var(--text-dim);line-height:1.75;margin-bottom:10px}
-.prose ul li::before{content:'';position:absolute;left:0;top:10px;width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.5}
-.cta-box{background:var(--accent-dim);border:1px solid var(--border-hi);border-radius:var(--radius);padding:32px;margin:48px 0;text-align:center}
-.cta-box p{font-size:14px;color:var(--text-dim);line-height:1.75;margin-bottom:8px}
-.cta-box code{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);background:rgba(99,102,241,0.08);padding:2px 8px;border-radius:4px}
-.cta-box .btn{display:inline-flex;align-items:center;gap:6px;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;background:var(--accent);color:var(--bg);text-decoration:none;margin-top:16px;transition:all .2s}
-.cta-box .btn:hover{opacity:.9;transform:translateY(-1px);text-decoration:none}
-.article-footer{margin-top:56px;padding-top:32px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted);line-height:1.65;font-style:italic}
-@media(max-width:768px){.article{padding:100px 20px 0}}
 ${blogNav}
 
 <article class="article">
@@ -474,43 +441,11 @@ ${blogFooter}`
 
 // ─── Individual article: Cold Start Problem ───
 
-const coldStartPostHtml = `${blogHead(
+const coldStartPostHtml = `${blogPostHead(
   'The Cold Start Problem for AI Agents',
   'Every new agent wallet starts at zero. How do you bootstrap trust when there is no history? We break down the cold start problem and the scoring strategies that solve it.',
   'cold-start-problem',
 )}
-.article{max-width:720px;margin:0 auto;padding:120px 32px 0}
-.article-back{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:40px;transition:color .2s}
-.article-back:hover{color:var(--accent);text-decoration:none}
-.article-meta{display:flex;gap:12px;align-items:center;margin-bottom:24px}
-.article-date{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted)}
-.article-tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--accent);background:var(--accent-dim);border:1px solid var(--border-hi);padding:3px 10px;border-radius:100px;text-transform:uppercase;letter-spacing:.5px}
-.article h1{font-family:'Instrument Serif',serif;font-size:clamp(30px,4.5vw,46px);font-weight:400;line-height:1.15;margin-bottom:20px;letter-spacing:-0.5px}
-.article .lead{font-size:18px;color:var(--text-dim);line-height:1.8;margin-bottom:48px;padding-bottom:40px;border-bottom:1px solid var(--border)}
-.prose h2{font-family:'Instrument Serif',serif;font-size:clamp(22px,3vw,30px);font-weight:400;margin-top:56px;margin-bottom:8px;letter-spacing:-0.3px}
-.prose h3{font-size:16px;font-weight:700;margin-top:32px;margin-bottom:8px;color:var(--text)}
-.prose p{font-size:15px;color:var(--text-dim);line-height:1.85;margin-bottom:16px}
-.prose strong{color:var(--text);font-weight:600}
-.prose em{color:var(--accent);font-style:italic}
-.signal{background:var(--bg2);border-left:3px solid var(--accent);border-radius:0 12px 12px 0;padding:20px 24px;margin:20px 0;font-size:14px;color:var(--text-dim);line-height:1.75}
-.signal strong{color:var(--text)}
-.pattern-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin:24px 0}
-.pattern-num{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-.pattern-card h3{margin-top:0;margin-bottom:12px}
-.pattern-card p{margin-bottom:12px}
-.pattern-card p:last-child{margin-bottom:0}
-.code-block{background:#060e1a;border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin:20px 0;overflow-x:auto}
-.code-block code{font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.65;color:var(--text-dim);white-space:pre}
-.prose ul{list-style:none;padding:0;margin:16px 0}
-.prose ul li{position:relative;padding-left:20px;font-size:14px;color:var(--text-dim);line-height:1.75;margin-bottom:10px}
-.prose ul li::before{content:'';position:absolute;left:0;top:10px;width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.5}
-.cta-box{background:var(--accent-dim);border:1px solid var(--border-hi);border-radius:var(--radius);padding:32px;margin:48px 0;text-align:center}
-.cta-box p{font-size:14px;color:var(--text-dim);line-height:1.75;margin-bottom:8px}
-.cta-box code{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);background:rgba(99,102,241,0.08);padding:2px 8px;border-radius:4px}
-.cta-box .btn{display:inline-flex;align-items:center;gap:6px;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;background:var(--accent);color:var(--bg);text-decoration:none;margin-top:16px;transition:all .2s}
-.cta-box .btn:hover{opacity:.9;transform:translateY(-1px);text-decoration:none}
-.article-footer{margin-top:56px;padding-top:32px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted);line-height:1.65;font-style:italic}
-@media(max-width:768px){.article{padding:100px 20px 0}}
 ${blogNav}
 
 <article class="article">
@@ -614,38 +549,11 @@ ${blogFooter}`
 
 // ─── Individual article: On-Chain Activity ───
 
-const onchainActivityPostHtml = `${blogHead(
+const onchainActivityPostHtml = `${blogPostHead(
   'What We Found Analyzing Real Wallet Activity on Base',
   'We analyzed our own payment wallet and discovered real x402 transfers, address poisoning attacks, and a fake token scam. Here is what on-chain forensics looks like in practice.',
   'on-chain-activity',
-)}
-.article{max-width:720px;margin:0 auto;padding:120px 32px 0}
-.article-back{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:40px;transition:color .2s}
-.article-back:hover{color:var(--accent);text-decoration:none}
-.article-meta{display:flex;gap:12px;align-items:center;margin-bottom:24px}
-.article-date{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted)}
-.article-tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--accent);background:var(--accent-dim);border:1px solid var(--border-hi);padding:3px 10px;border-radius:100px;text-transform:uppercase;letter-spacing:.5px}
-.article h1{font-family:'Instrument Serif',serif;font-size:clamp(30px,4.5vw,46px);font-weight:400;line-height:1.15;margin-bottom:20px;letter-spacing:-0.5px}
-.article .lead{font-size:18px;color:var(--text-dim);line-height:1.8;margin-bottom:48px;padding-bottom:40px;border-bottom:1px solid var(--border)}
-
-.prose h2{font-family:'Instrument Serif',serif;font-size:clamp(22px,3vw,30px);font-weight:400;margin-top:56px;margin-bottom:8px;letter-spacing:-0.3px}
-.prose h3{font-size:16px;font-weight:700;margin-top:32px;margin-bottom:8px;color:var(--text)}
-.prose p{font-size:15px;color:var(--text-dim);line-height:1.85;margin-bottom:16px}
-.prose strong{color:var(--text);font-weight:600}
-.prose em{color:var(--accent);font-style:italic}
-
-.signal{background:var(--bg2);border-left:3px solid var(--accent);border-radius:0 12px 12px 0;padding:20px 24px;margin:20px 0;font-size:14px;color:var(--text-dim);line-height:1.75}
-.signal strong{color:var(--text)}
-
-.pattern-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin:24px 0}
-.pattern-num{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-.pattern-card h3{margin-top:0;margin-bottom:12px}
-.pattern-card p{margin-bottom:12px}
-.pattern-card p:last-child{margin-bottom:0}
-
-.code-block{background:#060e1a;border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin:20px 0;overflow-x:auto}
-.code-block code{font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.65;color:var(--text-dim);white-space:pre}
-
+  `
 .tx-table{width:100%;border-collapse:collapse;margin:20px 0;font-size:13px}
 .tx-table th{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.5px}
 .tx-table td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:12px}
@@ -653,24 +561,9 @@ const onchainActivityPostHtml = `${blogHead(
 .tx-in{color:#22c55e}
 .tx-out{color:#ef4444}
 .tx-scam{color:#f59e0b;font-weight:700}
-
-.prose ul{list-style:none;padding:0;margin:16px 0}
-.prose ul li{position:relative;padding-left:20px;font-size:14px;color:var(--text-dim);line-height:1.75;margin-bottom:10px}
-.prose ul li::before{content:'';position:absolute;left:0;top:10px;width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.5}
-
-.cta-box{background:var(--accent-dim);border:1px solid var(--border-hi);border-radius:var(--radius);padding:32px;margin:48px 0;text-align:center}
-.cta-box p{font-size:14px;color:var(--text-dim);line-height:1.75;margin-bottom:8px}
-.cta-box code{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);background:rgba(99,102,241,0.08);padding:2px 8px;border-radius:4px}
-.cta-box .btn{display:inline-flex;align-items:center;gap:6px;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;background:var(--accent);color:var(--bg);text-decoration:none;margin-top:16px;transition:all .2s}
-.cta-box .btn:hover{opacity:.9;transform:translateY(-1px);text-decoration:none}
-
-.article-footer{margin-top:56px;padding-top:32px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted);line-height:1.65;font-style:italic}
-
-@media(max-width:768px){
-  .article{padding:100px 20px 0}
-  .tx-table{font-size:11px}
-  .tx-table th,.tx-table td{padding:8px 6px}
-}
+@media(max-width:768px){.tx-table{font-size:11px}.tx-table th,.tx-table td{padding:8px 6px}}
+`,
+)}
 ${blogNav}
 
 <article class="article">

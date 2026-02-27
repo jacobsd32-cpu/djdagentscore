@@ -7,6 +7,7 @@
  */
 
 import type { Transaction } from 'better-sqlite3'
+import { log } from '../logger.js'
 import type { AgentRegistrationRow, FraudReportRow, LeaderboardRow, ScoreHistoryRow, ScoreRow, Tier } from '../types.js'
 import { db } from './connection.js'
 
@@ -71,6 +72,11 @@ const stmtPruneSnapshots = db.prepare(
     SELECT rowid FROM wallet_snapshots WHERE wallet = ? ORDER BY snapshot_at DESC LIMIT 50
   )`,
 )
+
+/** Prune old wallet snapshots, keeping the 50 most recent. Call from the snapshot job, not from score upsert. */
+export function pruneWalletSnapshots(wallet: string): void {
+  stmtPruneSnapshots.run(wallet, wallet)
+}
 
 const stmtGetExpired = db.prepare<[], { wallet: string }>(`
   SELECT wallet FROM scores WHERE expires_at < datetime('now')
@@ -172,8 +178,8 @@ function refreshThresholds(): void {
       const parsed = JSON.parse(raw.value) as { thresholds: typeof _tierThresholds }
       if (parsed.thresholds) _tierThresholds = parsed.thresholds
     }
-  } catch {
-    /* use defaults */
+  } catch (err) {
+    log.warn('db', 'Failed to parse tier_threshold_adjustments — using defaults', err)
   }
   _thresholdsCachedAt = Date.now()
 }
@@ -276,10 +282,9 @@ const upsertScoreTxn = db.transaction(
     // Mark wallet as scored in wallet_index if it exists
     stmtUpdateWalletIndex.run(now.toISOString(), wallet)
 
-    // Keep only last 50 history entries per wallet
+    // Keep only last 50 history/decay entries per wallet
     stmtPruneHistory.run(wallet, wallet)
     stmtPruneDecay.run(wallet, wallet)
-    stmtPruneSnapshots.run(wallet, wallet)
   },
 )
 
@@ -405,14 +410,14 @@ export function countFreeTierUsesToday(requesterKey: string): number {
   const dayStart = new Date()
   dayStart.setUTCHours(0, 0, 0, 0)
   const row = db
-    .prepare<[string, string, string], { count: number }>(
+    .prepare<[string, string], { count: number }>(
       `SELECT COUNT(*) as count FROM query_log
-       WHERE (requester_wallet = ? OR requester_wallet = ?)
+       WHERE requester_wallet = ?
          AND endpoint = '/v1/score/basic'
-         AND timestamp >= ?
-         AND is_free_tier = 1`,
+         AND is_free_tier = 1
+         AND timestamp >= ?`,
     )
-    .get(requesterKey, requesterKey, dayStart.toISOString())
+    .get(requesterKey, dayStart.toISOString())
   return row?.count ?? 0
 }
 
@@ -519,7 +524,8 @@ export function getWalletIndexFirstSeen(wallet: string): string | null {
       .prepare<[string], { first_seen: string | null }>(`SELECT first_seen FROM wallet_index WHERE wallet = ?`)
       .get(w)
     return row?.first_seen ?? null
-  } catch {
+  } catch (err) {
+    log.warn('db', `getWalletIndexFirstSeen query failed for ${w}`, err)
     return null
   }
 }
