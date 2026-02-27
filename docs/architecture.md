@@ -12,18 +12,29 @@ src/
 ├── logger.ts                       # Structured logging
 ├── blockchain.ts                   # viem public client, chunked getLogs
 ├── metrics.ts                      # Prometheus metrics
-├── db.ts                           # Legacy DB entry point
+├── db.ts                           # Barrel re-export for db/ modules
+├── config/
+│   └── constants.ts                # Centralised magic numbers (scoring, blockchain, jobs, API)
 ├── db/
 │   ├── connection.ts               # SQLite connection (DELETE journal mode)
-│   ├── schema.ts                   # 25-table schema, migrations
+│   ├── schema.ts                   # 31-table schema, migrations, indexes
 │   └── queries.ts                  # Parameterised query helpers
 ├── middleware/
+│   ├── adminAuth.ts                # Admin endpoint authentication (SHA-256 + timing-safe)
 │   ├── apiKeyAuth.ts               # API key authentication (Bearer token)
 │   ├── freeTier.ts                 # 10 free requests/day for /v1/score/basic
 │   ├── paidRateLimit.ts            # Rate limiting for paid endpoints
 │   ├── queryLogger.ts              # Per-request query logging
 │   ├── requestId.ts                # X-Request-ID generation
 │   └── responseHeaders.ts          # Standard response + security headers
+├── utils/
+│   ├── walletUtils.ts              # Wallet address normalisation and validation
+│   ├── paymentUtils.ts             # x402 payment amount/pricing helpers
+│   └── badgeGenerator.ts           # SVG badge rendering
+├── templates/
+│   ├── agentProfile.ts             # Agent profile HTML page
+│   ├── explorer.ts                 # Explorer HTML page
+│   └── legal.ts                    # Terms, privacy, leaderboard HTML
 ├── routes/
 │   ├── register.ts                 # POST /v1/agent/register
 │   ├── score.ts                    # GET /v1/score/*
@@ -106,7 +117,7 @@ Separate indexer for standard USDC `Transfer` events. Feeds the Reliability and 
 
 ### Database (`src/db/`)
 
-SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached volume compatibility). 25 tables:
+SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached volume compatibility). 31 tables:
 
 - `scores` — cached composite + dimension scores
 - `score_history` — historical score snapshots
@@ -130,7 +141,7 @@ SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached vol
 |-----|-----------|---------|
 | Blockchain indexer | Continuous (12s) | Index x402 settlements |
 | USDC Transfer indexer | Continuous (12s) | Index USDC transfers |
-| Score refresh | Hourly | Refresh up to 10 expired scores |
+| Score refresh | Hourly | Refresh up to 50 expired scores |
 | Webhook delivery | Every 30s | Deliver queued webhook events with retries |
 | Intent matcher | Every 6 hours | Match pre/post payment intents |
 | Outcome matcher | Every 6 hours | Reconcile payment outcomes |
