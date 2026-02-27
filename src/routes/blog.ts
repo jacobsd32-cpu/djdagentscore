@@ -97,7 +97,6 @@ const listingHtml = `${blogHead(
   'Blog',
   'Insights on AI agent reputation, sybil detection, and trust infrastructure for the autonomous agent economy.',
 )}
-<style>
 .blog-hero{max-width:1080px;margin:0 auto;padding:120px 32px 60px;text-align:center}
 .blog-hero .chip{display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:var(--accent);background:var(--accent-dim);border:1px solid var(--border-hi);padding:6px 16px;border-radius:100px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:24px}
 .blog-hero h1{font-family:'Instrument Serif',serif;font-size:clamp(32px,5vw,52px);font-weight:400;line-height:1.15;margin-bottom:16px;letter-spacing:-1px}
@@ -119,7 +118,6 @@ const listingHtml = `${blogHead(
   .posts{padding:0 20px}
   .post-card{grid-template-columns:1fr;padding:28px}
 }
-</style>
 ${blogNav}
 
 <div class="blog-hero">
@@ -152,7 +150,6 @@ const sybilPostHtml = `${blogHead(
   '5 On-Chain Patterns That Reveal Sybil Agents',
   'How DJD Agent Score uses on-chain behavioral forensics to separate real AI agents from manufactured identities.',
 )}
-<style>
 .article{max-width:720px;margin:0 auto;padding:120px 32px 0}
 .article-back{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:40px;transition:color .2s}
 .article-back:hover{color:var(--accent);text-decoration:none}
@@ -195,7 +192,6 @@ const sybilPostHtml = `${blogHead(
 @media(max-width:768px){
   .article{padding:100px 20px 0}
 }
-</style>
 ${blogNav}
 
 <article class="article">

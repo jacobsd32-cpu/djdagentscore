@@ -180,8 +180,8 @@ nav{max-width:1080px;margin:0 auto;padding:0 32px;height:64px;display:flex;align
 .lb-s{font-family:'JetBrains Mono',monospace;font-weight:700;text-align:right}
 .lb-t{text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500}
 .lb-e{padding:36px;text-align:center;color:var(--text-muted);font-size:13px}
-.lb-badge{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;padding:2px 6px;border-radius:3px;margin-left:5px;vertical-align:middle}
-.lb-badge.reg{color:var(--accent);background:var(--accent-dim)}.lb-badge.gh{color:var(--green);background:var(--green-dim)}
+.lb-badge{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;padding:2px 6px;border-radius:4px;margin-left:8px;vertical-align:middle;letter-spacing:.3px;border:1px solid transparent}
+.lb-badge.reg{color:var(--accent);background:var(--accent-dim);border-color:var(--border-hi)}.lb-badge.gh{color:var(--green);background:var(--green-dim);border-color:rgba(52,211,153,0.18)}
 
 /* ── Feedback ── */
 .fb{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:40px;margin-top:32px}
@@ -211,6 +211,21 @@ nav{max-width:1080px;margin:0 auto;padding:0 32px;height:64px;display:flex;align
 /* ── Footer ── */
 footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 .ft-disc{font-size:11px;color:var(--text-muted);line-height:1.7;margin-bottom:24px;max-width:720px}.ft-disc a{color:var(--text-muted);text-decoration:underline}
+/* ── Partner section ── */
+.partner-sec{padding:80px 0 0;margin-top:80px;border-top:1px solid var(--border)}
+.partner-inner{max-width:720px;margin:0 auto;text-align:center}
+.partner-chip{display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--accent);background:var(--accent-dim);border:1px solid var(--border-hi);padding:5px 14px;border-radius:100px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:20px}
+.partner-title{font-family:'Instrument Serif',serif;font-size:clamp(24px,3vw,34px);font-weight:400;line-height:1.2;margin-bottom:16px;letter-spacing:-0.5px}
+.partner-desc{font-size:15px;color:var(--text-dim);line-height:1.8;margin-bottom:32px;max-width:580px;margin-left:auto;margin-right:auto}
+.partner-card{display:inline-flex;align-items:center;gap:20px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px 32px;text-decoration:none;color:inherit;transition:all .25s}
+.partner-card:hover{border-color:var(--border-hi);transform:translateY(-2px);text-decoration:none;box-shadow:0 8px 40px rgba(0,0,0,0.2)}
+.partner-logo{width:48px;height:48px;border-radius:12px;background:var(--accent-dim);border:1px solid var(--border-hi);display:flex;align-items:center;justify-content:center;font-size:22px}
+.partner-info{text-align:left}
+.partner-name{font-weight:700;font-size:16px;margin-bottom:4px}
+.partner-role{font-size:13px;color:var(--text-dim)}
+.partner-features{display:flex;gap:16px;justify-content:center;margin-top:28px;flex-wrap:wrap}
+.partner-feat{display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 14px}
+.partner-feat .dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
 .ft-bot{display:flex;justify-content:space-between;align-items:center}
 .ft-l{font-size:12px;color:var(--text-muted)}
 .ft-links{display:flex;gap:18px}.ft-links a{font-size:12px;color:var(--text-muted);text-decoration:none;transition:color .2s}.ft-links a:hover{color:var(--accent)}
@@ -595,6 +610,27 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
     </div>
     <button class="fb-submit" onclick="submitFeedback()">Submit Feedback</button>
     <div class="fb-msg" id="fbMsg"></div>
+  </div>
+</div>
+
+<!-- PARTNER: INSUMER MODEL -->
+<div class="partner-sec">
+  <div class="partner-inner">
+    <div class="partner-chip">Integration Partner</div>
+    <div class="partner-title">Identity attestation powered by<br>Insumer Model</div>
+    <p class="partner-desc">DJD Agent Score integrates with Insumer Model to provide verified identity attestations for AI agent wallets. Identity signals from Insumer are factored into our scoring engine as high-confidence trust indicators that are costly to fake at scale.</p>
+    <a href="https://insumermodel.com" target="_blank" class="partner-card">
+      <div class="partner-logo">&#x1D540;</div>
+      <div class="partner-info">
+        <div class="partner-name">Insumer Model</div>
+        <div class="partner-role">Decentralized identity attestation protocol</div>
+      </div>
+    </a>
+    <div class="partner-features">
+      <div class="partner-feat"><span class="dot"></span>Sybil-resistant verification</div>
+      <div class="partner-feat"><span class="dot"></span>On-chain attestations</div>
+      <div class="partner-feat"><span class="dot"></span>Identity dimension boost</div>
+    </div>
   </div>
 </div>
 
