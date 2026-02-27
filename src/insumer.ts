@@ -23,11 +23,46 @@ interface AttestCondition {
 }
 
 const ATTEST_CONDITIONS: AttestCondition[] = [
-  { contract: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', chain: 8453,  method: 'balanceOf', comparison: '>=', threshold: '0', label: 'usdc_base' },
-  { contract: '0xC18360217D8F7Ab5e7c516566761Ea12Ce7F9D72', chain: 1,     method: 'balanceOf', comparison: '>=', threshold: '1', label: 'ens' },
-  { contract: '0x4200000000000000000000000000000000000042', chain: 10,    method: 'balanceOf', comparison: '>=', threshold: '1', label: 'op' },
-  { contract: '0x912CE59144191C1204E64559FE8253a0e49E6548', chain: 42161, method: 'balanceOf', comparison: '>=', threshold: '1', label: 'arb' },
-  { contract: '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84', chain: 1,     method: 'balanceOf', comparison: '>=', threshold: '0', label: 'steth' },
+  {
+    contract: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    chain: 8453,
+    method: 'balanceOf',
+    comparison: '>=',
+    threshold: '0',
+    label: 'usdc_base',
+  },
+  {
+    contract: '0xC18360217D8F7Ab5e7c516566761Ea12Ce7F9D72',
+    chain: 1,
+    method: 'balanceOf',
+    comparison: '>=',
+    threshold: '1',
+    label: 'ens',
+  },
+  {
+    contract: '0x4200000000000000000000000000000000000042',
+    chain: 10,
+    method: 'balanceOf',
+    comparison: '>=',
+    threshold: '1',
+    label: 'op',
+  },
+  {
+    contract: '0x912CE59144191C1204E64559FE8253a0e49E6548',
+    chain: 42161,
+    method: 'balanceOf',
+    comparison: '>=',
+    threshold: '1',
+    label: 'arb',
+  },
+  {
+    contract: '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84',
+    chain: 1,
+    method: 'balanceOf',
+    comparison: '>=',
+    threshold: '0',
+    label: 'steth',
+  },
 ]
 
 /** Freshness window: reject attestations with block timestamps older than 5 min */
@@ -59,9 +94,7 @@ export interface AttestationResult {
   error: string | null
 }
 
-const EMPTY_CONDITIONS: ConditionResults = Object.fromEntries(
-  ATTEST_CONDITIONS.map((c) => [c.label, false]),
-)
+const EMPTY_CONDITIONS: ConditionResults = Object.fromEntries(ATTEST_CONDITIONS.map((c) => [c.label, false]))
 
 const EMPTY_RESULT: AttestationResult = {
   verified: false,

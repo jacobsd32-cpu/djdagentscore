@@ -68,7 +68,10 @@ describe('refreshWalletTransferStats', () => {
     indexUsdcTransferBatch(db, transfers)
     refreshWalletTransferStats(db, ['0x1'])
 
-    const stats = db.prepare('SELECT * FROM wallet_transfer_stats WHERE wallet = ?').get('0x1') as any
+    const stats = db.prepare('SELECT * FROM wallet_transfer_stats WHERE wallet = ?').get('0x1') as Record<
+      string,
+      number
+    >
     expect(stats.total_tx_count).toBe(3)
     expect(stats.total_volume_out).toBeCloseTo(0.75)
     expect(stats.total_volume_in).toBeCloseTo(1.0)
