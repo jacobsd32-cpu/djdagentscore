@@ -427,3 +427,67 @@ db.exec(`
     published_at    TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `)
+
+// ── Wallet address case-normalization migration ─────────────────────────────
+// Ethereum addresses are case-insensitive, but SQLite TEXT PRIMARY KEY is
+// case-sensitive. Older data may contain mixed-case duplicates (e.g.
+// 0x3E4E...B528 vs 0x3e4e...b528). This migration lowercases all wallet
+// addresses in the scores table, merging duplicates by keeping the row with
+// the highest composite_score.
+{
+  const dupes = db
+    .prepare(`
+    SELECT LOWER(wallet) AS lw, COUNT(*) AS cnt
+    FROM scores
+    GROUP BY LOWER(wallet)
+    HAVING cnt > 1
+  `)
+    .all() as Array<{ lw: string; cnt: number }>
+
+  if (dupes.length > 0) {
+    const mergeDupes = db.transaction(() => {
+      for (const { lw } of dupes) {
+        // For each group of case-variant duplicates, keep the one with the
+        // highest composite_score (tie-break: most recent calculated_at).
+        // Delete the losers, then update the winner's wallet to lowercase.
+        const rows = db
+          .prepare(`
+          SELECT wallet, composite_score, calculated_at
+          FROM scores
+          WHERE LOWER(wallet) = ?
+          ORDER BY composite_score DESC, calculated_at DESC
+        `)
+          .all(lw) as Array<{ wallet: string; composite_score: number; calculated_at: string }>
+
+        const winner = rows[0]!
+        const losers = rows.slice(1)
+
+        for (const loser of losers) {
+          db.prepare('DELETE FROM scores WHERE wallet = ?').run(loser.wallet)
+        }
+
+        // Rename winner to lowercase if needed
+        if (winner.wallet !== lw) {
+          db.prepare('UPDATE scores SET wallet = ? WHERE wallet = ?').run(lw, winner.wallet)
+        }
+      }
+    })
+    mergeDupes()
+  }
+
+  // Normalize any remaining non-lowercase wallets (no conflicts, just rename)
+  const nonLower = db
+    .prepare(`
+    SELECT wallet FROM scores WHERE wallet != LOWER(wallet)
+  `)
+    .all() as Array<{ wallet: string }>
+
+  if (nonLower.length > 0) {
+    const normalizeAll = db.transaction(() => {
+      for (const { wallet } of nonLower) {
+        db.prepare('UPDATE scores SET wallet = ? WHERE wallet = ?').run(wallet.toLowerCase(), wallet)
+      }
+    })
+    normalizeAll()
+  }
+}

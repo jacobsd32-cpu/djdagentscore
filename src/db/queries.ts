@@ -217,8 +217,10 @@ export function upsertScore(
   const expiresAt = new Date(now.getTime() + TTL_MS)
   const tier = scoreToTier(compositeScore)
 
+  const normalizedWallet = wallet.toLowerCase()
+
   upsertScoreTxn(
-    wallet,
+    normalizedWallet,
     compositeScore,
     reliabilityScore,
     viabilityScore,
