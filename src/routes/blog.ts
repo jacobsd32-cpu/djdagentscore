@@ -19,6 +19,7 @@ const blogHead = (title: string, description: string, slug = '') => `<!DOCTYPE h
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${title} — DJD Agent Score">
 <meta name="twitter:description" content="${description}">
+<link rel="alternate" type="application/rss+xml" title="DJD Agent Score Blog" href="https://djd-agent-score.fly.dev/blog/rss.xml">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -599,9 +600,70 @@ if (score >= 30 || confidence < 20) allowWithLimits();</code></div>
 
 ${blogFooter}`
 
+// ─── RSS Feed ───
+
+const SITE = 'https://djd-agent-score.fly.dev'
+
+const blogPosts = [
+  {
+    title: 'What is ERC-8004? On-Chain Reputation for AI Agents',
+    slug: 'what-is-erc-8004',
+    description:
+      'A deep dive into the Ethereum standard that puts AI agent reputation on-chain — how it works, why it matters, and how DJD Agent Score publishes to the registry on Base.',
+    date: 'Thu, 27 Feb 2026 12:00:00 GMT',
+    tag: 'Infrastructure',
+  },
+  {
+    title: 'The Cold Start Problem for AI Agents',
+    slug: 'cold-start-problem',
+    description:
+      'Every new agent wallet starts at zero. How do you bootstrap trust when there is no history? We break down the cold start problem and the scoring strategies that solve it.',
+    date: 'Thu, 27 Feb 2026 10:00:00 GMT',
+    tag: 'Analysis',
+  },
+  {
+    title: '5 On-Chain Patterns That Reveal Sybil Agents',
+    slug: 'sybil-patterns',
+    description:
+      'How DJD Agent Score uses on-chain behavioral forensics to separate real AI agents from manufactured identities.',
+    date: 'Wed, 26 Feb 2026 12:00:00 GMT',
+    tag: 'Research',
+  },
+]
+
+const rssXml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+  <title>DJD Agent Score Blog</title>
+  <link>${SITE}/blog</link>
+  <description>Insights on AI agent reputation, sybil detection, and trust infrastructure for the autonomous agent economy.</description>
+  <language>en-us</language>
+  <lastBuildDate>${blogPosts[0].date}</lastBuildDate>
+  <atom:link href="${SITE}/blog/rss.xml" rel="self" type="application/rss+xml"/>
+${blogPosts
+  .map(
+    (p) => `  <item>
+    <title>${p.title}</title>
+    <link>${SITE}/blog/${p.slug}</link>
+    <guid isPermaLink="true">${SITE}/blog/${p.slug}</guid>
+    <description>${p.description}</description>
+    <pubDate>${p.date}</pubDate>
+    <category>${p.tag}</category>
+  </item>`,
+  )
+  .join('\n')}
+</channel>
+</rss>`
+
 // ─── Routes ───
 
 blog.get('/', (c) => c.html(listingHtml))
+blog.get('/rss.xml', (c) => {
+  return c.body(rssXml, 200, {
+    'Content-Type': 'application/rss+xml; charset=utf-8',
+    'Cache-Control': 'public, max-age=3600',
+  })
+})
 blog.get('/sybil-patterns', (c) => c.html(sybilPostHtml))
 blog.get('/what-is-erc-8004', (c) => c.html(erc8004PostHtml))
 blog.get('/cold-start-problem', (c) => c.html(coldStartPostHtml))
