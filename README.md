@@ -30,16 +30,17 @@ Returns:
   "tier": "Emerging",
   "confidence": 0.16,
   "recommendation": "insufficient_history",
-  "modelVersion": "2.3.0",
+  "modelVersion": "2.4.0",
   "lastUpdated": "2026-02-25T04:12:50.000Z",
   "computedAt": "2026-02-25T04:12:50.000Z",
+  "dataSource": "cached",
   "scoreFreshness": 0.85,
   "freeTier": true,
   "freeQueriesRemainingToday": 9
 }
 ```
 
-`score` is 0–100. `confidence` reflects how much on-chain data backs the score. Wallets with more USDC transaction history and verified identity score higher.
+`score` is 0–100. `confidence` reflects how much on-chain data backs the score. `dataSource` is `live`, `cached`, or `unavailable` — indicating whether the score was freshly computed, served from cache, or if on-chain data couldn't be fetched. Wallets with more USDC transaction history and verified identity score higher.
 
 Embed a live score badge in your own README:
 
@@ -113,7 +114,7 @@ curl "https://djd-agent-score.fly.dev/v1/score/full?wallet=0x…" \
 
 ## How scoring works
 
-> **Model v2.3.0** — Insumer token-gating attestation for identity verification. Improved scoring accuracy for low-data wallets. Expanded capability signals. Auto-recalibrating tier thresholds from outcome data.
+> **Model v2.4.0** — Insumer token-gating attestation for identity verification. Improved scoring accuracy for low-data wallets. Expanded capability signals. Auto-recalibrating tier thresholds from outcome data. Integrity layer hardening (sybil batch queries, fraud report deduplication).
 
 Every wallet is evaluated across five weighted dimensions based on its USDC transaction history on Base:
 
@@ -236,13 +237,13 @@ Requires **Node.js v22**. Starts on `http://localhost:3000`.
 
 **Blockchain indexer:** Polls Base USDC every 12 seconds for `AuthorizationUsed` and `Transfer` events. Two-layer filter (EIP-3009 event + $1 USDC amount cap) isolates x402 settlements from regular DeFi activity. Adaptive chunk sizing handles BlastAPI's 20k result cap.
 
-**Database:** SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached volume compatibility). 25 tables covering scores, history, fraud reports, registrations, query logs, indexer state, API keys, webhooks, certifications, and job stats.
+**Database:** SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached volume compatibility). 31 tables covering scores, history, fraud reports, registrations, query logs, indexer state, API keys, webhooks, certifications, job stats, outcome calibration, and anomaly detection.
 
 **RPC provider:** Default is BlastAPI public Base endpoint. For heavy indexing, use a dedicated provider via `BASE_RPC_URL`. Avoid `publicnode.com` (rejects 10k-block `eth_getLogs` ranges).
 
 **ERC-8004:** [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) (AI Agent Registry) check is disabled until a registry contract deploys on Base.
 
-**Score caching:** 1 hour cache. Background refresh for up to 50 expired scores/hour. Force recalculation with `/v1/score/refresh` ($0.25). Admin flush endpoint expires all cached scores to trigger ecosystem-wide re-scoring after model updates.
+**Score caching:** 1 hour cache. Background refresh for up to 50 expired scores per batch. Force recalculation with `/v1/score/refresh` ($0.25). Admin flush endpoint expires all cached scores to trigger ecosystem-wide re-scoring after model updates.
 
 **Auto-recalibration:** The system continuously adjusts scoring thresholds based on real-world outcome data, closing the feedback loop between predicted trust and actual wallet behavior.
 
