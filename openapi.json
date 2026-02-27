@@ -8,7 +8,7 @@
     "license": { "name": "MIT", "url": "https://github.com/jacobsd32-cpu/djdagentscore/blob/main/LICENSE" }
   },
   "servers": [
-    { "url": "https://djd-agent-score.fly.dev", "description": "Production" }
+    { "url": "https://djdagentscore.dev", "description": "Production" }
   ],
   "tags": [
     { "name": "score",         "description": "Score lookup and computation" },

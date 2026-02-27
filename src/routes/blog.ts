@@ -14,12 +14,12 @@ const blogHead = (title: string, description: string, slug = '') => `<!DOCTYPE h
 <meta property="og:type" content="article">
 <meta property="og:title" content="${title} — DJD Agent Score">
 <meta property="og:description" content="${description}">
-<meta property="og:url" content="https://djd-agent-score.fly.dev/blog${slug ? `/${slug}` : ''}">
+<meta property="og:url" content="https://djdagentscore.dev/blog${slug ? `/${slug}` : ''}">
 <meta property="og:site_name" content="DJD Agent Score">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${title} — DJD Agent Score">
 <meta name="twitter:description" content="${description}">
-<link rel="alternate" type="application/rss+xml" title="DJD Agent Score Blog" href="https://djd-agent-score.fly.dev/blog/rss.xml">
+<link rel="alternate" type="application/rss+xml" title="DJD Agent Score Blog" href="https://djdagentscore.dev/blog/rss.xml">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -602,7 +602,7 @@ ${blogFooter}`
 
 // ─── RSS Feed ───
 
-const SITE = 'https://djd-agent-score.fly.dev'
+const SITE = 'https://djdagentscore.dev'
 
 const blogPosts = [
   {

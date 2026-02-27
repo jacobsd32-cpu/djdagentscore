@@ -8,7 +8,7 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="DJD Agent Score — Trust Infrastructure for AI Agents">
 <meta property="og:description" content="Trust score 0–100 for any AI agent wallet. On-chain reputation from transaction history. One API call, no signup.">
-<meta property="og:url" content="https://djd-agent-score.fly.dev/">
+<meta property="og:url" content="https://djdagentscore.dev/">
 <meta property="og:site_name" content="DJD Agent Score">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="DJD Agent Score — Trust Infrastructure for AI Agents">
@@ -527,7 +527,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
   <div class="code"><div class="code-l">JavaScript</div><pre><span class="c">// Before sending USDC, check the recipient's reputation</span>
 <span class="k">const</span> wallet = <span class="s">"0xRecipientAddress"</span>;
 <span class="k">const</span> { score, confidence, recommendation } = <span class="k">await</span> (
-  <span class="k">await</span> <span class="f">fetch</span>(<span class="s">`https://djd-agent-score.fly.dev/v1/score/basic?wallet=</span><span class="k">${</span>wallet<span class="k">}</span><span class="s">`</span>)
+  <span class="k">await</span> <span class="f">fetch</span>(<span class="s">`https://djdagentscore.dev/v1/score/basic?wallet=</span><span class="k">${</span>wallet<span class="k">}</span><span class="s">`</span>)
 ).<span class="f">json</span>();
 
 <span class="c">// Gate the transaction on the recommendation</span>
@@ -746,8 +746,8 @@ function submitFeedback(){
   var entry={type:type,wallet:wallet,details:details,contact:contact,ts:new Date().toISOString()};
   var subject=encodeURIComponent('[DJD Feedback] '+type);
   var body=encodeURIComponent('Type: '+type+'\nWallet: '+(wallet||'N/A')+'\nContact: '+(contact||'N/A')+'\nTimestamp: '+entry.ts+'\n\nDetails:\n'+details);
-  window.open('mailto:feedback@djd-agent-score.fly.dev?subject='+subject+'&body='+body,'_blank');
-  msg.textContent='Feedback recorded. A compose window should open. If not, email feedback@djd-agent-score.fly.dev directly.';
+  window.open('mailto:feedback@djdagentscore.dev?subject='+subject+'&body='+body,'_blank');
+  msg.textContent='Feedback recorded. A compose window should open. If not, email feedback@djdagentscore.dev directly.';
   msg.className='fb-msg vis ok';
   document.getElementById('fbType').value='';document.getElementById('fbWallet').value='';
   document.getElementById('fbDetails').value='';document.getElementById('fbContact').value='';
