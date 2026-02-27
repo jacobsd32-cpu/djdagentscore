@@ -35,6 +35,6 @@ describe('GET /health', () => {
     const res = await app.request('/health')
     const body = await res.json()
     expect(body.modelVersion).toBe(MODEL_VERSION)
-    expect(body.modelVersion).toBe('2.3.0')
+    expect(body.modelVersion).toBe('2.4.0')
   })
 })

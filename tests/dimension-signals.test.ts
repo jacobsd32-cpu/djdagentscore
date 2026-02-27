@@ -115,10 +115,38 @@ describe('calcIdentity DRY helpers', () => {
       10, // githubStars
       new Date().toISOString(), // githubPushedAt (recent)
       true, // basename
+      { usdc_base: true, ens: true, op: false, arb: true, steth: false }, // insumerConditions
     )
 
     const signalSum = Object.values(result.signals).reduce((a, b) => a + b, 0)
     expect(result.score).toBe(signalSum)
+  })
+
+  it('scores insumer conditions at 3 pts each (v2.4)', async () => {
+    const none = await calcIdentity(ZERO_WALLET, 0, null, false, false, null, null, false, {})
+    expect(none.signals.insumerAttestation).toBe(0)
+    expect(none.insumerVerified).toBe(false)
+
+    const two = await calcIdentity(ZERO_WALLET, 0, null, false, false, null, null, false, {
+      usdc_base: true,
+      ens: false,
+      op: true,
+      arb: false,
+      steth: false,
+    })
+    expect(two.signals.insumerAttestation).toBe(6) // 2 × 3
+    expect(two.insumerVerified).toBe(true)
+    expect(two.insumerConditionsPassed).toBe(2)
+
+    const all = await calcIdentity(ZERO_WALLET, 0, null, false, false, null, null, false, {
+      usdc_base: true,
+      ens: true,
+      op: true,
+      arb: true,
+      steth: true,
+    })
+    expect(all.signals.insumerAttestation).toBe(15) // 5 × 3
+    expect(all.insumerConditionsPassed).toBe(5)
   })
 
   it('gives zero github activity when not verified', async () => {
