@@ -93,7 +93,12 @@ export interface IdentityData {
   creatorScore: number | null
   generationDepth: number
   constitutionHashVerified: boolean
+  /** True if at least one Insumer condition passed (backward compat). */
   insumerVerified: boolean
+  /** v2.4: Per-condition attestation results (label → pass/fail). */
+  insumerConditions?: Record<string, boolean>
+  /** v2.4: How many attestation conditions passed. */
+  insumerConditionsPassed?: number
 }
 
 export interface CapabilityData {
