@@ -15,10 +15,10 @@ describe('BehaviorData type', () => {
 
   it('behavior dimension fits in ScoreDimensions', () => {
     const dims: ScoreDimensions = {
-      reliability: { score: 70, data: {} as any },
-      viability: { score: 60, data: {} as any },
-      identity: { score: 50, data: {} as any },
-      capability: { score: 40, data: {} as any },
+      reliability: { score: 70, data: {} as ScoreDimensions['reliability']['data'] },
+      viability: { score: 60, data: {} as ScoreDimensions['viability']['data'] },
+      identity: { score: 50, data: {} as ScoreDimensions['identity']['data'] },
+      capability: { score: 40, data: {} as ScoreDimensions['capability']['data'] },
       behavior: {
         score: 65,
         data: {
