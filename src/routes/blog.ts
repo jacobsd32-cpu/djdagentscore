@@ -178,6 +178,18 @@ ${blogNav}
 
 <div class="posts">
 
+  <a href="/blog/v2-4-0" class="post-card">
+    <div>
+      <div class="post-meta">
+        <span class="post-date">Feb 27, 2026</span>
+        <span class="post-tag">Release</span>
+      </div>
+      <div class="post-title">v2.4.0: Score Accuracy, Data Transparency, and a Code Audit</div>
+      <p class="post-excerpt">Model v2.4.0 ships fixes for cache mutation, missing indicators, NaN edge cases, and adds a new dataSource field so consumers always know where their score came from.</p>
+    </div>
+    <div class="post-read">Read &rarr;</div>
+  </a>
+
   <a href="/blog/on-chain-activity" class="post-card">
     <div>
       <div class="post-meta">
@@ -698,11 +710,111 @@ Filter: address = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
 
 ${blogFooter}`
 
+// ─── Individual article: v2.4.0 Release ───
+
+const v240PostHtml = `${blogPostHead(
+  'v2.4.0: Score Accuracy, Data Transparency, and a Code Audit',
+  'Model v2.4.0 ships fixes for cache mutation, missing indicators, NaN edge cases, and adds a new dataSource field so consumers always know where their score came from.',
+  'v2-4-0',
+)}
+${blogNav}
+
+<article class="article">
+  <a href="/blog" class="article-back">&larr; All posts</a>
+  <div class="article-meta">
+    <span class="article-date">Feb 27, 2026</span>
+    <span class="article-tag">Release</span>
+  </div>
+  <h1>v2.4.0: Score Accuracy, Data Transparency, and a Code Audit</h1>
+  <p class="lead">Model version 2.4.0 focuses on <strong>correctness</strong> and <strong>transparency</strong>. We ran a full code audit across the scoring engine, fixed every issue we found, and added a new field that tells API consumers exactly where their score came from.</p>
+
+  <div class="prose">
+
+    <h2>What Changed</h2>
+
+    <p>This release addresses bugs that could silently degrade score accuracy under specific conditions, and adds infrastructure improvements to make the system more observable.</p>
+
+    <h3>Cache Mutation Fix</h3>
+    <p>The most impactful fix. When a cached score was served, a <strong>serve-time dampening function</strong> was mutating the cached object in memory. This meant the second consumer to read the same cached score would receive an already-dampened value &mdash; and each subsequent read would dampen it further.</p>
+    <p>The fix is simple: we now spread the cached object into a fresh copy before applying any transformations. Scores returned from the cache are now identical to what was originally computed.</p>
+
+    <h3>Missing Sybil &amp; Gaming Indicators</h3>
+    <p>Several response builder paths were not including <code class="mono">sybilFlag</code> and <code class="mono">gamingIndicators</code> in their output. Consumers relying on these fields for downstream decisions would have received <code class="mono">undefined</code> instead of the actual analysis results. All response paths now consistently include both fields.</p>
+
+    <h3>NaN Limit Parameter</h3>
+    <p>A <code class="mono">limit</code> query parameter on the score history endpoint was being parsed without validation. Passing a non-numeric value would propagate <code class="mono">NaN</code> into the database query, returning zero results silently. We now clamp and default the parameter safely.</p>
+
+    <h3>Balance Snapshot Resilience</h3>
+    <p>When the RPC provider returns an error during the balance snapshot job, the system previously wrote a <code class="mono">0</code> balance to the database. For wallets with real holdings, this created a false &ldquo;balance dropped to zero&rdquo; event in the history. The snapshot job now <strong>skips the write entirely</strong> on RPC failure and logs the error for investigation.</p>
+
+    <h2>New: <code class="mono">dataSource</code> Field</h2>
+
+    <p>Every score response now includes a <code class="mono">dataSource</code> field that tells you exactly where the score came from:</p>
+
+    <div class="code-block"><code>{
+  "wallet": "0x1234...abcd",
+  "score": 72,
+  "tier": "Established",
+  "dataSource": "cached",
+  "modelVersion": "2.4.0"
+}</code></div>
+
+    <ul>
+      <li><strong><code class="mono">live</code></strong> &mdash; freshly computed from on-chain data in this request</li>
+      <li><strong><code class="mono">cached</code></strong> &mdash; served from a previously computed score that is still within its freshness window</li>
+      <li><strong><code class="mono">unavailable</code></strong> &mdash; no score could be computed (e.g., wallet has no on-chain activity)</li>
+    </ul>
+
+    <p>This is useful for consumers who need to distinguish between a real-time computation and a cached result &mdash; for example, if you want to display a &ldquo;computed X minutes ago&rdquo; indicator in your UI, or trigger a <code class="mono">/v1/score/refresh</code> when the source is <code class="mono">cached</code>.</p>
+
+    <h2>Infrastructure Improvements</h2>
+
+    <ul>
+      <li><strong>Database transactions</strong> &mdash; multi-step operations (outcome matching, intent matching, score refresh) are now wrapped in SQLite transactions for consistency</li>
+      <li><strong>Silent catch elimination</strong> &mdash; all empty <code class="mono">catch {}</code> blocks now log errors with context, making production debugging possible</li>
+      <li><strong>Magic number extraction</strong> &mdash; scoring thresholds, blockchain constants, and job configuration are centralized in <code class="mono">src/config/constants.ts</code></li>
+      <li><strong>Template extraction</strong> &mdash; HTML templates for agent profiles, explorer, and legal pages are now in dedicated <code class="mono">src/templates/</code> modules, reducing route file sizes by over 1,000 lines total</li>
+    </ul>
+
+    <h2>SDK Update</h2>
+
+    <p>The TypeScript SDK (<code class="mono">djd-agent-score-client</code>) has been updated to v0.2.0 with the new <code class="mono">dataSource</code> field typed in <code class="mono">BasicScoreResponse</code> and <code class="mono">FullScoreResponse</code>. If you are using the SDK, update to get typed access:</p>
+
+    <div class="code-block"><code>const result = await client.getBasicScore(wallet)
+
+if (result.dataSource === 'cached') {
+  console.log('Score was served from cache')
+}</code></div>
+
+    <h2>Full Changelog</h2>
+
+    <p>The complete list of changes is available in the <a href="https://github.com/jacobsd32-cpu/djdagentscore/releases/tag/v2.4.0" style="color:var(--accent)">GitHub release notes</a>. All 193 tests pass across 28 test files.</p>
+
+    <div class="cta-box">
+      <p>Try the updated scoring engine on any Base wallet:</p>
+      <a href="/#lookup" class="btn">Score a Wallet</a>
+    </div>
+
+    <p class="article-footer">DJD Agent Score analyzes on-chain behavioral patterns to assign reputation scores to AI agent wallets. Scores are published to the ERC-8004 Reputation Registry on Base mainnet.</p>
+
+  </div>
+</article>
+
+${blogFooter}`
+
 // ─── RSS Feed ───
 
 const SITE = 'https://djdagentscore.dev'
 
 const blogPosts = [
+  {
+    title: 'v2.4.0: Score Accuracy, Data Transparency, and a Code Audit',
+    slug: 'v2-4-0',
+    description:
+      'Model v2.4.0 ships fixes for cache mutation, missing indicators, NaN edge cases, and adds a new dataSource field so consumers always know where their score came from.',
+    date: 'Thu, 27 Feb 2026 16:00:00 GMT',
+    tag: 'Release',
+  },
   {
     title: 'What We Found Analyzing Real Wallet Activity on Base',
     slug: 'on-chain-activity',
@@ -770,6 +882,7 @@ blog.get('/rss.xml', (c) => {
     'Cache-Control': 'public, max-age=3600',
   })
 })
+blog.get('/v2-4-0', (c) => c.html(v240PostHtml))
 blog.get('/on-chain-activity', (c) => c.html(onchainActivityPostHtml))
 blog.get('/sybil-patterns', (c) => c.html(sybilPostHtml))
 blog.get('/what-is-erc-8004', (c) => c.html(erc8004PostHtml))

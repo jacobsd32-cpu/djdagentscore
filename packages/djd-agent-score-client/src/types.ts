@@ -3,6 +3,8 @@ export type Address = `0x${string}`
 
 export type Tier = 'Elite' | 'Trusted' | 'Established' | 'Emerging' | 'Unverified'
 
+export type DataSource = 'live' | 'cached' | 'unavailable'
+
 export interface BasicScoreResponse {
   wallet: Address
   score: number
@@ -13,6 +15,7 @@ export interface BasicScoreResponse {
   lastUpdated: string
   computedAt: string
   scoreFreshness: number
+  dataSource: DataSource
   stale?: boolean
   freeTier?: boolean
   freeQueriesRemainingToday?: number

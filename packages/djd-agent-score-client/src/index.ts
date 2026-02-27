@@ -1,5 +1,6 @@
 import type {
   Address,
+  DataSource,
   BasicScoreResponse,
   FullScoreResponse,
   LeaderboardResponse,
@@ -15,6 +16,7 @@ import type {
 
 export type {
   Address,
+  DataSource,
   BasicScoreResponse,
   FullScoreResponse,
   LeaderboardResponse,
