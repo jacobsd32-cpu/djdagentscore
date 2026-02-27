@@ -35,15 +35,15 @@ describe('applyDetectionAdjustments', () => {
     const sybil: SybilResult = { ...cleanSybil, sybilFlag: true, caps: { reliability: 40 } }
     const result = applyDetectionAdjustments(baseRaw, sybil, cleanGaming)
     expect(result.reliability).toBe(40) // capped from 80 to 40
-    expect(result.viability).toBe(70)   // unchanged
-    expect(result.identity).toBe(60)    // unchanged
+    expect(result.viability).toBe(70) // unchanged
+    expect(result.identity).toBe(60) // unchanged
   })
 
   it('applies sybil identity cap', () => {
     const sybil: SybilResult = { ...cleanSybil, sybilFlag: true, caps: { identity: 50 } }
     const result = applyDetectionAdjustments(baseRaw, sybil, cleanGaming)
-    expect(result.identity).toBe(50)     // capped from 60 to 50
-    expect(result.reliability).toBe(80)  // unchanged
+    expect(result.identity).toBe(50) // capped from 60 to 50
+    expect(result.reliability).toBe(80) // unchanged
   })
 
   it('applies both sybil caps simultaneously', () => {
@@ -63,7 +63,7 @@ describe('applyDetectionAdjustments', () => {
     const gaming: GamingResult = { ...cleanGaming, penalties: { composite: 0, reliability: 15, viability: 0 } }
     const result = applyDetectionAdjustments(baseRaw, cleanSybil, gaming)
     expect(result.reliability).toBe(65) // 80 - 15
-    expect(result.viability).toBe(70)   // unchanged
+    expect(result.viability).toBe(70) // unchanged
   })
 
   it('applies gaming viability penalty', () => {
@@ -101,6 +101,6 @@ describe('applyDetectionAdjustments', () => {
     const gaming: GamingResult = { ...cleanGaming, penalties: { composite: 5, reliability: 50, viability: 50 } }
     const result = applyDetectionAdjustments(baseRaw, sybil, gaming)
     expect(result.capability).toBe(50) // always untouched
-    expect(result.behavior).toBe(40)   // always untouched
+    expect(result.behavior).toBe(40) // always untouched
   })
 })

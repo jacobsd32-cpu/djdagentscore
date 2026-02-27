@@ -44,4 +44,3 @@ export function makeBadge(label: string, value: string, color: string): string {
   </g>
 </svg>`
 }
-

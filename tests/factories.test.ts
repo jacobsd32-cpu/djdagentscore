@@ -46,8 +46,11 @@ describe('test factories', () => {
     expect(w.total_tx_count).toBe(99)
     expect(w.total_volume_in).toBe(9999)
 
-    const score = createTestScore(db, { wallet: w.wallet, composite_score: 95, tier: 'Elite' })
-    const row = db.prepare('SELECT composite_score, tier FROM scores WHERE wallet = ?').get(w.wallet) as { composite_score: number; tier: string }
+    const _score = createTestScore(db, { wallet: w.wallet, composite_score: 95, tier: 'Elite' })
+    const row = db.prepare('SELECT composite_score, tier FROM scores WHERE wallet = ?').get(w.wallet) as {
+      composite_score: number
+      tier: string
+    }
     expect(row.composite_score).toBe(95)
     expect(row.tier).toBe('Elite')
   })

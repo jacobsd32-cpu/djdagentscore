@@ -28,15 +28,8 @@ import { withRetry } from '../utils/retry.js'
 
 const TAG = 'erc8004-publisher'
 
-const {
-  MIN_CONFIDENCE,
-  SCORE_DELTA,
-  BATCH_LIMIT,
-  TX_TIMEOUT_MS,
-  INTER_TX_DELAY_MS,
-  MIN_ETH_BALANCE,
-  SCORE_ENDPOINT,
-} = REPUTATION_PUBLISHER_CONFIG
+const { MIN_CONFIDENCE, SCORE_DELTA, BATCH_LIMIT, TX_TIMEOUT_MS, INTER_TX_DELAY_MS, MIN_ETH_BALANCE, SCORE_ENDPOINT } =
+  REPUTATION_PUBLISHER_CONFIG
 
 const GIVE_FEEDBACK_ABI = parseAbi([
   'function giveFeedback(uint256 agentId, int128 value, uint8 valueDecimals, string tag1, string tag2, string endpoint, string feedbackURI, bytes32 feedbackHash)',

@@ -10,12 +10,7 @@ export function extractPayerWallet(header: string | undefined): string | null {
   if (!header) return null
   try {
     const json = JSON.parse(Buffer.from(header, 'base64').toString('utf8'))
-    return (
-      json?.payload?.authorization?.from ??
-      json?.payer ??
-      json?.from ??
-      null
-    )
+    return json?.payload?.authorization?.from ?? json?.payer ?? json?.from ?? null
   } catch {
     return null
   }

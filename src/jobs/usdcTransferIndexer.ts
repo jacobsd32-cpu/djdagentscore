@@ -53,7 +53,9 @@ async function fetchAndIndexChunk(start: bigint, end: bigint, isCatchingUp: bool
   if (transferLogs.length === 0) return 0
 
   const chunkAnchorBlock = anchorBlockData?.number ?? start
-  const chunkAnchorTsMs = anchorBlockData ? anchorBlockData.timestamp * 1000n : BASE_GENESIS_TS_MS + (start - 1n) * 2000n
+  const chunkAnchorTsMs = anchorBlockData
+    ? anchorBlockData.timestamp * 1000n
+    : BASE_GENESIS_TS_MS + (start - 1n) * 2000n
 
   const transfers: UsdcTransfer[] = []
   for (const logEntry of transferLogs) {
