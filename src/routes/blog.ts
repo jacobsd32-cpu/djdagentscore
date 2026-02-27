@@ -137,6 +137,18 @@ ${blogNav}
 
 <div class="posts">
 
+  <a href="/blog/on-chain-activity" class="post-card">
+    <div>
+      <div class="post-meta">
+        <span class="post-date">Feb 27, 2026</span>
+        <span class="post-tag">Case Study</span>
+      </div>
+      <div class="post-title">What We Found Analyzing Real Wallet Activity on Base</div>
+      <p class="post-excerpt">We analyzed our own payment wallet and discovered real x402 transfers, address poisoning attacks, and a fake token scam. Here is what on-chain forensics looks like in practice.</p>
+    </div>
+    <div class="post-read">Read &rarr;</div>
+  </a>
+
   <a href="/blog/what-is-erc-8004" class="post-card">
     <div>
       <div class="post-meta">
@@ -600,11 +612,212 @@ if (score >= 30 || confidence < 20) allowWithLimits();</code></div>
 
 ${blogFooter}`
 
+// ─── Individual article: On-Chain Activity ───
+
+const onchainActivityPostHtml = `${blogHead(
+  'What We Found Analyzing Real Wallet Activity on Base',
+  'We analyzed our own payment wallet and discovered real x402 transfers, address poisoning attacks, and a fake token scam. Here is what on-chain forensics looks like in practice.',
+  'on-chain-activity',
+)}
+.article{max-width:720px;margin:0 auto;padding:120px 32px 0}
+.article-back{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:40px;transition:color .2s}
+.article-back:hover{color:var(--accent);text-decoration:none}
+.article-meta{display:flex;gap:12px;align-items:center;margin-bottom:24px}
+.article-date{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted)}
+.article-tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--accent);background:var(--accent-dim);border:1px solid var(--border-hi);padding:3px 10px;border-radius:100px;text-transform:uppercase;letter-spacing:.5px}
+.article h1{font-family:'Instrument Serif',serif;font-size:clamp(30px,4.5vw,46px);font-weight:400;line-height:1.15;margin-bottom:20px;letter-spacing:-0.5px}
+.article .lead{font-size:18px;color:var(--text-dim);line-height:1.8;margin-bottom:48px;padding-bottom:40px;border-bottom:1px solid var(--border)}
+
+.prose h2{font-family:'Instrument Serif',serif;font-size:clamp(22px,3vw,30px);font-weight:400;margin-top:56px;margin-bottom:8px;letter-spacing:-0.3px}
+.prose h3{font-size:16px;font-weight:700;margin-top:32px;margin-bottom:8px;color:var(--text)}
+.prose p{font-size:15px;color:var(--text-dim);line-height:1.85;margin-bottom:16px}
+.prose strong{color:var(--text);font-weight:600}
+.prose em{color:var(--accent);font-style:italic}
+
+.signal{background:var(--bg2);border-left:3px solid var(--accent);border-radius:0 12px 12px 0;padding:20px 24px;margin:20px 0;font-size:14px;color:var(--text-dim);line-height:1.75}
+.signal strong{color:var(--text)}
+
+.pattern-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin:24px 0}
+.pattern-num{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.pattern-card h3{margin-top:0;margin-bottom:12px}
+.pattern-card p{margin-bottom:12px}
+.pattern-card p:last-child{margin-bottom:0}
+
+.code-block{background:#060e1a;border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin:20px 0;overflow-x:auto}
+.code-block code{font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.65;color:var(--text-dim);white-space:pre}
+
+.tx-table{width:100%;border-collapse:collapse;margin:20px 0;font-size:13px}
+.tx-table th{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.5px}
+.tx-table td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:12px}
+.tx-table tr:last-child td{border-bottom:none}
+.tx-in{color:#22c55e}
+.tx-out{color:#ef4444}
+.tx-scam{color:#f59e0b;font-weight:700}
+
+.prose ul{list-style:none;padding:0;margin:16px 0}
+.prose ul li{position:relative;padding-left:20px;font-size:14px;color:var(--text-dim);line-height:1.75;margin-bottom:10px}
+.prose ul li::before{content:'';position:absolute;left:0;top:10px;width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.5}
+
+.cta-box{background:var(--accent-dim);border:1px solid var(--border-hi);border-radius:var(--radius);padding:32px;margin:48px 0;text-align:center}
+.cta-box p{font-size:14px;color:var(--text-dim);line-height:1.75;margin-bottom:8px}
+.cta-box code{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);background:rgba(99,102,241,0.08);padding:2px 8px;border-radius:4px}
+.cta-box .btn{display:inline-flex;align-items:center;gap:6px;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;background:var(--accent);color:var(--bg);text-decoration:none;margin-top:16px;transition:all .2s}
+.cta-box .btn:hover{opacity:.9;transform:translateY(-1px);text-decoration:none}
+
+.article-footer{margin-top:56px;padding-top:32px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted);line-height:1.65;font-style:italic}
+
+@media(max-width:768px){
+  .article{padding:100px 20px 0}
+  .tx-table{font-size:11px}
+  .tx-table th,.tx-table td{padding:8px 6px}
+}
+${blogNav}
+
+<article class="article">
+  <a href="/blog" class="article-back">&larr; All posts</a>
+  <div class="article-meta">
+    <span class="article-date">Feb 26, 2026</span>
+    <span class="article-tag">Case Study</span>
+  </div>
+  <h1>What We Found Analyzing Real Wallet Activity on Base</h1>
+  <p class="lead">We pulled the full transaction history of our own payment wallet on Base. What we found was a window into the real on-chain environment AI agents operate in &mdash; including an address poisoning attack we caught in the act.</p>
+
+  <div class="prose">
+
+    <p>Most discussions about AI agent security are theoretical. We wanted to show what it actually looks like when you examine real on-chain data. So we analyzed the DJD Agent Score payment wallet &mdash; the address that receives x402 micropayments for API calls.</p>
+
+    <p>Here is what the data showed, the attack we discovered, and why this matters for anyone building in the agent economy.</p>
+
+    <!-- The Wallet -->
+    <h2>The Wallet</h2>
+
+    <p>Our x402 payment wallet on Base mainnet:</p>
+
+    <div class="code-block"><code>0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528</code></div>
+
+    <p>This is the address specified in our <code class="mono">fly.toml</code> as the <code class="mono">PAY_TO</code> target. Every paid API call routes USDC here through the x402 facilitator. We pulled the full ERC-20 transfer history using Etherscan&rsquo;s export and Base RPC <code class="mono">eth_getLogs</code> queries.</p>
+
+    <!-- Real Transfers -->
+    <h2>The Real Transfers</h2>
+
+    <p>The legitimate USDC activity broke down cleanly:</p>
+
+    <table class="tx-table">
+      <thead>
+        <tr><th>Direction</th><th>Amount</th><th>Counterparty</th><th>Method</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="tx-in">IN</td><td>24.39 USDC</td><td>Coinbase Hot Wallet</td><td>Transfer</td></tr>
+        <tr><td class="tx-out">OUT</td><td>5.00 USDC &times;3</td><td>0x21DD37E3&hellip;e7Be10</td><td>TransferWithAuthorization</td></tr>
+        <tr><td class="tx-out">OUT</td><td>3.36 USDC</td><td>0x930fEb56&hellip;CBb7a</td><td>TransferWithAuthorization</td></tr>
+        <tr><td class="tx-in">IN</td><td>0.01 USDC</td><td>0xfc6087&hellip;2B09</td><td>Transfer</td></tr>
+      </tbody>
+    </table>
+
+    <p>The initial 24.39 USDC came from <strong>Coinbase</strong> (tagged as &ldquo;Coinbase 42&rdquo; on Etherscan &mdash; one of Coinbase&rsquo;s hot wallets at <code class="mono">0x40EbC1&hellip;</code>). The outgoing transfers used <strong>EIP-3009 TransferWithAuthorization</strong>, which is the mechanism x402 facilitators use to move funds with off-chain signed approvals.</p>
+
+    <div class="signal"><strong>Key insight:</strong> TransferWithAuthorization (EIP-3009) is how the x402 protocol works under the hood. The payer signs an off-chain message authorizing a specific transfer, and the facilitator submits it on-chain. This is why you see the facilitator address as the transaction sender, not the actual payer.</div>
+
+    <!-- The Attack -->
+    <h2>The Address Poisoning Attack</h2>
+
+    <p>Mixed in with the legitimate transfers, we found something else: <strong>eight zero-value transfers</strong> of a token called &ldquo;&#42861;&#42834;&#42835;&#42842;&rdquo; sent to an address that looked almost identical to one of our real counterparties.</p>
+
+    <div class="pattern-card">
+      <div class="pattern-num">The Scam</div>
+      <h3>Address Poisoning via Fake Tokens</h3>
+      <div class="signal"><strong>Real address:</strong> 0x21DD<strong>37E3</strong>E4eA6CCC0a5C98A4944702eDE6<strong>e7Be10</strong></div>
+      <div class="signal"><strong>Scam address:</strong> 0x21DD<strong>F521</strong>14F53CcFe37ddd3DC503853B52<strong>C6Be10</strong></div>
+      <p>The attacker created a token with a name that uses <em>Unicode lookalike characters</em> to visually impersonate USDC. The token name &ldquo;&#42861;&#42834;&#42835;&#42842;&rdquo; uses characters from the Lisu script (Unicode block U+A4D0) that resemble Latin letters U, S, D, C.</p>
+      <p>The scam address was chosen to match the <strong>first four and last four characters</strong> of our real transaction partner. If someone copies the address from their transaction history without carefully checking the middle bytes, they send funds to the attacker.</p>
+    </div>
+
+    <h3>How Address Poisoning Works</h3>
+
+    <p>The attack follows a specific playbook:</p>
+
+    <ul>
+      <li><strong>Step 1:</strong> Monitor the mempool for USDC transfers to identify active wallets and their counterparties</li>
+      <li><strong>Step 2:</strong> Generate a &ldquo;vanity&rdquo; address that matches the first and last few characters of a real recipient</li>
+      <li><strong>Step 3:</strong> Deploy a fake ERC-20 token that visually mimics USDC (in this case, using Unicode Lisu characters)</li>
+      <li><strong>Step 4:</strong> Send zero-value transfers of the fake token from the target wallet to the scam address, polluting the transaction history</li>
+      <li><strong>Step 5:</strong> Wait for the victim to copy-paste the wrong address from their history</li>
+    </ul>
+
+    <p>The attacker bears almost no cost &mdash; sending zero-value ERC-20 transfers on Base costs fractions of a cent. But a single successful poisoning can yield thousands in stolen funds.</p>
+
+    <!-- Why This Matters -->
+    <h2>Why This Matters for AI Agents</h2>
+
+    <p>Here is the thing: <strong>AI agents are even more vulnerable to this attack than humans.</strong></p>
+
+    <p>When an autonomous agent needs to send funds, it often references recent transaction history to find the right address. If the agent&rsquo;s address resolution logic does a fuzzy match on &ldquo;starts with 0x21DD and ends with Be10,&rdquo; it will match the poisoned address. Unlike a human who might notice the middle bytes look different, a poorly designed agent will happily send real USDC to the scam address.</p>
+
+    <p>This is exactly the kind of threat that reputation scoring can help mitigate:</p>
+
+    <ul>
+      <li><strong>Transaction graph analysis</strong> can detect when a wallet&rsquo;s history contains suspicious zero-value token transfers from unknown contracts</li>
+      <li><strong>Counterparty scoring</strong> can flag addresses that appear in poisoning campaigns across multiple victims</li>
+      <li><strong>Token contract verification</strong> can identify fake tokens that impersonate established assets using Unicode tricks</li>
+    </ul>
+
+    <!-- Forensic Methodology -->
+    <h2>The Forensic Methodology</h2>
+
+    <p>We used two approaches to pull this data:</p>
+
+    <h3>1. Etherscan ERC-20 Export</h3>
+    <p>Etherscan&rsquo;s token transfer CSV export captures all ERC-20 events for an address. This is the easiest way to see the full picture &mdash; including fake tokens that won&rsquo;t show up in standard wallet UIs.</p>
+
+    <h3>2. Direct RPC Queries</h3>
+    <p>We queried Base&rsquo;s RPC endpoint using <code class="mono">eth_getLogs</code> filtered by the ERC-20 Transfer event signature:</p>
+
+    <div class="code-block"><code>Topic 0: 0xddf252ad1be2c89b69c2b068fc378daa
+         952ba7f163c4a11628f55a4df523b3ef
+
+Filter: address = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+        topic1 or topic2 = our wallet address</code></div>
+
+    <p>Filtering by the <strong>real USDC contract address</strong> is the key differentiator. The RPC query only returns genuine USDC transfers, while the Etherscan export shows everything &mdash; real and fake tokens alike. Comparing the two is how we identified the poisoning attack.</p>
+
+    <!-- What You Can Learn -->
+    <h2>What You Can Learn from Your Wallet</h2>
+
+    <p>If you&rsquo;re running an x402-enabled agent or API, here is how to audit your own payment wallet:</p>
+
+    <ul>
+      <li><strong>Export your ERC-20 history</strong> from Etherscan/Basescan and look for tokens you don&rsquo;t recognize</li>
+      <li><strong>Compare addresses character by character</strong> &mdash; don&rsquo;t trust first-4/last-4 matching</li>
+      <li><strong>Filter RPC logs by contract address</strong> to isolate real USDC transfers from noise</li>
+      <li><strong>Check for zero-value transfers</strong> &mdash; these are almost always poisoning attempts</li>
+      <li><strong>Score your counterparties</strong> using DJD Agent Score to identify suspicious wallets before transacting</li>
+    </ul>
+
+    <div class="cta-box">
+      <p>Check any wallet&rsquo;s reputation score to identify suspicious activity patterns:</p>
+      <a href="/#lookup" class="btn">Score a Wallet</a>
+    </div>
+
+    <p class="article-footer">DJD Agent Score analyzes on-chain behavioral patterns to assign reputation scores to AI agent wallets. Scores are published to the ERC-8004 Reputation Registry on Base mainnet.</p>
+
+  </div>
+</article>
+
+${blogFooter}`
+
 // ─── RSS Feed ───
 
 const SITE = 'https://djdagentscore.dev'
 
 const blogPosts = [
+  {
+    title: 'What We Found Analyzing Real Wallet Activity on Base',
+    slug: 'on-chain-activity',
+    description:
+      'We analyzed our own payment wallet and discovered real x402 transfers, address poisoning attacks, and a fake token scam. Here is what on-chain forensics looks like in practice.',
+    date: 'Thu, 27 Feb 2026 14:00:00 GMT',
+    tag: 'Case Study',
+  },
   {
     title: 'What is ERC-8004? On-Chain Reputation for AI Agents',
     slug: 'what-is-erc-8004',
@@ -664,6 +877,7 @@ blog.get('/rss.xml', (c) => {
     'Cache-Control': 'public, max-age=3600',
   })
 })
+blog.get('/on-chain-activity', (c) => c.html(onchainActivityPostHtml))
 blog.get('/sybil-patterns', (c) => c.html(sybilPostHtml))
 blog.get('/what-is-erc-8004', (c) => c.html(erc8004PostHtml))
 blog.get('/cold-start-problem', (c) => c.html(coldStartPostHtml))
