@@ -69,9 +69,15 @@ export function createTestWallet(db: DatabaseType, overrides: Partial<TestWallet
         unique_partners, is_proactively_indexed, is_scored)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
-    row.wallet, row.first_seen, row.last_seen, row.total_tx_count,
-    row.total_volume_in, row.total_volume_out, row.unique_partners,
-    row.is_proactively_indexed, row.is_scored,
+    row.wallet,
+    row.first_seen,
+    row.last_seen,
+    row.total_tx_count,
+    row.total_volume_in,
+    row.total_volume_out,
+    row.unique_partners,
+    row.is_proactively_indexed,
+    row.is_scored,
   )
   return row
 }
@@ -151,10 +157,20 @@ export function createTestScore(db: DatabaseType, overrides: Partial<TestScore> 
         tier, confidence, recommendation, sybil_flag, model_version, raw_data, calculated_at, expires_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
-    row.wallet, row.composite_score, row.reliability_score, row.viability_score,
-    row.identity_score, row.capability_score, row.tier, row.confidence,
-    row.recommendation, row.sybil_flag, row.model_version, row.raw_data,
-    row.calculated_at, row.expires_at,
+    row.wallet,
+    row.composite_score,
+    row.reliability_score,
+    row.viability_score,
+    row.identity_score,
+    row.capability_score,
+    row.tier,
+    row.confidence,
+    row.recommendation,
+    row.sybil_flag,
+    row.model_version,
+    row.raw_data,
+    row.calculated_at,
+    row.expires_at,
   )
   return row
 }
@@ -188,14 +204,21 @@ export function createTestQueryLog(
     timestamp: hoursAgo(6),
     ...overrides,
   }
-  const result = db.prepare(
-    `INSERT INTO query_log
+  const result = db
+    .prepare(
+      `INSERT INTO query_log
        (requester_wallet, target_wallet, endpoint, target_score, target_tier, is_free_tier, timestamp)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  ).run(
-    row.requester_wallet, row.target_wallet, row.endpoint,
-    row.target_score, row.target_tier, row.is_free_tier, row.timestamp,
-  )
+    )
+    .run(
+      row.requester_wallet,
+      row.target_wallet,
+      row.endpoint,
+      row.target_score,
+      row.target_tier,
+      row.is_free_tier,
+      row.timestamp,
+    )
   return { ...row, id: Number(result.lastInsertRowid) }
 }
 
@@ -213,10 +236,7 @@ export interface TestFraudReport {
   penalty_applied: number
 }
 
-export function createTestFraudReport(
-  db: DatabaseType,
-  overrides: Partial<TestFraudReport> = {},
-): TestFraudReport {
+export function createTestFraudReport(db: DatabaseType, overrides: Partial<TestFraudReport> = {}): TestFraudReport {
   const row: TestFraudReport = {
     id: `fraud-${++seq}`,
     target_wallet: fakeWallet(),
@@ -252,7 +272,9 @@ export function createTestSnapshot(db: DatabaseType, overrides: Partial<TestSnap
     ...overrides,
   }
   db.prepare('INSERT INTO wallet_snapshots (wallet, usdc_balance, snapshot_at) VALUES (?, ?, ?)').run(
-    row.wallet, row.usdc_balance, row.snapshot_at,
+    row.wallet,
+    row.usdc_balance,
+    row.snapshot_at,
   )
   return row
 }
@@ -295,9 +317,16 @@ export function createTestMetrics(db: DatabaseType, overrides: Partial<TestMetri
         balance_trend_7d, unique_partners_30d, last_updated)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
-    row.wallet, row.tx_count_24h, row.tx_count_7d, row.tx_count_30d,
-    row.volume_in_30d, row.volume_out_30d, row.income_burn_ratio,
-    row.balance_trend_7d, row.unique_partners_30d, row.last_updated,
+    row.wallet,
+    row.tx_count_24h,
+    row.tx_count_7d,
+    row.tx_count_30d,
+    row.volume_in_30d,
+    row.volume_out_30d,
+    row.income_burn_ratio,
+    row.balance_trend_7d,
+    row.unique_partners_30d,
+    row.last_updated,
   )
   return row
 }

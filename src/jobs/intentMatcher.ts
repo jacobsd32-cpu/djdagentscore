@@ -88,16 +88,18 @@ export async function runIntentMatcher(db: DatabaseType): Promise<void> {
           const queryTime = new Date(queryTs).getTime()
           const txTime = new Date(tx.timestamp).getTime()
           pendingInserts.push([
-            query.requester_wallet, query.target_wallet, queryTs,
-            1, tx.tx_hash, tx.timestamp, txTime - queryTime,
+            query.requester_wallet,
+            query.target_wallet,
+            queryTs,
+            1,
+            tx.tx_hash,
+            tx.timestamp,
+            txTime - queryTime,
           ])
           conversions++
         } else if (isOldEnough) {
           // Observation window closed with no transaction
-          pendingInserts.push([
-            query.requester_wallet, query.target_wallet, queryTs,
-            0, null, null, null,
-          ])
+          pendingInserts.push([query.requester_wallet, query.target_wallet, queryTs, 0, null, null, null])
         }
 
         processed++

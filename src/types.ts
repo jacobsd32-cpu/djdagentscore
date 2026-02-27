@@ -45,13 +45,13 @@ export function isValidWebhookUrl(url: string): boolean {
     if (ipv4Match) {
       const [, a, b] = ipv4Match.map(Number) as [number, number, number, number, number]
       if (
-        a === 0 ||           // 0.0.0.0/8 (current network)
-        a === 10 ||          // 10.0.0.0/8 (private)
-        a === 127 ||         // 127.0.0.0/8 (loopback)
+        a === 0 || // 0.0.0.0/8 (current network)
+        a === 10 || // 10.0.0.0/8 (private)
+        a === 127 || // 127.0.0.0/8 (loopback)
         (a === 100 && b! >= 64 && b! <= 127) || // 100.64.0.0/10 (CGNAT)
-        (a === 169 && b === 254) ||              // 169.254.0.0/16 (link-local / cloud metadata)
-        (a === 172 && b! >= 16 && b! <= 31) ||   // 172.16.0.0/12 (private)
-        (a === 192 && b === 168)                 // 192.168.0.0/16 (private)
+        (a === 169 && b === 254) || // 169.254.0.0/16 (link-local / cloud metadata)
+        (a === 172 && b! >= 16 && b! <= 31) || // 172.16.0.0/12 (private)
+        (a === 192 && b === 168) // 192.168.0.0/16 (private)
       ) {
         return false
       }

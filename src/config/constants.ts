@@ -10,13 +10,13 @@
 
 /** Maps API path → price in USDC. Used by both x402 middleware and query logger. */
 export const ENDPOINT_PRICING: Record<string, number> = {
-  '/v1/score/full': 0.10,
+  '/v1/score/full': 0.1,
   '/v1/score/refresh': 0.25,
   '/v1/report': 0.02,
   '/v1/data/fraud/blacklist': 0.05,
-  '/v1/score/batch': 0.50,
+  '/v1/score/batch': 0.5,
   '/v1/score/history': 0.15,
-  '/v1/certification/apply': 99.00,
+  '/v1/certification/apply': 99.0,
 }
 
 // ── Tier Configuration ──────────────────────────────────────────────────────
@@ -249,11 +249,21 @@ export const BLOCKS_PER_HOUR = 1_800
 export const RELIABILITY_BREAKPOINTS = {
   /** Total USDC transfer count → points (max 25). */
   txCount: [
-    [0, 0], [5, 4], [25, 10], [100, 18], [500, 23], [1000, 25],
+    [0, 0],
+    [5, 4],
+    [25, 10],
+    [100, 18],
+    [500, 23],
+    [1000, 25],
   ] as ReadonlyArray<[number, number]>,
   /** Total nonce (all txs sent) → points (max 20). */
   nonce: [
-    [0, 0], [1, 3], [10, 8], [50, 14], [200, 18], [1000, 20],
+    [0, 0],
+    [1, 3],
+    [10, 8],
+    [50, 14],
+    [200, 18],
+    [1000, 20],
   ] as ReadonlyArray<[number, number]>,
   /** Payment success rate: base pts when any tx exists, bonuses at thresholds. */
   successRate: { BASE: 15, REPEAT_BONUS: 10, REPEAT_THRESHOLD: 5, PROVEN_BONUS: 5, PROVEN_THRESHOLD: 20, MAX: 30 },
@@ -263,24 +273,35 @@ export const RELIABILITY_BREAKPOINTS = {
   uptimeMaxPts: 25,
   /** Recency tiers: [maxBlocksAgo, points] checked in order. */
   recency: [
-    [BLOCKS_PER_HOUR * 24, 20],       // <24h
-    [BLOCKS_PER_HOUR * 24 * 7, 15],   // <7d
-    [BLOCKS_PER_HOUR * 24 * 30, 5],   // <30d
+    [BLOCKS_PER_HOUR * 24, 20], // <24h
+    [BLOCKS_PER_HOUR * 24 * 7, 15], // <7d
+    [BLOCKS_PER_HOUR * 24 * 30, 5], // <30d
   ] as ReadonlyArray<[number, number]>,
 } as const
 
 export const VIABILITY_BREAKPOINTS = {
   /** ETH balance thresholds (descending): [minEth, points]. Max 15 pts. */
   ethBalance: [
-    [0.1, 15], [0.01, 10], [0.001, 5], [0, 2],
+    [0.1, 15],
+    [0.01, 10],
+    [0.001, 5],
+    [0, 2],
   ] as ReadonlyArray<[number, number]>,
   /** USDC balance thresholds (descending): [minUsd, points]. Max 25 pts. */
   usdcBalance: [
-    [100, 25], [50, 22], [25, 18], [10, 15], [5, 10], [1, 5], [0.1, 2],
+    [100, 25],
+    [50, 22],
+    [25, 18],
+    [10, 15],
+    [5, 10],
+    [1, 5],
+    [0.1, 2],
   ] as ReadonlyArray<[number, number]>,
   /** Income/burn ratio thresholds (descending): [minRatio, points]. Max 30 pts. */
   incomeRatio: [
-    [2, 30], [1.5, 25], [1, 15],
+    [2, 30],
+    [1.5, 25],
+    [1, 15],
   ] as ReadonlyArray<[number, number]>,
   /** Fallback when outflows=0 but inflows>0. */
   pureIncomePts: 30,
@@ -288,7 +309,11 @@ export const VIABILITY_BREAKPOINTS = {
   burningPts: 5,
   /** Wallet age → points (ascending, for piecewiseLog). Max 30 pts. */
   walletAge: [
-    [0, 0], [1, 5], [7, 15], [30, 25], [90, 30],
+    [0, 0],
+    [1, 5],
+    [7, 15],
+    [30, 25],
+    [90, 30],
   ] as ReadonlyArray<[number, number]>,
   /** Penalty for ever-zero-balance wallets. */
   zeroBalancePenalty: -15,
@@ -302,15 +327,25 @@ export const IDENTITY_BREAKPOINTS = {
   githubVerifiedPts: 25,
   /** GitHub activity: stars and push recency. Max 15 pts combined. */
   githubActivity: {
-    STARS_HIGH_THRESHOLD: 5, STARS_HIGH_PTS: 5,
-    STARS_LOW_THRESHOLD: 1, STARS_LOW_PTS: 3,
-    RECENT_PUSH_DAYS: 30, RECENT_PUSH_PTS: 10,
-    STALE_PUSH_DAYS: 90, STALE_PUSH_PTS: 5,
+    STARS_HIGH_THRESHOLD: 5,
+    STARS_HIGH_PTS: 5,
+    STARS_LOW_THRESHOLD: 1,
+    STARS_LOW_PTS: 3,
+    RECENT_PUSH_DAYS: 30,
+    RECENT_PUSH_PTS: 10,
+    STALE_PUSH_DAYS: 90,
+    STALE_PUSH_PTS: 5,
   },
   insumerPtsPerCondition: 3,
   /** Wallet age cliffs (descending): [minDays, points]. Max 20 pts. */
   walletAge: [
-    [180, 20], [90, 17], [60, 15], [30, 12], [14, 9], [7, 5], [3, 3],
+    [180, 20],
+    [90, 17],
+    [60, 15],
+    [30, 12],
+    [14, 9],
+    [7, 5],
+    [3, 3],
   ] as ReadonlyArray<[number, number]>,
   /** Points when age <= min threshold. */
   walletAgeMinPts: 1,
@@ -319,19 +354,37 @@ export const IDENTITY_BREAKPOINTS = {
 export const CAPABILITY_BREAKPOINTS = {
   /** Total revenue → points (ascending, for piecewiseLog). Max 35 pts. */
   revenue: [
-    [0, 0], [0.1, 3], [1, 8], [10, 16], [50, 23], [200, 30], [500, 35],
+    [0, 0],
+    [0.1, 3],
+    [1, 8],
+    [10, 16],
+    [50, 23],
+    [200, 30],
+    [500, 35],
   ] as ReadonlyArray<[number, number]>,
   /** Unique counterparties → points (ascending, for piecewiseLog). Max 15 pts. */
   counterparties: [
-    [0, 0], [1, 3], [3, 7], [5, 10], [10, 13], [20, 15],
+    [0, 0],
+    [1, 3],
+    [3, 7],
+    [5, 10],
+    [10, 13],
+    [20, 15],
   ] as ReadonlyArray<[number, number]>,
   /** Service longevity days → points (ascending, for piecewiseLog). Max 15 pts. */
   longevity: [
-    [0, 0], [1, 3], [7, 7], [14, 10], [30, 13], [60, 15],
+    [0, 0],
+    [1, 3],
+    [7, 7],
+    [14, 10],
+    [30, 13],
+    [60, 15],
   ] as ReadonlyArray<[number, number]>,
   /** x402 service count thresholds (descending): [minTxCount, serviceCount]. */
   x402ServiceThresholds: [
-    [50, 4], [20, 3], [5, 2],
+    [50, 4],
+    [20, 3],
+    [5, 2],
   ] as ReadonlyArray<[number, number]>,
   /** Service count → points when real x402 data is available. */
   x402PtsWithData: { 4: 35, 3: 28, 2: 18, 1: 9, 0: 0 } as Record<number, number>,

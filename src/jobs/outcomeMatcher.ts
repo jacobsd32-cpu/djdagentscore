@@ -55,7 +55,19 @@ export async function runOutcomeMatcher(db: DatabaseType): Promise<void> {
     let noActivity = 0
 
     // Collect inserts to batch in a single transaction for atomicity + performance
-    type OutcomeRow = [number, string, string | null, number | null, string | null, null, string, string, string | null, number | null, number | null]
+    type OutcomeRow = [
+      number,
+      string,
+      string | null,
+      number | null,
+      string | null,
+      null,
+      string,
+      string,
+      string | null,
+      number | null,
+      number | null,
+    ]
     const pendingInserts: OutcomeRow[] = []
 
     for (let i = 0; i < unmatched.length; i++) {
@@ -82,7 +94,13 @@ export async function runOutcomeMatcher(db: DatabaseType): Promise<void> {
                  WHERE ((from_wallet = ? AND to_wallet = ?) OR (from_wallet = ? AND to_wallet = ?))
                    AND timestamp > ?`,
               )
-              .get(lookup.requester_wallet, lookup.target_wallet, lookup.target_wallet, lookup.requester_wallet, queryTs)
+              .get(
+                lookup.requester_wallet,
+                lookup.target_wallet,
+                lookup.target_wallet,
+                lookup.requester_wallet,
+                queryTs,
+              )
           : null
 
         // ── Check for fraud reports against target ────────────────────────────

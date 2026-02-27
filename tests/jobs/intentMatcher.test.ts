@@ -11,14 +11,10 @@ vi.mock('../../src/logger.js', () => ({
   log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }))
 
-import { runIntentMatcher } from '../../src/jobs/intentMatcher.js'
-import {
-  createTestQueryLog,
-  createTestTransfer,
-  createTestWallet,
-} from '../factories.js'
-import { createTestDb } from '../helpers/testDb.js'
 import type Database from 'better-sqlite3'
+import { runIntentMatcher } from '../../src/jobs/intentMatcher.js'
+import { createTestQueryLog, createTestTransfer, createTestWallet } from '../factories.js'
+import { createTestDb } from '../helpers/testDb.js'
 
 // ---------------------------------------------------------------------------
 // Helpers

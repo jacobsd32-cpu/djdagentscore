@@ -10,15 +10,10 @@ vi.mock('../../src/logger.js', () => ({
   log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }))
 
-import { runOutcomeMatcher } from '../../src/jobs/outcomeMatcher.js'
-import {
-  createTestFraudReport,
-  createTestQueryLog,
-  createTestTransfer,
-  createTestWallet,
-} from '../factories.js'
-import { createTestDb } from '../helpers/testDb.js'
 import type Database from 'better-sqlite3'
+import { runOutcomeMatcher } from '../../src/jobs/outcomeMatcher.js'
+import { createTestFraudReport, createTestQueryLog, createTestTransfer, createTestWallet } from '../factories.js'
+import { createTestDb } from '../helpers/testDb.js'
 
 // ---------------------------------------------------------------------------
 // Helpers

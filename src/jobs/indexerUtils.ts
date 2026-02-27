@@ -27,9 +27,7 @@ export function blockToIsoTimestamp(blockNumber: bigint, anchorBlock: bigint, an
  */
 export function parseSuggestedEnd(err: unknown): bigint | null {
   const msg =
-    (err as { details?: string; message?: string })?.details ??
-    (err as { message?: string })?.message ??
-    String(err)
+    (err as { details?: string; message?: string })?.details ?? (err as { message?: string })?.message ?? String(err)
   const m = msg.match(/retry with the range \d+-(\d+)/)
   return m ? BigInt(m[1]) : null
 }
