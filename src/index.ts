@@ -27,6 +27,7 @@ import historyRoute from './routes/history.js'
 import certificationRoute from './routes/certification.js'
 import explorerRoute from './routes/explorer.js'
 import blogRoute from './routes/blog.js'
+import wellKnownRoute from './routes/wellKnown.js'
 import { adminWebhooks, publicWebhooks } from './routes/webhooks.js'
 import stripeWebhookRoute from './routes/stripeWebhook.js'
 import billingRoute from './routes/billing.js'
@@ -149,6 +150,7 @@ app.route('/docs', docsRoute)                 // free — Swagger UI
 app.route('/metrics', metricsRoute)             // free — Prometheus metrics
 app.route('/billing', billingRoute)             // free — Stripe billing self-service
 app.route('/pricing', pricingRoute)             // free — pricing page
+app.route('/.well-known/x402', wellKnownRoute) // free — x402 agent discovery
 
 // ---------- x402 Payment Middleware (v2.5 + Bazaar Discovery) ----------
 // Protects paid endpoints. Free endpoints (leaderboard, health) are not listed so they pass through.

@@ -52,13 +52,21 @@ View any wallet's profile page: [djd-agent-score.fly.dev/agent/{wallet}](https:/
 
 ---
 
+## The problem
+
+Your agent is about to send $500 USDC to a wallet it's never seen before. Should it?
+
+That wallet might belong to a legit service provider with 6 months of clean transaction history. Or it might be a fresh sybil wallet that was created 3 hours ago to drain your agent's funds.
+
+DJD Agent Score answers this in one API call — no signup, no API key, no payment for the free tier. Score any wallet on Base in under 200ms. The scoring engine analyzes real on-chain USDC transaction history, partner diversity, account age, and runs sybil/gaming detection across 12 behavioral checks.
+
 ## Built for
 
-**AI agent developers on Base** — Check a wallet's reputation before your agent sends payment, accepts a request, or enters a contract.
+**AI agent developers** — Check a wallet's reputation before your agent sends payment, accepts a request, or enters a contract. Works with AgentKit, Eliza, Automaton, or any framework that transacts on Base.
 
-**DeFi protocols** — Gate agent access or set risk parameters. Call the API before allowing an agent to interact with your lending pool, DEX, or yield vault.
+**x402 service providers** — Gate access to your paid API by agent reputation. Low-trust wallets pay more or get blocked. High-trust wallets get priority. One middleware call.
 
-**x402 builders** — A real-world example of an API monetized natively through the x402 payment standard.
+**DeFi protocols** — Set risk parameters based on agent scores. Before allowing an agent to interact with your lending pool, DEX, or yield vault, check if it's a real operator or a bot farm.
 
 ---
 
@@ -250,6 +258,16 @@ Requires **Node.js v22**. Starts on `http://localhost:3000`.
 **Score caching:** 1 hour cache. Background refresh for up to 50 expired scores per batch. Force recalculation with `/v1/score/refresh` ($0.25). Admin flush endpoint expires all cached scores to trigger ecosystem-wide re-scoring after model updates.
 
 **Auto-recalibration:** The system continuously adjusts scoring thresholds based on real-world outcome data, closing the feedback loop between predicted trust and actual wallet behavior.
+
+### Agent auto-discovery
+
+x402-compatible agents can discover all DJD endpoints automatically:
+
+```bash
+curl https://djd-agent-score.fly.dev/.well-known/x402
+```
+
+Returns a machine-readable manifest of every endpoint, its price, input schema, and integration options.
 
 ### How x402 payments work
 
