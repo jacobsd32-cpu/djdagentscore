@@ -73,6 +73,13 @@ export const ErrorCodes = {
   WEBHOOK_LIMIT_EXCEEDED: 'webhook_limit_exceeded',
   WEBHOOK_URL_INVALID: 'webhook_url_invalid',
 
+  // Billing
+  BILLING_DISABLED: 'billing_disabled',
+  BILLING_INVALID_PLAN: 'billing_invalid_plan',
+  BILLING_SESSION_NOT_FOUND: 'billing_session_not_found',
+  BILLING_KEY_NOT_READY: 'billing_key_not_ready',
+  BILLING_WEBHOOK_SIGNATURE: 'billing_webhook_signature_invalid',
+
   // History
   HISTORY_NOT_FOUND: 'history_not_found',
   INVALID_DATE_RANGE: 'invalid_date_range',

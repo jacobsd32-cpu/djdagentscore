@@ -24,6 +24,11 @@ const FREE_ENDPOINTS = new Set([
   '/v1/certification',        // GET check is free
   '/v1/certification/badge',  // SVG badge is free
   '/v1/webhooks',             // webhook management is free (paid via subscription)
+  '/billing/checkout',        // Stripe billing — self-service
+  '/billing/success',
+  '/billing/plans',
+  '/billing/portal',
+  '/stripe/webhook',          // Stripe webhook
 ])
 
 function tierFromEndpoint(endpoint: string): string {

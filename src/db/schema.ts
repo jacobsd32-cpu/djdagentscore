@@ -435,6 +435,28 @@ db.exec(`
   );
 `)
 
+// ── Stripe Billing ──────────────────────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS subscriptions (
+    id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+    stripe_customer_id        TEXT NOT NULL,
+    stripe_subscription_id    TEXT UNIQUE,
+    stripe_checkout_session_id TEXT UNIQUE NOT NULL,
+    email                     TEXT,
+    plan                      TEXT NOT NULL,
+    status                    TEXT NOT NULL DEFAULT 'pending',
+    api_key_id                INTEGER REFERENCES api_keys(id),
+    created_at                TEXT NOT NULL DEFAULT (datetime('now')),
+    canceled_at               TEXT,
+    current_period_end        TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_subscriptions_customer ON subscriptions(stripe_customer_id);
+  CREATE INDEX IF NOT EXISTS idx_subscriptions_checkout ON subscriptions(stripe_checkout_session_id);
+`)
+
+// Add stripe_customer_id to api_keys (nullable — admin-created keys won't have one)
+addColumnIfMissing('api_keys', 'stripe_customer_id', 'TEXT')
+
 // ── Wallet address case-normalization migration ─────────────────────────────
 // Ethereum addresses are case-insensitive, but SQLite TEXT PRIMARY KEY is
 // case-sensitive. Older data may contain mixed-case duplicates (e.g.

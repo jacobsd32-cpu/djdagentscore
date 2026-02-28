@@ -28,6 +28,10 @@ import certificationRoute from './routes/certification.js'
 import explorerRoute from './routes/explorer.js'
 import blogRoute from './routes/blog.js'
 import { adminWebhooks, publicWebhooks } from './routes/webhooks.js'
+import stripeWebhookRoute from './routes/stripeWebhook.js'
+import billingRoute from './routes/billing.js'
+import { initStripe } from './billing/stripeClient.js'
+import { initBillingPlans } from './config/plans.js'
 import { requestIdMiddleware } from './middleware/requestId.js'
 import { paidRateLimitMiddleware } from './middleware/paidRateLimit.js'
 import { errorResponse, AppError } from './errors.js'
@@ -87,6 +91,12 @@ const FACILITATOR_URL = process.env.FACILITATOR_URL ?? 'https://x402.org/facilit
 const NETWORK: Network = 'eip155:8453' // Base mainnet (CAIP-2)
 const facilitatorClient = new HTTPFacilitatorClient({ url: FACILITATOR_URL })
 
+// ---------- Stripe Billing (optional) ----------
+// When STRIPE_SECRET_KEY is set, billing endpoints are enabled.
+// initBillingPlans() validates that all STRIPE_PRICE_* vars are present.
+initStripe()
+initBillingPlans()
+
 // ---------- App ----------
 
 const app = new Hono<AppEnv>()
@@ -104,6 +114,10 @@ app.use('*', cors({
   allowMethods: ['GET', 'POST', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
 }))
+// Stripe webhook MUST be mounted before bodyLimit — signature verification
+// requires the raw request body bytes, which bodyLimit would consume/truncate.
+app.route('/stripe/webhook', stripeWebhookRoute)
+
 app.use('*', bodyLimit({
   maxSize: API_CONFIG.MAX_BODY_SIZE,
   onError: (c) => c.json(errorResponse('body_too_large', 'Request body too large'), 413),
@@ -132,6 +146,7 @@ app.route('/openapi.json', openapiRoute)    // free — API spec
 app.route('/v1/data/economy', economyRoute)  // free — ecosystem health metrics
 app.route('/docs', docsRoute)                 // free — Swagger UI
 app.route('/metrics', metricsRoute)             // free — Prometheus metrics
+app.route('/billing', billingRoute)             // free — Stripe billing self-service
 
 // ---------- x402 Payment Middleware (v2.5 + Bazaar Discovery) ----------
 // Protects paid endpoints. Free endpoints (leaderboard, health) are not listed so they pass through.

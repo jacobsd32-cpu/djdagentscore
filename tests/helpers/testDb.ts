@@ -189,7 +189,22 @@ export function createTestDb(): Database.Database {
       is_active INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       last_used_at TEXT,
-      revoked_at TEXT
+      revoked_at TEXT,
+      stripe_customer_id TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+      stripe_customer_id        TEXT NOT NULL,
+      stripe_subscription_id    TEXT UNIQUE,
+      stripe_checkout_session_id TEXT UNIQUE NOT NULL,
+      email                     TEXT,
+      plan                      TEXT NOT NULL,
+      status                    TEXT NOT NULL DEFAULT 'pending',
+      api_key_id                INTEGER REFERENCES api_keys(id),
+      created_at                TEXT NOT NULL DEFAULT (datetime('now')),
+      canceled_at               TEXT,
+      current_period_end        TEXT
     );
 
     CREATE TABLE IF NOT EXISTS score_history (

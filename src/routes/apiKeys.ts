@@ -1,20 +1,12 @@
-import crypto from 'node:crypto'
 import { Hono } from 'hono'
 import { db } from '../db.js'
 import { errorResponse } from '../errors.js'
 import { adminAuth } from '../middleware/adminAuth.js'
+import { generateApiKey, hashKey, keyPrefix } from '../utils/apiKeyUtils.js'
 
 const apiKeys = new Hono()
 
 apiKeys.use('*', adminAuth)
-
-function generateApiKey(): string {
-  return `djd_live_${crypto.randomBytes(32).toString('hex')}`
-}
-
-function hashKey(key: string): string {
-  return crypto.createHash('sha256').update(key).digest('hex')
-}
 
 // POST / — Create a new API key
 apiKeys.post('/', async (c) => {
@@ -25,7 +17,7 @@ apiKeys.post('/', async (c) => {
 
   const rawKey = generateApiKey()
   const keyHash = hashKey(rawKey)
-  const keyPrefix = `${rawKey.slice(0, 16)}...`
+  const prefix = keyPrefix(rawKey)
   const name = body.name ?? null
   const tier = body.tier ?? 'standard'
   const monthlyLimit = body.monthly_limit ?? 10000
@@ -40,13 +32,13 @@ apiKeys.post('/', async (c) => {
     INSERT INTO api_keys (key_hash, key_prefix, wallet, name, tier, monthly_limit, usage_reset_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `)
-    .run(keyHash, keyPrefix, body.wallet.toLowerCase(), name, tier, monthlyLimit, nextReset.toISOString())
+    .run(keyHash, prefix, body.wallet.toLowerCase(), name, tier, monthlyLimit, nextReset.toISOString())
 
   return c.json(
     {
       id: result.lastInsertRowid,
       key: rawKey, // ONLY returned on creation
-      key_prefix: keyPrefix,
+      key_prefix: prefix,
       wallet: body.wallet.toLowerCase(),
       name,
       tier,
