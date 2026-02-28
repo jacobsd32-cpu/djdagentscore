@@ -14,7 +14,9 @@ import { ENDPOINT_PRICING } from '../config/constants.js'
 const wellKnown = new Hono()
 
 wellKnown.get('/', (c) => {
-  const baseUrl = new URL(c.req.url).origin
+  const raw = new URL(c.req.url)
+  const proto = c.req.header('x-forwarded-proto') ?? raw.protocol.replace(':', '')
+  const baseUrl = `${proto}://${raw.host}`
 
   return c.json({
     x402: {

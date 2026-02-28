@@ -13,8 +13,7 @@ import type { MiddlewareHandler } from 'hono'
 import { RATE_LIMIT_CONFIG } from '../config/constants.js'
 import { countFreeTierUsesToday } from '../db.js'
 import { getOrCalculateScore, MODEL_VERSION } from '../scoring/engine.js'
-import type { Address } from '../types.js'
-import { isValidAddress } from '../types.js'
+import { normalizeWallet } from '../utils/walletUtils.js'
 
 const { FREE_DAILY_LIMIT } = RATE_LIMIT_CONFIG
 
@@ -58,12 +57,12 @@ export const freeTierMiddleware: MiddlewareHandler = async (c, _next) => {
   }
 
   // Still within free quota — serve directly
-  const wallet = c.req.query('wallet')
-  if (!wallet || !isValidAddress(wallet)) {
+  const wallet = normalizeWallet(c.req.query('wallet'))
+  if (!wallet) {
     return c.json({ error: 'Invalid or missing wallet address' }, 400)
   }
 
-  const result = await getOrCalculateScore(wallet as Address)
+  const result = await getOrCalculateScore(wallet)
 
   // Signal to queryLogger that this was a free-tier response
   c.set('freeTier', true)
