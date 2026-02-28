@@ -29,6 +29,7 @@ const FREE_ENDPOINTS = new Set([
   '/billing/plans',
   '/billing/portal',
   '/stripe/webhook',          // Stripe webhook
+  '/pricing',                 // Pricing page
 ])
 
 function tierFromEndpoint(endpoint: string): string {

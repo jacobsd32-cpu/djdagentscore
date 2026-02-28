@@ -59,8 +59,8 @@ const SWAGGER_HTML = `<!DOCTYPE html>
 </head>
 <body>
   <div class="header-banner">
-    <h1>DJD Agent Score <span class="badge">x402</span></h1>
-    <p>On-chain reputation scoring for autonomous AI agents &middot; Paid via USDC micropayments on Base</p>
+    <h1>DJD Agent Score <span class="badge">API</span></h1>
+    <p>On-chain reputation scoring for autonomous AI agents &middot; <a href="/pricing" style="color:#818cf8;text-decoration:underline">View pricing &amp; plans</a></p>
   </div>
   <div id="swagger-ui"></div>
   <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js" crossorigin></script>

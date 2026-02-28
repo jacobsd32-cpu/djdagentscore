@@ -76,10 +76,10 @@ const blogNav = `
   <div class="nav-links">
     <a href="/explorer">Explorer</a>
     <a href="/blog" class="active">Blog</a>
-    <a href="/#lookup">Score</a>
+    <a href="/pricing">Pricing</a>
     <a href="/#api-ref">API</a>
-    <a href="https://github.com/jacobsd32-cpu/djdagentscore" target="_blank">GitHub</a>
-    <a class="nav-cta" href="/#lookup">Try It Free</a>
+    <a href="/docs">Docs</a>
+    <a class="nav-cta" href="/pricing">Get Started</a>
   </div>
 </nav>
 </div>
