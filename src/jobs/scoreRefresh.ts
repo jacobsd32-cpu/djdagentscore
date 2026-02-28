@@ -11,7 +11,7 @@
 import { parseAbi } from 'viem'
 import { getPublicClient, USDC_ADDRESS } from '../blockchain.js'
 import { JOB_CONFIG } from '../config/constants.js'
-import { db, getExpiredWallets, pruneWalletSnapshots } from '../db.js'
+import { db, getExpiredWallets, getUnscoredWallets, pruneWalletSnapshots } from '../db.js'
 import { log } from '../logger.js'
 import { getOrCalculateScore } from '../scoring/engine.js'
 import type { Address, BalanceTrend } from '../types.js'
@@ -280,15 +280,16 @@ export async function runHourlyRefresh(): Promise<void> {
   hourStart.setMinutes(0, 0, 0)
 
   try {
-    // Expired wallets due for refresh
+    // ── Step 1: Refresh wallets with expired scores ─────────────────────────
     const expired = getExpiredWallets()
     const toRefresh = expired.slice(0, REFRESH_BATCH_SIZE)
 
+    let refreshed = 0
+
     if (toRefresh.length === 0) {
-      log.info('refresh', 'No wallets to refresh')
+      log.info('refresh', 'No expired wallets to refresh')
     } else {
-      log.info('refresh', `Refreshing ${toRefresh.length} wallet(s)`)
-      let refreshed = 0
+      log.info('refresh', `Refreshing ${toRefresh.length} expired wallet(s)`)
 
       for (const wallet of toRefresh) {
         try {
@@ -301,11 +302,37 @@ export async function runHourlyRefresh(): Promise<void> {
         }
         await new Promise((res) => setTimeout(res, INTER_WALLET_DELAY_MS))
       }
-
-      jobStats.hourlyRefresh.walletsRefreshed = refreshed
     }
 
-    // Aggregate hourly economy metrics
+    // ── Step 2: Proactively seed unscored wallets ───────────────────────────
+    // Prevents the cold-start deadlock: no scores → empty leaderboard → no API
+    // queries → no scores. Picks wallets with ≥3 transactions, most recently
+    // active first, up to whatever batch capacity remains after expired refreshes.
+    const seedSlots = Math.max(0, REFRESH_BATCH_SIZE - toRefresh.length)
+    if (seedSlots > 0) {
+      const unscored = getUnscoredWallets(seedSlots)
+      if (unscored.length > 0) {
+        log.info('refresh', `Seeding ${unscored.length} unscored wallet(s)`)
+
+        for (const wallet of unscored) {
+          try {
+            await snapshotAndUpdateMetrics(wallet)
+            await getOrCalculateScore(wallet as Address, true, 0)
+            refreshed++
+            log.info('refresh', `Seeded ${wallet}`)
+          } catch (err) {
+            log.error('refresh', `Seed failed for ${wallet}`, err)
+          }
+          await new Promise((res) => setTimeout(res, INTER_WALLET_DELAY_MS))
+        }
+      } else {
+        log.info('refresh', 'No unscored wallets with sufficient history to seed')
+      }
+    }
+
+    jobStats.hourlyRefresh.walletsRefreshed = refreshed
+
+    // ── Step 3: Aggregate hourly economy metrics ────────────────────────────
     try {
       insertHourlyEconomyMetrics(hourStart)
       log.info('refresh', 'Hourly economy metrics aggregated')
@@ -314,7 +341,7 @@ export async function runHourlyRefresh(): Promise<void> {
     }
 
     jobStats.hourlyRefresh.lastRun = new Date().toISOString()
-    log.info('refresh', 'Hourly refresh complete')
+    log.info('refresh', `Hourly refresh complete — ${refreshed} wallet(s) processed`)
   } catch (err) {
     log.error('refresh', 'Hourly refresh error', err)
   }

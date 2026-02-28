@@ -13,12 +13,25 @@ import { MODEL_VERSION } from '../scoring/responseBuilders.js'
 
 const startTime = Date.now()
 
-const health = new Hono()
+/**
+ * Cache the full health payload for CACHE_TTL_MS to prevent DB contention.
+ *
+ * The 6 COUNT(*) queries are cheap individually (~1ms each) but when the
+ * USDC indexer is batch-writing thousands of rows, SQLite's WAL checkpoint
+ * can block reads on a single-vCPU Fly machine. Caching for 10s ensures the
+ * Fly health probe (60s interval, 25s timeout) always gets a near-instant
+ * response regardless of indexer load.
+ */
+const CACHE_TTL_MS = 10_000
 
-health.get('/', (c) => {
+// biome-ignore lint/suspicious/noExplicitAny: health payload shape is ad-hoc
+let cachedPayload: any = null
+let cachedAt = 0
+
+function buildHealthPayload() {
   const indexer = getIndexerStatus()
 
-  return c.json({
+  return {
     status: 'ok',
     version: MODEL_VERSION,
     modelVersion: MODEL_VERSION,
@@ -57,7 +70,25 @@ health.get('/', (c) => {
         lastRun: jobStats.dailyAggregator.lastRun || null,
       },
     },
-  })
+  }
+}
+
+const health = new Hono()
+
+health.get('/', (c) => {
+  const now = Date.now()
+
+  // Serve cached payload if fresh; otherwise rebuild (and cache)
+  if (!cachedPayload || now - cachedAt > CACHE_TTL_MS) {
+    cachedPayload = buildHealthPayload()
+    cachedAt = now
+  } else {
+    // Update the uptime counter even when serving from cache — it's the one
+    // field consumers expect to always be fresh, and it's free to compute.
+    cachedPayload.uptime = Math.floor((now - startTime) / 1000)
+  }
+
+  return c.json(cachedPayload)
 })
 
 export default health

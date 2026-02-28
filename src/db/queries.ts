@@ -82,6 +82,21 @@ const stmtGetExpired = db.prepare<[], { wallet: string }>(`
   SELECT wallet FROM scores WHERE expires_at < datetime('now')
 `)
 
+/**
+ * Unscored wallets with enough transaction history to produce meaningful scores.
+ * Picks the most recently active wallets first to prioritize "alive" agents.
+ * Requires ≥3 transactions to avoid scoring near-empty wallets.
+ */
+const stmtGetUnscoredWallets = db.prepare<[number], { wallet: string }>(`
+  SELECT w.wallet
+  FROM wallet_index w
+  LEFT JOIN scores s ON s.wallet = w.wallet
+  WHERE s.wallet IS NULL
+    AND w.total_tx_count >= 3
+  ORDER BY w.last_seen DESC
+  LIMIT ?
+`)
+
 const stmtCountScores = db.prepare<[], { count: number }>(`
   SELECT COUNT(*) as count FROM scores
 `)
@@ -300,6 +315,11 @@ export function getScoreHistory(wallet: string): ScoreHistoryRow[] {
 
 export function getExpiredWallets(): string[] {
   return stmtGetExpired.all().map((r) => r.wallet)
+}
+
+/** Returns wallets from wallet_index that have never been scored but have ≥3 transactions. */
+export function getUnscoredWallets(limit: number): string[] {
+  return stmtGetUnscoredWallets.all(limit).map((r) => r.wallet)
 }
 
 export function countCachedScores(): number {
