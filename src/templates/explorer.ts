@@ -10,7 +10,7 @@ export const explorerHtml = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Explorer - DJD Agent Score</title>
-<meta name="description" content="Look up trust scores for any AI agent wallet on Base. Explore the leaderboard, check reputation, and verify wallets before transacting.">
+<meta name="description" content="Look up reputation scores for any Base wallet. Explore the leaderboard, check on-chain history, and verify wallets before your agent transacts.">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -182,7 +182,7 @@ footer a{color:var(--muted)}
   </div>
 </div>
 <footer>
-  DJD Agent Score &middot; Trust infrastructure for the agent economy &middot;
+  DJD Agent Score &middot; Reputation API for the agent economy &middot;
   <a href="/v1/leaderboard">API</a> &middot;
   <a href="https://github.com/jacobsd32-cpu/djdagentscore">GitHub</a> &middot;
   <a href="/terms">Terms</a>

@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DJD Agent Score — Trust Infrastructure for AI Agents</title>
-<meta name="description" content="When your AI agent is about to send money to another AI agent, how do you know that agent is legit? Trust score 0–100 from on-chain history. One API call, no signup.">
+<title>DJD Agent Score — Reputation API for the Agent Economy</title>
+<meta name="description" content="Reputation API for the agent economy. One API call returns a 0-100 trust score for any Base wallet. Know whether a wallet is safe before your agent sends a dollar.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="DJD Agent Score — Trust Infrastructure for AI Agents">
-<meta property="og:description" content="Trust score 0–100 for any AI agent wallet. On-chain reputation from transaction history. One API call, no signup.">
+<meta property="og:title" content="DJD Agent Score — Reputation API for the Agent Economy">
+<meta property="og:description" content="Reputation API for the agent economy. One API call returns a 0-100 trust score for any Base wallet. Under 200ms.">
 <meta property="og:url" content="https://djdagentscore.dev/">
 <meta property="og:site_name" content="DJD Agent Score">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="DJD Agent Score — Trust Infrastructure for AI Agents">
-<meta name="twitter:description" content="Trust score 0–100 for any AI agent wallet. On-chain reputation from transaction history. One API call, no signup.">
+<meta name="twitter:title" content="DJD Agent Score — Reputation API for the Agent Economy">
+<meta name="twitter:description" content="Reputation API for the agent economy. One API call returns a 0-100 trust score for any Base wallet. Under 200ms.">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -287,10 +287,10 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 <!-- HERO -->
 <div class="hero">
   <div class="hero-chip"><span class="dot"></span> Live on Base &middot; Free tier available</div>
-  <h1>Trust scores for the <em>autonomous agent economy</em></h1>
-  <p class="hero-sub">Before your AI agent sends money to another AI agent, it asks us one question: <strong>is this wallet legit?</strong> We check the blockchain and answer in milliseconds.</p>
+  <h1>Stop your agent from <em>getting rugged.</em></h1>
+  <p class="hero-sub">One API call. Under 200ms. Know whether any Base wallet is safe to transact with before your agent sends a single dollar.</p>
   <div class="hero-actions">
-    <a href="#lookup" class="btn btn-primary">Score a Wallet</a>
+    <a href="#api-ref" class="btn btn-primary">Get Your API Key (Free)</a>
     <a href="#explainer" class="btn btn-ghost">Watch the Demo</a>
   </div>
 </div>
@@ -308,8 +308,8 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 <!-- ANIMATED EXPLAINER -->
 <div class="sec" id="explainer">
   <div class="sec-label">See It Work</div>
-  <div class="sec-title">Watch a score decide in real time</div>
-  <div class="sec-desc">Your agent needs a service. Multiple agents offer it. Who do you trust?</div>
+  <div class="sec-title">Watch your integration decide in real time</div>
+  <div class="sec-desc">Your agent needs a service. Multiple agents offer it. Here's what AgentScore returns for each.</div>
   <div class="exp">
     <div class="exp-tabs">
       <button class="exp-tab active" data-exp="0">Legal Research</button>
@@ -318,7 +318,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
     </div>
     <div class="exp-scenario" data-scenario="0" data-winner="0">
       <div class="exp-stage">
-        <div class="exp-task">Your <strong>legal research bot</strong> needs to hire a research service. Three agents offer the work at different prices.</div>
+        <div class="exp-task">You're building a <strong>legal research agent</strong> that pays for external services. Three wallets offer the work. Here's what AgentScore returns for each.</div>
         <div class="exp-cards">
           <div class="exp-card" data-card="0">
             <div class="exp-card-name">LexAgent</div>
@@ -339,12 +339,12 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
             <div class="exp-card-stat">Created yesterday &middot; 0 completed jobs</div>
           </div>
         </div>
-        <div class="exp-result"><strong>LexAgent selected.</strong> Consistent 6-month history with 43 unique counterparties, no integrity flags. The cheapest option was created yesterday with zero history &mdash; price isn't everything.</div>
+        <div class="exp-result"><strong>Based on the scores, your agent's logic selects LexAgent.</strong> The cheapest option scored a 9 with zero transaction history. Your code caught it before it cost you anything.</div>
       </div>
     </div>
     <div class="exp-scenario" data-scenario="1" data-winner="2">
       <div class="exp-stage">
-        <div class="exp-task">Your <strong>content bot</strong> needs a translation service for a product launch. Three translation agents are available.</div>
+        <div class="exp-task">You're building a <strong>content translation agent</strong> that pays for external services. Three wallets offer the work. Here's what AgentScore returns for each.</div>
         <div class="exp-cards">
           <div class="exp-card" data-card="0">
             <div class="exp-card-name">TranslateAI</div>
@@ -365,12 +365,12 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
             <div class="exp-card-stat">8-month history &middot; 67 counterparties</div>
           </div>
         </div>
-        <div class="exp-result"><strong>LingoPro selected.</strong> Highest score with strong confidence. PolyGlot's wallet was created 3 days ago &mdash; insufficient history to trust with a product launch.</div>
+        <div class="exp-result"><strong>Based on the scores, your agent's logic selects LingoPro.</strong> PolyGlot was created 3 days ago with a single counterparty. Your integration flagged it automatically.</div>
       </div>
     </div>
     <div class="exp-scenario" data-scenario="2" data-winner="1">
       <div class="exp-stage">
-        <div class="exp-task">Your <strong>trading bot</strong> needs a market data feed. Three aggregator agents are available.</div>
+        <div class="exp-task">You're building a <strong>market data agent</strong> that pays for external services. Three wallets offer the work. Here's what AgentScore returns for each.</div>
         <div class="exp-cards">
           <div class="exp-card" data-card="0">
             <div class="exp-card-name">DataStream</div>
@@ -392,7 +392,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
             <div class="exp-card-stat">4-month history &middot; 22 counterparties</div>
           </div>
         </div>
-        <div class="exp-result"><strong>MarketPulse selected.</strong> DataStream was flagged &mdash; its wallet shares a funding source with 12 other wallets, indicating possible Sybil activity. Integrity matters more than price.</div>
+        <div class="exp-result"><strong>Based on the scores, your agent's logic selects MarketPulse.</strong> DataStream triggered a Sybil flag, sharing a funding source with 12 other wallets. Your agent never saw it as an option.</div>
       </div>
     </div>
     <div class="exp-ctrl">
@@ -410,22 +410,22 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 <div class="sec">
   <div class="sec-label">How It Works</div>
   <div class="sec-title">Three steps to trust</div>
-  <div class="sec-desc">Your agent sends a wallet address. We return a verdict. One API call, under 200ms.</div>
+  <div class="sec-desc">You integrate once. Your agent checks every counterparty at runtime. One API call, under 200ms.</div>
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
-      <h3>Query</h3>
-      <p>Your agent sends us any Base wallet address via a simple GET request. No API keys. No accounts. Free tier included.</p>
+      <h3>Integrate</h3>
+      <p>Drop in our SDK (npm or pip) or hit the REST API directly. Free tier included. No API key required for basic lookups.</p>
     </div>
     <div class="step">
       <div class="step-num">2</div>
-      <h3>Analyze</h3>
-      <p>We check every transaction that wallet has ever made. Five scoring dimensions plus two integrity detection systems produce a score from 0 to 100.</p>
+      <h3>Query</h3>
+      <p>Pass any Base wallet address. We analyze every on-chain transaction across five scoring dimensions plus two integrity detection systems. Response in under 200ms.</p>
     </div>
     <div class="step">
       <div class="step-num">3</div>
-      <h3>Decide</h3>
-      <p>Your agent receives a score, tier, confidence level, and an actionable recommendation: <strong>proceed</strong>, <strong>use caution</strong>, or <strong>don't transact</strong>.</p>
+      <h3>Gate</h3>
+      <p>You get back a score (0-100), a tier, a confidence level, and a recommendation: <strong>proceed</strong>, <strong>use caution</strong>, or <strong>block</strong>. Write your business logic around it.</p>
     </div>
   </div>
 </div>
@@ -523,7 +523,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 <div class="sec" id="api-ref">
   <div class="sec-label">Integration</div>
   <div class="sec-title">Add trust in one API call</div>
-  <div class="sec-desc">Score the recipient before every transaction. Gate payments on the recommendation field.</div>
+  <div class="sec-desc">Add a reputation check before every outbound transaction. Gate payments on the recommendation field.</div>
   <div class="code"><div class="code-l">JavaScript</div><pre><span class="c">// Before sending USDC, check the recipient's reputation</span>
 <span class="k">const</span> wallet = <span class="s">"0xRecipientAddress"</span>;
 <span class="k">const</span> { score, confidence, recommendation } = <span class="k">await</span> (
@@ -544,7 +544,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 <div class="sec">
   <div class="sec-label">Endpoints</div>
   <div class="sec-title">API reference</div>
-  <div class="sec-desc">Basic lookups are free. Paid tiers available via <a href="/pricing" style="color:var(--accent);text-decoration:underline">monthly plans</a> (credit card) or x402 micropayments (USDC on Base).</div>
+  <div class="sec-desc">Basic lookups are free. Upgrade when you're ready: <a href="/pricing" style="color:var(--accent);text-decoration:underline">monthly plans</a> (credit card) for predictable costs, or x402 micropayments (USDC on Base) for agents that pay per query from their own wallet.</div>
   <div class="api">
     <div class="api-r hdr"><div>Endpoint</div><div style="text-align:right">Price</div><div style="text-align:right">Method</div></div>
     <div class="api-r"><div><div class="api-ep">/v1/score/basic?wallet=</div><div class="api-d">Composite score, tier, confidence, recommendation</div></div><div class="api-p api-f">Free tier</div><div class="api-m">GET</div></div>

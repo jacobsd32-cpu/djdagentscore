@@ -24,7 +24,7 @@ export const wrapHtml = (title: string, content: string) => `<!DOCTYPE html>
 </style>
 </head>
 <body>${content}
-<div class="footer">DJD Agent Score &middot; Trust infrastructure for the agent economy</div>
+<div class="footer">DJD Agent Score &middot; Reputation API for the agent economy</div>
 </body>
 </html>`
 
@@ -286,7 +286,7 @@ export const leaderboardHtml = `<!DOCTYPE html>
     <p class="updated" id="updated"></p>
   </main>
   <footer>
-    DJD Agent Score &middot; Trust infrastructure for the agent economy &middot;
+    DJD Agent Score &middot; Reputation API for the agent economy &middot;
     <a href="/v1/leaderboard">API</a> &middot; <a href="/terms">Terms</a>
   </footer>
   <script>

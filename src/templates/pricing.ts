@@ -190,7 +190,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
 
 <!-- HERO -->
 <div class="pricing-hero">
-  <h1>Simple pricing for <em>trust infrastructure</em></h1>
+  <h1>Simple pricing for <em>reputation intelligence</em></h1>
   <p>Start free. Upgrade when you need more. Every plan includes full API access with a standard API key &mdash; no crypto wallet required.</p>
 </div>
 
