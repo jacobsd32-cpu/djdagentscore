@@ -67,7 +67,27 @@ export async function runOutcomeMatcher(db: DatabaseType): Promise<void> {
       string | null,
       number | null,
       number | null,
+      number | null,
+      number | null,
+      number | null,
+      number | null,
+      number | null,
     ]
+
+    // Prepared statement to look up dimension scores for a target wallet
+    const dimScoreLookup = db.prepare<
+      [string],
+      {
+        reliability_score: number | null
+        viability_score: number | null
+        identity_score: number | null
+        capability_score: number | null
+        behavior_score: number | null
+      }
+    >(
+      `SELECT reliability_score, viability_score, identity_score, capability_score, behavior_score
+       FROM scores WHERE wallet = ? LIMIT 1`,
+    )
     const pendingInserts: OutcomeRow[] = []
 
     for (let i = 0; i < unmatched.length; i++) {
@@ -141,6 +161,9 @@ export async function runOutcomeMatcher(db: DatabaseType): Promise<void> {
           ? Math.round((new Date(outcomeAt).getTime() - queryDate.getTime()) / (1000 * 60 * 60 * 24))
           : null
 
+        // Look up dimension scores at the time the query was made
+        const dimScores = dimScoreLookup.get(lookup.target_wallet)
+
         pendingInserts.push([
           lookup.id,
           lookup.target_wallet,
@@ -153,6 +176,11 @@ export async function runOutcomeMatcher(db: DatabaseType): Promise<void> {
           outcomeAt,
           daysToOutcome,
           outcomeValue,
+          dimScores?.reliability_score ?? null,
+          dimScores?.viability_score ?? null,
+          dimScores?.identity_score ?? null,
+          dimScores?.capability_score ?? null,
+          dimScores?.behavior_score ?? null,
         ])
 
         processed++
@@ -167,8 +195,10 @@ export async function runOutcomeMatcher(db: DatabaseType): Promise<void> {
         `INSERT INTO score_outcomes
            (query_id, target_wallet, requester_wallet,
             score_at_query, tier_at_query, confidence_at_query, model_version,
-            outcome_type, outcome_at, days_to_outcome, outcome_value)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            outcome_type, outcome_at, days_to_outcome, outcome_value,
+            reliability_at_query, viability_at_query, identity_at_query,
+            capability_at_query, behavior_at_query)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       db.transaction(() => {
         for (const row of pendingInserts) insertStmt.run(...row)

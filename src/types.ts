@@ -187,6 +187,22 @@ export interface FullScoreResponse extends BasicScoreResponse {
   scoreRange?: { low: number; high: number }
   topContributors?: string[]
   topDetractors?: string[]
+  // v2.5 flywheel enrichments
+  trajectory?: {
+    velocity: number | null
+    momentum: number | null
+    direction: 'improving' | 'declining' | 'stable' | 'volatile' | 'new'
+    modifier: number
+    dataPoints: number
+    spanDays: number
+  }
+  dampening?: {
+    wasDampened: boolean
+    maxDelta: number
+    actualDelta: number
+  }
+  effectiveWeights?: Record<string, number>
+  percentileRank?: number
 }
 
 // ---------- DB row shapes ----------

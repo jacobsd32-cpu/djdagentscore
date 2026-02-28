@@ -70,6 +70,13 @@ addColumnIfMissing('scores', 'sybil_indicators', "TEXT DEFAULT '[]'")
 addColumnIfMissing('scores', 'gaming_indicators', "TEXT DEFAULT '[]'")
 addColumnIfMissing('scores', 'behavior_score', 'INTEGER')
 
+// Migrate score_outcomes to include dimension scores at query time (Phase 3: adaptive weights)
+addColumnIfMissing('score_outcomes', 'reliability_at_query', 'INTEGER')
+addColumnIfMissing('score_outcomes', 'viability_at_query', 'INTEGER')
+addColumnIfMissing('score_outcomes', 'identity_at_query', 'INTEGER')
+addColumnIfMissing('score_outcomes', 'capability_at_query', 'INTEGER')
+addColumnIfMissing('score_outcomes', 'behavior_at_query', 'INTEGER')
+
 // Migrate score_history to include confidence + model_version
 addColumnIfMissing('score_history', 'confidence', 'REAL DEFAULT 0.0')
 addColumnIfMissing('score_history', 'model_version', "TEXT DEFAULT '1.0.0'")

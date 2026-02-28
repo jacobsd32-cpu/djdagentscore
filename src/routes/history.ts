@@ -8,6 +8,7 @@
 import { Hono } from 'hono'
 import { db } from '../db.js'
 import { errorResponse } from '../errors.js'
+import { computeTrajectory } from '../scoring/trajectory.js'
 import { normalizeWallet } from '../utils/walletUtils.js'
 
 const history = new Hono()
@@ -19,46 +20,6 @@ interface ScoreHistoryRow {
   calculated_at: string
   confidence: number
   model_version: string
-}
-
-interface TrendAnalysis {
-  direction: 'improving' | 'declining' | 'stable'
-  change_pct: number
-  avg_score: number
-  min_score: number
-  max_score: number
-}
-
-function calculateTrend(rows: ScoreHistoryRow[]): TrendAnalysis | null {
-  if (rows.length < 2) return null
-
-  const scores = rows.map((r) => r.score)
-  const latest = scores[0]! // newest first
-  const earliest = scores[scores.length - 1]!
-
-  const change = latest - earliest
-  const changePct = earliest !== 0 ? (change / earliest) * 100 : 0
-
-  const avg = scores.reduce((a, b) => a + b, 0) / scores.length
-  const min = Math.min(...scores)
-  const max = Math.max(...scores)
-
-  let direction: 'improving' | 'declining' | 'stable'
-  if (Math.abs(change) <= 5) {
-    direction = 'stable'
-  } else if (change > 0) {
-    direction = 'improving'
-  } else {
-    direction = 'declining'
-  }
-
-  return {
-    direction,
-    change_pct: Math.round(changePct * 10) / 10,
-    avg_score: Math.round(avg * 10) / 10,
-    min_score: min,
-    max_score: max,
-  }
 }
 
 history.get('/', (c) => {
@@ -115,7 +76,31 @@ history.get('/', (c) => {
   }
   const totalCount = (db.prepare(countSql).get(...countArgs) as { count: number })?.count ?? 0
 
-  const trend = calculateTrend(rows)
+  // v2.5: Use computeTrajectory for richer analysis (backward-compat trend fields preserved)
+  const trajectory = computeTrajectory({
+    scores: rows.map((r) => ({ score: r.score, calculatedAt: r.calculated_at })),
+  })
+
+  // Backward-compatible trend object (old 3-state direction + basic stats)
+  let trend: { direction: string; change_pct: number; avg_score: number; min_score: number; max_score: number } | null =
+    null
+  if (rows.length >= 2) {
+    const scores = rows.map((r) => r.score)
+    const latest = scores[0]!
+    const earliest = scores[scores.length - 1]!
+    const change = latest - earliest
+    const changePct = earliest !== 0 ? (change / earliest) * 100 : 0
+    const avg = scores.reduce((a, b) => a + b, 0) / scores.length
+    // Preserve original 3-state logic: ±5 score threshold (not velocity-based)
+    const dir3 = Math.abs(change) <= 5 ? 'stable' : change > 0 ? 'improving' : 'declining'
+    trend = {
+      direction: dir3,
+      change_pct: Math.round(changePct * 10) / 10,
+      avg_score: Math.round(avg * 10) / 10,
+      min_score: Math.min(...scores),
+      max_score: Math.max(...scores),
+    }
+  }
 
   return c.json({
     wallet,
@@ -132,6 +117,16 @@ history.get('/', (c) => {
       to: before ?? (rows.length > 0 ? rows[0]!.calculated_at : null),
     },
     ...(trend ? { trend } : {}),
+    // v2.5: Rich trajectory analysis
+    trajectory: {
+      velocity: trajectory.velocity,
+      momentum: trajectory.momentum,
+      direction: trajectory.direction,
+      volatility: trajectory.volatility,
+      modifier: trajectory.modifier,
+      dataPoints: trajectory.dataPoints,
+      spanDays: trajectory.spanDays,
+    },
   })
 })
 

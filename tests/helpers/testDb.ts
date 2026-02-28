@@ -121,7 +121,12 @@ export function createTestDb(): Database.Database {
       outcome_type TEXT,
       outcome_at TEXT,
       days_to_outcome INTEGER,
-      outcome_value REAL
+      outcome_value REAL,
+      reliability_at_query INTEGER,
+      viability_at_query INTEGER,
+      identity_at_query INTEGER,
+      capability_at_query INTEGER,
+      behavior_at_query INTEGER
     );
 
     CREATE TABLE IF NOT EXISTS fraud_reports (

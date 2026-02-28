@@ -410,3 +410,71 @@ export const BEHAVIOR_BREAKPOINTS = {
   /** Blend divisor for partial scoring: weight = (length - 1) / divisor. */
   partialBlendDivisor: 4,
 } as const
+
+// ---------------------------------------------------------------------------
+// Trajectory (Phase 4.5 — score history trend modifier)
+// ---------------------------------------------------------------------------
+
+export const TRAJECTORY_CONFIG = {
+  /** Minimum history entries before applying any modifier. */
+  MIN_DATA_POINTS: 3,
+  /** Consecutive streak length for ±5 modifier (requires matching velocity). */
+  STRONG_STREAK: 10,
+  /** Consecutive streak length for ±3 modifier. */
+  MODERATE_STREAK: 5,
+  /** Velocity (pts/day) threshold for strong trend. */
+  VELOCITY_STRONG: 1.0,
+  /** Velocity (pts/day) threshold for moderate trend. */
+  VELOCITY_MODERATE: 0.5,
+  /** Volatility (stdev) below this = stable (earns +1 bonus). */
+  STABILITY_THRESHOLD: 5,
+  /** Volatility (stdev) above this = volatile direction. */
+  VOLATILE_THRESHOLD: 15,
+  /** Absolute cap on trajectory modifier. */
+  MAX_MODIFIER: 5,
+} as const
+
+// ---------------------------------------------------------------------------
+// Population-Relative Adaptive Breakpoints (Phase 2)
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Outcome-Driven Adaptive Weights (Phase 3)
+// ---------------------------------------------------------------------------
+
+export const ADAPTIVE_WEIGHTS_CONFIG = {
+  /** Minimum outcome rows (with dimension scores) before weight learning activates. */
+  MIN_OUTCOMES: 50,
+  /** Minimum negative outcomes (fraud, no_activity) required. */
+  MIN_NEGATIVE: 5,
+  /** Max weight change per dimension per 6h recalibration cycle. */
+  MAX_SHIFT_PER_RUN: 0.02,
+  /** Max total deviation from default weight per dimension. */
+  MAX_TOTAL_DRIFT: 0.05,
+} as const
+
+// ---------------------------------------------------------------------------
+// Population-Relative Adaptive Breakpoints (Phase 2)
+// ---------------------------------------------------------------------------
+
+export const POPULATION_CONFIG = {
+  /** Minimum scored wallets before adaptive breakpoints activate. */
+  MIN_SAMPLE_SIZE: 50,
+  /** Maximum ratio by which a breakpoint input threshold can shift upward. */
+  MAX_SHIFT_RATIO: 0.3,
+  /** Dimension median score below which maturity factor = 0 (early ecosystem). */
+  MATURITY_BASELINE: 25,
+  /** Dimension median score at which maturity factor = 1 (mature ecosystem). */
+  MATURITY_CEILING: 65,
+} as const
+
+// ---------------------------------------------------------------------------
+// Confidence-Weighted Dampening (Phase 4)
+// ---------------------------------------------------------------------------
+
+export const DAMPENING_CONFIG = {
+  /** Max score swing allowed at confidence = 0.0 (low data, free to move). */
+  MAX_DELTA_LOW_CONF: 30,
+  /** Max score swing allowed at confidence = 1.0 (high data, sticky). */
+  MAX_DELTA_HIGH_CONF: 8,
+} as const
