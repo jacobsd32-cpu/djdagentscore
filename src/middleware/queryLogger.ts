@@ -59,10 +59,23 @@ export const queryLoggerMiddleware: MiddlewareHandler = async (c, next) => {
     const requesterWallet = getPayerWallet(c)
     const targetWallet = c.req.query('wallet') ?? null
     const hasApiKey = !!c.get('apiKeyWallet')
-    const responseSource = hasApiKey ? 'api_key' : isFreeTier ? 'free_tier' : 'paid'
+    const httpStatus = c.res.status
 
-    // Only record price_paid for actual x402 payments — API key requests
-    // bypass payment and should not inflate revenue metrics.
+    // Determine the true response source:
+    // - 402 = x402 rejected (no payment received)
+    // - API key = bypass payment entirely
+    // - free tier = free endpoint or quota-based
+    // - paid = successful x402 payment (2xx on a priced endpoint)
+    const responseSource = httpStatus === 402
+      ? 'payment_rejected'
+      : hasApiKey
+        ? 'api_key'
+        : isFreeTier
+          ? 'free_tier'
+          : 'paid'
+
+    // Only record price_paid when x402 actually collected payment —
+    // rejected requests, API key bypasses, and free tier should not inflate revenue.
     const actualPricePaid = responseSource === 'paid' ? pricePaid : 0
 
     insertQueryLog({
