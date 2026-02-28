@@ -30,7 +30,7 @@ Returns:
   "tier": "Emerging",
   "confidence": 0.16,
   "recommendation": "insufficient_history",
-  "modelVersion": "2.4.0",
+  "modelVersion": "2.5.0",
   "lastUpdated": "2026-02-25T04:12:50.000Z",
   "computedAt": "2026-02-25T04:12:50.000Z",
   "dataSource": "cached",
@@ -114,11 +114,11 @@ curl "https://djd-agent-score.fly.dev/v1/score/full?wallet=0x…" \
 
 ## How scoring works
 
-> **Model v2.4.0** — Insumer token-gating attestation for identity verification. Improved scoring accuracy for low-data wallets. Expanded capability signals. Auto-recalibrating tier thresholds from outcome data. Integrity layer hardening (sybil batch queries, fraud report deduplication).
+> **Model v2.5.0** — Intelligent Scoring Flywheel. Adaptive dimension breakpoints from population statistics. Outcome-learned dimension weights. Score trajectory analysis (velocity, momentum, direction). Confidence-weighted dampening for score stability. Percentile ranking.
 
 Every wallet is evaluated across five weighted dimensions based on its USDC transaction history on Base:
 
-| Dimension | Weight | What it measures |
+| Dimension | Base Weight | What it measures |
 |---|---|---|
 | **Payment Reliability** | 30% | Transaction history and consistency on Base |
 | **Economic Viability** | 25% | Financial health signals from USDC activity |
@@ -126,9 +126,13 @@ Every wallet is evaluated across five weighted dimensions based on its USDC tran
 | **Behavior** | 15% | Transaction timing patterns and anomaly detection |
 | **Capability** | 10% | Demonstrated service delivery and ecosystem participation |
 
+Dimension weights adapt over time based on outcome correlation data — dimensions that better predict real-world wallet behavior receive higher effective weights.
+
 **Score tiers:** Elite (90+) · Trusted (75–89) · Established (50–74) · Emerging (25–49) · Unverified (0–24). Tier thresholds auto-adjust based on outcome calibration data.
 
 The scoring engine indexes x402 settlements on-chain using the EIP-3009 `AuthorizationUsed` event. Agents that use x402 to pay for services accumulate verifiable payment history that feeds directly into their score. The more an agent transacts through x402, the more meaningful its reputation becomes.
+
+**Adaptive scoring:** The v2.5 flywheel makes scores smarter over time. Population-derived breakpoints ensure dimension scores reflect where a wallet stands relative to the ecosystem. Score trajectory analysis applies a ±5 point modifier based on whether a wallet's reputation is improving or declining. Confidence-weighted dampening prevents established scores from swinging on limited new data.
 
 **Integrity layers:** Sybil detection, gaming detection, and fraud report penalties are applied multiplicatively. Scores are cached for 1 hour with background refresh for active wallets.
 

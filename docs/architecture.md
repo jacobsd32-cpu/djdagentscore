@@ -57,11 +57,17 @@ src/
 ├── scoring/
 │   ├── dimensions.ts               # Reliability, Viability, Identity, Capability (+ counterparties, longevity)
 │   ├── behavior.ts                 # Behavior dimension (transaction patterns, Bayesian blending)
-│   ├── engine.ts                   # Orchestration, caching, fraud penalties
+│   ├── engine.ts                   # Orchestration, caching, fraud penalties, flywheel pipeline
 │   ├── integrity.ts                # Sybil + gaming integrity modifier
 │   ├── sybil.ts                    # Sybil detection heuristics
 │   ├── gaming.ts                   # Score gaming detection
-│   ├── confidence.ts               # Confidence scoring
+│   ├── confidence.ts               # Confidence scoring (trajectory stability signal)
+│   ├── trajectory.ts               # Score velocity, momentum, direction → ±5 composite modifier
+│   ├── populationStats.ts          # Population percentiles from scored wallets (cached 6h)
+│   ├── adaptiveBreakpoints.ts      # Shift dimension breakpoints from population medians
+│   ├── adaptiveWeights.ts          # Learn dimension weights from outcome correlations
+│   ├── dampening.ts                # Confidence-weighted score stability
+│   ├── caps.ts                     # Sybil caps + gaming penalties (pure function)
 │   ├── dataAvailability.ts         # Data sufficiency checks
 │   ├── responseBuilders.ts         # BasicScoreResponse / FullScoreResponse builders
 │   ├── calibrationReport.ts        # Scoring model calibration
@@ -88,17 +94,19 @@ src/
 
 The scoring engine orchestrates the full scoring pipeline:
 
-1. **Sybil detection** (DB-only, fast) — checks for known sybil patterns
-2. **Blockchain data fetch** (RPC) — USDC data, nonce, ETH balance, Basename lookup
-3. **Gaming checks** (DB + balance) — detects window-dressing and burst-and-stop patterns
-4. **Dimension scoring** — calculates all 5 dimensions with sybil caps and gaming penalties applied
-5. **Integrity multiplier** — multiplicative modifier from sybil + gaming + fraud reports
-6. **Confidence scoring** — multi-factor confidence estimate
-7. **Recommendation** — human-readable recommendation based on score + confidence + flags
+1. **Blockchain data fetch** (RPC) — USDC data, nonce, ETH balance, Basename lookup
+2. **Detections** — Sybil detection (DB-only, fast) + gaming checks (DB + balance)
+3. **Dimension scoring** — calculates all 5 dimensions with adaptive breakpoints from population stats, sybil caps, and gaming penalties
+4. **Composite score** — weighted sum using adaptive weights (learned from outcome correlations)
+5. **Trajectory modifier** — ±5 point adjustment based on score velocity, momentum, and direction
+6. **Confidence dampening** — clamps score delta based on confidence level (high-confidence scores are sticky)
+7. **Integrity multiplier** — multiplicative modifier from sybil + gaming + fraud reports
+8. **Confidence scoring** — multi-factor confidence estimate including trajectory stability
+9. **Explainability** — trajectory data, effective weights, percentile rank, dampening info in response
 
-Dimensions are weighted across Reliability, Viability, Identity, Behavior, and Capability. Weights and sub-signal point budgets are defined in `dimensions.ts`.
+Dimensions are weighted across Reliability, Viability, Identity, Behavior, and Capability. Base weights and sub-signal point budgets are defined in `dimensions.ts`. Effective weights adapt over time via `adaptiveWeights.ts`, which learns from outcome correlation data collected by the auto-recalibration job.
 
-The Behavior dimension uses statistical blending for wallets with limited transaction history. The Capability dimension includes ecosystem participation signals. Tier thresholds are dynamically adjusted by the auto-recalibration job based on outcome data.
+The Behavior dimension uses statistical blending for wallets with limited transaction history. The Capability dimension includes ecosystem participation signals. Dimension breakpoints shift based on population medians (`adaptiveBreakpoints.ts` + `populationStats.ts`), ensuring scores reflect where a wallet stands relative to the ecosystem. Tier thresholds are dynamically adjusted by the auto-recalibration job based on outcome data.
 
 The integrity multiplier applies multiplicative penalties from sybil indicators, gaming indicators, and fraud reports. See `integrity.ts` for constants.
 
@@ -147,6 +155,6 @@ SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached vol
 | Outcome matcher | Every 6 hours | Reconcile payment outcomes |
 | Anomaly detector | Every 15 min | Flag anomalous wallet behavior |
 | Sybil monitor | Every 5 min | Enhanced sybil detection |
-| Auto-recalibration | Every 6 hours | Adjust tier thresholds from outcome data |
+| Auto-recalibration | Every 6 hours | Adjust tier thresholds, update population stats, learn adaptive weights |
 | Daily aggregator | Daily | Aggregate wallet metrics |
 | GitHub re-verify | Daily | Refresh GitHub verification status |
