@@ -59,6 +59,11 @@ export const queryLoggerMiddleware: MiddlewareHandler = async (c, next) => {
     const requesterWallet = getPayerWallet(c)
     const targetWallet = c.req.query('wallet') ?? null
     const hasApiKey = !!c.get('apiKeyWallet')
+    const responseSource = hasApiKey ? 'api_key' : isFreeTier ? 'free_tier' : 'paid'
+
+    // Only record price_paid for actual x402 payments — API key requests
+    // bypass payment and should not inflate revenue metrics.
+    const actualPricePaid = responseSource === 'paid' ? pricePaid : 0
 
     insertQueryLog({
       requester_wallet: requesterWallet,
@@ -67,10 +72,10 @@ export const queryLoggerMiddleware: MiddlewareHandler = async (c, next) => {
       tier_requested: tierFromEndpoint(path),
       target_score: null,  // populated by future outcome-matching job
       target_tier: null,
-      response_source: hasApiKey ? 'api_key' : isFreeTier ? 'free_tier' : 'paid',
+      response_source: responseSource,
       response_time_ms: Date.now() - startTime,
       user_agent: c.req.header('user-agent') ?? null,
-      price_paid: isFreeTier ? 0 : pricePaid,
+      price_paid: actualPricePaid,
       is_free_tier: isFreeTier,
       timestamp: new Date().toISOString(),
     })
