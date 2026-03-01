@@ -9,3 +9,6 @@ data/
 .DS_Store
 .serena/
 .claude/
+x402/
+server.json
+docs/plans/
