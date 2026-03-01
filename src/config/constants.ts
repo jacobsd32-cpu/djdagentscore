@@ -153,6 +153,8 @@ export const BLOCKCHAIN_INDEXER_CONFIG = {
   MAX_CATCHUP_BLOCKS: 43_200n,
   /** SQLite micro-batch size for INSERT transactions */
   MICRO_BATCH_SIZE: 50,
+  /** Max blocks to process per poll cycle. Caps event-loop cost of catch-up. */
+  MAX_BLOCKS_PER_CYCLE: 2_000n,
 } as const
 
 // ── USDC Transfer Indexer ───────────────────────────────────────────────
@@ -176,6 +178,10 @@ export const USDC_INDEXER_CONFIG = {
   EVENT_LOOP_YIELD_MS: 50,
   /** Blocks behind tip at which we skip wallet stats refresh */
   CATCHUP_THRESHOLD: 50n,
+  /** Max blocks to process in a single poll cycle.
+   *  Caps the event-loop cost of catch-up — excess blocks are processed in
+   *  subsequent 15s poll cycles instead of one giant batch. */
+  MAX_BLOCKS_PER_CYCLE: 200n,
 } as const
 
 // ── Reputation Publisher ────────────────────────────────────────────────

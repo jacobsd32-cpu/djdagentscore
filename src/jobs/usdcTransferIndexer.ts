@@ -24,6 +24,7 @@ const {
   MICRO_BATCH_SIZE,
   EVENT_LOOP_YIELD_MS,
   CATCHUP_THRESHOLD,
+  MAX_BLOCKS_PER_CYCLE,
 } = USDC_INDEXER_CONFIG
 
 const TRANSFER_EVENT = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)')
@@ -149,26 +150,34 @@ export async function startUsdcTransferIndexer(): Promise<void> {
       const tip = await getPublicClient().getBlockNumber()
 
       if (tip > lastBlockIndexed) {
-        const isCatchingUp = tip - lastBlockIndexed > CATCHUP_THRESHOLD
+        const gap = tip - lastBlockIndexed
+        const isCatchingUp = gap > CATCHUP_THRESHOLD
+
+        // Cap the block range per cycle so each iteration stays bounded.
+        // Excess blocks are processed in subsequent 15s poll cycles.
+        const cycleEnd = gap > MAX_BLOCKS_PER_CYCLE ? lastBlockIndexed + MAX_BLOCKS_PER_CYCLE : tip
 
         if (isCatchingUp) {
-          log.info('usdc-indexer', `Catching up ${tip - lastBlockIndexed} blocks — skipping wallet stats refresh`)
+          log.info(
+            'usdc-indexer',
+            `Catching up ${gap} blocks (processing ${cycleEnd - lastBlockIndexed} this cycle) — skipping wallet stats refresh`,
+          )
         }
 
         const total = await iterateChunks({
           fromBlock: lastBlockIndexed + 1n,
-          toBlock: tip,
+          toBlock: cycleEnd,
           chunkSize: LOG_CHUNK_SIZE,
           yieldMs: Math.max(RATE_LIMIT_DELAY_MS, 50),
           processChunk: (start, end) => fetchAndIndexChunk(start, end, isCatchingUp),
         })
 
         if (total > 0) {
-          log.info('usdc-indexer', `Indexed ${total} USDC transfer(s) in blocks ${lastBlockIndexed + 1n}–${tip}`)
+          log.info('usdc-indexer', `Indexed ${total} USDC transfer(s) in blocks ${lastBlockIndexed + 1n}–${cycleEnd}`)
         }
 
-        lastBlockIndexed = tip
-        setIndexerState(STATE_KEY, tip.toString())
+        lastBlockIndexed = cycleEnd
+        setIndexerState(STATE_KEY, cycleEnd.toString())
       }
     } catch (err) {
       log.error('usdc-indexer', 'RPC error', err)

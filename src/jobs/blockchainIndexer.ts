@@ -46,6 +46,7 @@ const {
   EVENT_LOOP_YIELD_MS,
   MAX_CATCHUP_BLOCKS,
   MICRO_BATCH_SIZE,
+  MAX_BLOCKS_PER_CYCLE,
 } = BLOCKCHAIN_INDEXER_CONFIG
 
 const TRANSFER_EVENT = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)')
@@ -241,15 +242,23 @@ export async function startBlockchainIndexer(): Promise<void> {
       const tip = await getPublicClient().getBlockNumber()
 
       if (tip > lastBlockIndexed) {
+        const gap = tip - lastBlockIndexed
+        // Cap the block range per cycle to keep event-loop cost bounded.
+        const cycleEnd = gap > MAX_BLOCKS_PER_CYCLE ? lastBlockIndexed + MAX_BLOCKS_PER_CYCLE : tip
         const fromBlock = lastBlockIndexed + 1n
-        const count = await fetchAndIndexRange(fromBlock, tip)
 
-        if (count > 0) {
-          log.info('indexer', `Indexed ${count} transfer(s) in blocks ${fromBlock}–${tip}`)
+        if (gap > MAX_BLOCKS_PER_CYCLE) {
+          log.info('indexer', `${gap} blocks behind — processing ${MAX_BLOCKS_PER_CYCLE} this cycle`)
         }
 
-        lastBlockIndexed = tip
-        setIndexerState(STATE_KEY, tip.toString())
+        const count = await fetchAndIndexRange(fromBlock, cycleEnd)
+
+        if (count > 0) {
+          log.info('indexer', `Indexed ${count} transfer(s) in blocks ${fromBlock}–${cycleEnd}`)
+        }
+
+        lastBlockIndexed = cycleEnd
+        setIndexerState(STATE_KEY, cycleEnd.toString())
       }
     } catch (err) {
       log.error('indexer', 'RPC error', err)
