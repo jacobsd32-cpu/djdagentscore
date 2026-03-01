@@ -94,7 +94,9 @@ export const JOB_INTERVALS = {
 
 /** Staggered startup delays to avoid thundering herd on boot */
 export const JOB_STARTUP_DELAYS = {
-  USDC_INDEXER_MS: 30_000,
+  /** Let server serve health checks & requests before indexing starts */
+  BLOCKCHAIN_INDEXER_MS: 10_000,
+  USDC_INDEXER_MS: 45_000,
   INTENT_MATCHER_MS: 60_000,
   OUTCOME_MATCHER_MS: 90_000,
   AUTO_RECALIBRATION_MS: 120_000,

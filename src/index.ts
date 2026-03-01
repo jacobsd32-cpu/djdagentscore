@@ -433,12 +433,16 @@ server = serve({ fetch: app.fetch, port: PORT }, (info) => {
 
   log.info('jobs', 'Starting background processes...')
 
-  // ── 1. Blockchain indexer (continuous) ─────────────────────────────────────
-  startBlockchainIndexer().catch((err) =>
-    log.error('indexer', 'Fatal error, stopped', err),
-  )
+  // ── 1. Blockchain indexer (continuous, delayed 10s) ─────────────────────────
+  // Delayed start lets the server pass its first Fly.io health check before
+  // the indexer's synchronous SQLite writes start competing for the event loop.
+  setTimeout(() => {
+    startBlockchainIndexer().catch((err) =>
+      log.error('indexer', 'Fatal error, stopped', err),
+    )
+  }, JOB_STARTUP_DELAYS.BLOCKCHAIN_INDEXER_MS)
 
-  // ── 1b. USDC Transfer indexer (continuous, delayed 30s) ──────────────────
+  // ── 1b. USDC Transfer indexer (continuous, delayed 45s) ──────────────────
   // Staggered start prevents both indexers from competing for RPC bandwidth
   // and event loop time simultaneously, which was causing health check failures.
   setTimeout(() => {
