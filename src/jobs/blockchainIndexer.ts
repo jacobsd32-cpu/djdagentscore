@@ -45,6 +45,7 @@ const {
   LOG_CHUNK_SIZE,
   EVENT_LOOP_YIELD_MS,
   MAX_CATCHUP_BLOCKS,
+  MICRO_BATCH_SIZE,
 } = BLOCKCHAIN_INDEXER_CONFIG
 
 const TRANSFER_EVENT = parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)')
@@ -171,8 +172,15 @@ async function fetchAndIndexChunk(start: bigint, end: bigint): Promise<number> {
     })
   }
 
-  if (transfers.length > 0) {
-    indexTransferBatch(transfers)
+  // ── Micro-batch inserts to avoid blocking the event loop ────────────
+  // Each micro-batch runs in its own synchronous transaction.
+  // Yields between batches let health checks and HTTP requests interleave.
+  for (let i = 0; i < transfers.length; i += MICRO_BATCH_SIZE) {
+    const batch = transfers.slice(i, i + MICRO_BATCH_SIZE)
+    indexTransferBatch(batch)
+    if (i + MICRO_BATCH_SIZE < transfers.length) {
+      await new Promise((r) => setTimeout(r, EVENT_LOOP_YIELD_MS))
+    }
   }
   return transfers.length
 }

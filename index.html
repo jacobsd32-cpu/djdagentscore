@@ -13,7 +13,10 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="DJD Agent Score — Reputation API for the Agent Economy">
 <meta name="twitter:description" content="Reputation API for the agent economy. One API call returns a 0-100 trust score for any Base wallet. Under 200ms.">
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 <style>
 :root {
   --bg: #0a1628; --bg2: #0d1b2a; --bg3: #132238;
@@ -29,7 +32,7 @@
   --radius: 16px;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;scroll-padding-top:80px}
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 .wrap{max-width:1080px;margin:0 auto;padding:0 32px;position:relative;z-index:1}
 a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
@@ -616,7 +619,8 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
       <label>Your Contact (optional)</label>
       <input type="text" id="fbContact" placeholder="Email, wallet, or X handle for follow-up">
     </div>
-    <button class="fb-submit" onclick="submitFeedback()">Submit Feedback</button>
+    <button class="fb-submit" onclick="submitFeedback()">Open Email to Submit</button>
+    <div style="color:var(--text-muted);font-size:11px;text-align:center;margin-top:6px">Opens your email client to send feedback to jacobsd32@gmail.com</div>
     <div class="fb-msg" id="fbMsg"></div>
   </div>
 </div>
@@ -667,17 +671,23 @@ function mkEl(tag, cls, text) {
 }
 
 /* ── Stats ── */
-async function loadStats(){
-  try{var d=await(await fetch(A+'/health')).json();
+async function loadStats(retries){
+  if(retries===undefined)retries=2;
+  try{var r=await fetch(A+'/health');
+  if(!r.ok)throw new Error(r.status);
+  var d=await r.json();
   document.getElementById('sW').textContent=fmt(d.database.indexedWallets);
   document.getElementById('sT').textContent=fmt(d.database.totalTransactionsIndexed);
   document.getElementById('sQ').textContent=fmt(d.database.totalQueryLogEntries);
   document.getElementById('sS').textContent=d.indexer.running?'LIVE':'DOWN';
-  }catch(e){document.getElementById('sS').textContent='ERR'}}
+  }catch(e){if(retries>0){setTimeout(function(){loadStats(retries-1)},3000)}else{document.getElementById('sS').textContent='ERR'}}}
 
 /* ── Leaderboard ── */
-async function loadLB(){
-  try{var d=await(await fetch(A+'/v1/leaderboard')).json();
+async function loadLB(retries){
+  if(retries===undefined)retries=2;
+  try{var r=await fetch(A+'/v1/leaderboard');
+  if(!r.ok)throw new Error(r.status);
+  var d=await r.json();
   var t=document.getElementById('lbT'),e=document.getElementById('lbE');
   if(!d.leaderboard||!d.leaderboard.length){e.textContent='No scored wallets yet. Indexer is accumulating data.';return}
   e.style.display='none';
@@ -694,7 +704,7 @@ async function loadLB(){
     var tc={Elite:'var(--accent)',Trusted:'var(--green)',Established:'var(--yellow)',Emerging:'var(--orange)'}[tn]||'var(--text-muted)';
     var tDiv=mkEl('div','lb-t',tn);tDiv.style.color=tc;row.appendChild(tDiv);
     t.appendChild(row)});
-  }catch(e){document.getElementById('lbE').textContent='Could not load leaderboard.'}}
+  }catch(e){if(retries>0){setTimeout(function(){loadLB(retries-1)},3000)}else{document.getElementById('lbE').textContent='Could not load leaderboard.'}}}
 
 /* ── Score Lookup ── */
 var sCol=function(s){return s>=90?'var(--accent)':s>=75?'var(--green)':s>=50?'var(--yellow)':s>=25?'var(--orange)':'var(--text-muted)'};
@@ -746,8 +756,8 @@ function submitFeedback(){
   var entry={type:type,wallet:wallet,details:details,contact:contact,ts:new Date().toISOString()};
   var subject=encodeURIComponent('[DJD Feedback] '+type);
   var body=encodeURIComponent('Type: '+type+'\nWallet: '+(wallet||'N/A')+'\nContact: '+(contact||'N/A')+'\nTimestamp: '+entry.ts+'\n\nDetails:\n'+details);
-  window.open('mailto:feedback@djdagentscore.dev?subject='+subject+'&body='+body,'_blank');
-  msg.textContent='Feedback recorded. A compose window should open. If not, email feedback@djdagentscore.dev directly.';
+  window.open('mailto:jacobsd32@gmail.com?subject='+subject+'&body='+body,'_blank');
+  msg.textContent='Feedback recorded. A compose window should open. If not, email jacobsd32@gmail.com directly.';
   msg.className='fb-msg vis ok';
   document.getElementById('fbType').value='';document.getElementById('fbWallet').value='';
   document.getElementById('fbDetails').value='';document.getElementById('fbContact').value='';
@@ -788,8 +798,10 @@ document.getElementById('expReplay').addEventListener('click',function(){switchS
 
 /* ── Init ── */
 document.getElementById('wI').addEventListener('keydown',function(e){if(e.key==='Enter')doScore()});
-loadStats();loadLB();setInterval(loadStats,30000);
 switchScenario(0);
+/* Defer API calls so first paint isn't blocked */
+requestAnimationFrame(function(){setTimeout(function(){loadStats();loadLB()},100)});
+setInterval(loadStats,30000);
 
 var qw=new URLSearchParams(location.search).get('wallet');
 if(qw){document.getElementById('wI').value=qw;doScore(false);}

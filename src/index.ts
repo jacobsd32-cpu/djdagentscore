@@ -164,6 +164,18 @@ const payment = (price: number) => ({
   network: NETWORK,
 })
 
+let x402Ready = true
+// Catch x402 facilitator async init failure so the server doesn't crash
+process.on('unhandledRejection', (err: unknown) => {
+  if (err instanceof Error && err.constructor.name === 'RouteConfigurationError') {
+    x402Ready = false
+    log.warn('x402', `Facilitator init failed — paid endpoints will return 503: ${err.message}`)
+    return // swallow — don't crash
+  }
+  // Re-throw anything else so it crashes as usual
+  throw err
+})
+
 const x402Middleware = paymentMiddlewareFromConfig(
   {
     '/v1/score/full': {
@@ -317,9 +329,28 @@ const x402Middleware = paymentMiddlewareFromConfig(
   [{ network: NETWORK, server: new ExactEvmScheme() }],
 )
 
+// Paid route paths — used to scope 503 when x402 init fails
+const PAID_ROUTES = new Set([
+  '/v1/score/full',
+  '/v1/score/refresh',
+  '/v1/report',
+  '/v1/data/fraud/blacklist',
+  '/v1/score/batch',
+  '/v1/score/history',
+  '/v1/certification/apply',
+])
+
 app.use(async (c, next) => {
   // Skip x402 for API key authenticated requests
   if (c.get('apiKeyId')) {
+    await next()
+    return
+  }
+  // If x402 failed to init, only block paid routes — let free routes through
+  if (!x402Ready) {
+    if (PAID_ROUTES.has(c.req.path)) {
+      return c.json({ error: 'Payment service temporarily unavailable' }, 503)
+    }
     await next()
     return
   }
