@@ -28,3 +28,18 @@ export const db: DatabaseType = new Database(DB_PATH)
 db.pragma('journal_mode = DELETE')
 db.pragma('synchronous = FULL')
 db.pragma('foreign_keys = ON')
+
+// Enable incremental auto-vacuum so `PRAGMA incremental_vacuum` in the data
+// pruner can return freed pages to the OS. On a brand-new database this takes
+// effect immediately. On an existing database the mode is stored but only
+// activates after a full VACUUM (which temporarily doubles disk usage). The
+// data pruner gracefully handles the NONE case — deleted pages still go on
+// SQLite's free-list and get reused by future inserts, preventing growth.
+const currentAutoVacuum = (db.pragma('auto_vacuum') as Array<{ auto_vacuum: number }>)[0]?.auto_vacuum ?? 0
+if (currentAutoVacuum === 0) {
+  // auto_vacuum = NONE — set to INCREMENTAL for future effect.
+  // On existing databases this requires a VACUUM to activate, which we defer
+  // until the pruner has shrunk the data enough to make it safe (< 50% disk).
+  db.pragma('auto_vacuum = INCREMENTAL')
+}
+export const autoVacuumMode = currentAutoVacuum === 2 ? 'incremental' : currentAutoVacuum === 1 ? 'full' : 'none'

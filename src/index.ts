@@ -53,6 +53,7 @@ import { runAutoRecalibration } from './scoring/autoRecalibration.js'
 import { runGithubReverify } from './jobs/githubReverify.js'
 import { processWebhookQueue } from './jobs/webhookDelivery.js'
 import { runReputationPublisher } from './jobs/reputationPublisher.js'
+import { runDataPruner } from './jobs/dataPruner.js'
 import { jobStats } from './jobs/jobStats.js'
 import { db, getIndexerState, setIndexerState } from './db.js'
 import { log } from './logger.js'
@@ -568,6 +569,7 @@ server = serve({ fetch: app.fetch, port: PORT }, (info) => {
         if (today !== lastAggDate) {
           await runDailyAggregator(db)
           await runGithubReverify()
+          await runDataPruner(db)
           lastAggDate = today
           setIndexerState('last_agg_date', today)
         }

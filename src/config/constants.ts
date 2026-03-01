@@ -184,6 +184,25 @@ export const USDC_INDEXER_CONFIG = {
   MAX_BLOCKS_PER_CYCLE: 200n,
 } as const
 
+// ── Data Pruning ────────────────────────────────────────────────────────
+
+/** Automatic pruning of unbounded tables to prevent disk exhaustion.
+ *  Runs once per day inside the daily aggregator job.
+ *  wallet_transfer_stats (pre-aggregated) is preserved — only raw rows are pruned. */
+export const DATA_PRUNING_CONFIG = {
+  /** Keep raw USDC transfers for this many days. Older rows are deleted.
+   *  wallet_transfer_stats retains the aggregated totals indefinitely. */
+  USDC_TRANSFERS_RETENTION_DAYS: 14,
+  /** Keep query_log entries for this many days */
+  QUERY_LOG_RETENTION_DAYS: 90,
+  /** Keep webhook_deliveries for this many days */
+  WEBHOOK_DELIVERIES_RETENTION_DAYS: 30,
+  /** Max rows to delete per batch (avoids long-held write lock) */
+  DELETE_BATCH_SIZE: 10_000,
+  /** Yield between delete batches (ms) */
+  DELETE_YIELD_MS: 100,
+} as const
+
 // ── Reputation Publisher ────────────────────────────────────────────────
 
 export const REPUTATION_PUBLISHER_CONFIG = {

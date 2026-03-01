@@ -311,6 +311,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_usdc_transfers_from ON usdc_transfers(from_wallet);
   CREATE INDEX IF NOT EXISTS idx_usdc_transfers_to ON usdc_transfers(to_wallet);
   CREATE INDEX IF NOT EXISTS idx_usdc_transfers_block ON usdc_transfers(block_number);
+  CREATE INDEX IF NOT EXISTS idx_usdc_transfers_timestamp ON usdc_transfers(timestamp);
 
   -- P3: Calibration Reports
   CREATE TABLE IF NOT EXISTS calibration_reports (
