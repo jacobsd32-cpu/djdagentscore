@@ -88,8 +88,12 @@ wellKnown.get('/', (c) => {
     ],
     integration: {
       npm: {
-        client: 'djd-agent-score-client',
+        client: 'djd-agent-score',
+        mcp: 'djd-agent-score-mcp',
         middleware: 'x402-agent-score',
+      },
+      pypi: {
+        client: 'djd-agent-score',
       },
       quickstart: `curl "${baseUrl}/v1/score/basic?wallet=0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"`,
     },

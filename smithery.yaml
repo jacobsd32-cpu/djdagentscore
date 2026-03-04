@@ -1,0 +1,28 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      apiKey:
+        type: string
+        description: >-
+          DJD Agent Score API key for paid endpoints (get_full_score, get_score_history, batch_score).
+          Free endpoints (get_score, get_leaderboard, get_economy_metrics) work without a key.
+      apiUrl:
+        type: string
+        default: "https://djdagentscore.dev"
+        description: >-
+          Base URL for the DJD Agent Score API. Override for self-hosted instances.
+  commandFunction: |-
+    (config) => ({
+      command: 'npx',
+      args: ['-y', 'djd-agent-score-mcp'],
+      env: {
+        ...(config.apiKey ? { DJD_API_KEY: config.apiKey } : {}),
+        ...(config.apiUrl ? { DJD_API_URL: config.apiUrl } : {})
+      }
+    })
+  exampleConfig:
+    apiKey: "djd_live_your_key_here"

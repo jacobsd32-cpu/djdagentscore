@@ -1,0 +1,6 @@
+name,handle,platform,project,relevance_to_agentscore,status,last_contact,notes
+Agent Framework Maintainer,@example_langchain,Twitter/GitHub,LangChain community tools,PR target for langchain-community tools repo — direct distribution to 100K+ developers,not_contacted,,Submit PR to langchain-community with our LangChain tool integration
+Base Ecosystem Developer,@example_base_dev,Farcaster,Base ecosystem project,Building agents on Base — direct user of our API for pre-transaction trust checks,not_contacted,,Follow their work first then warm DM with free API key
+AI Agent Launchpad,@example_launchpad,Twitter,Agent launchpad/marketplace,Could integrate score checks into their agent listing and discovery flow,not_contacted,,Position as quality signal for their marketplace — agents with higher scores get better placement
+DeFi Protocol with Bot Activity,@example_defi,Twitter/Discord,DeFi protocol on Base,High bot/agent activity on their protocol — score checks protect their users,not_contacted,,Frame as security feature — helps them distinguish legitimate agents from sybils
+Crypto Infrastructure Project,@example_infra,Twitter/GitHub,Wallet or identity infra,Complementary infrastructure — they do identity we do reputation scoring,not_contacted,,Partnership angle — their identity data could improve our Identity dimension scoring
