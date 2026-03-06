@@ -31,5 +31,8 @@ export function getPaymentHeader(c: Context): string | undefined {
 export function getPayerWallet(c: Context): string | null {
   const apiKeyWallet = (c as Context<AppEnv>).get('apiKeyWallet') ?? null
   if (apiKeyWallet) return apiKeyWallet
-  return extractPayerWallet(getPaymentHeader(c))
+  const x402Wallet = extractPayerWallet(getPaymentHeader(c))
+  if (x402Wallet) return x402Wallet
+  // Fall back to plain x-payer-address header (used by tests and direct callers)
+  return c.req.header('x-payer-address') ?? null
 }
