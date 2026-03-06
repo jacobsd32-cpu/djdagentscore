@@ -211,6 +211,8 @@ export async function createPortalSession(customerId: string): Promise<string> {
 // ── Temporary Key Store ───────────────────────────────────────────
 // Raw API keys are stored here briefly between webhook (provisioning) and
 // success page (display). Keys auto-expire after 10 minutes.
+// TODO: Persist pending key to database with 10-minute TTL to survive process restarts.
+// Current in-memory Map means the raw key is lost if Fly.io restarts between webhook delivery and user visiting /billing/success.
 
 const pendingKeys = new Map<string, { rawKey: string; expiresAt: number }>()
 const KEY_TTL_MS = 10 * 60 * 1000 // 10 minutes
