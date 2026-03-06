@@ -4,6 +4,7 @@
  */
 
 import { getOrCalculateScore } from '../scoring/engine.js'
+import { log } from '../logger.js'
 import type { Address, FullScoreResponse } from '../types.js'
 
 const JOB_TTL_MS = 10 * 60 * 1000 // 10 min
@@ -82,7 +83,9 @@ export function submitJob(wallet: Address): string {
       job.result = result
     } catch (_err: unknown) {
       job.status = 'error'
-      job.error = 'Score computation failed'
+      const errMsg = _err instanceof Error ? _err.message : String(_err)
+      job.error = errMsg
+      log.error('scoreQueue', 'Score computation failed', { wallet: job.wallet, error: errMsg })
     }
   }).catch(() => {
     job.status = 'error'
