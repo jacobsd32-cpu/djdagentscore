@@ -18,6 +18,7 @@ import { db } from '../db.js'
 import { errorResponse } from '../errors.js'
 import { adminAuth } from '../middleware/adminAuth.js'
 import { makeBadge } from '../utils/badgeGenerator.js'
+import { getPayerWallet } from '../utils/paymentUtils.js'
 import { normalizeWallet } from '../utils/walletUtils.js'
 
 // ---------- Types ----------
@@ -108,9 +109,8 @@ certification.get('/badge/:wallet', (c) => {
 // ── Paid: Apply for certification ($99 USDC) ───────────────────────────────
 
 certification.post('/apply', (c) => {
-  // Extract payer wallet from x402 header or API key context
-  const payerWallet = c.req.header('x-payer-address') ?? c.get('apiKeyWallet' as never) as string | undefined
-  const wallet = normalizeWallet(payerWallet)
+  // Extract payer wallet using the shared utility (handles both x402 and API key auth)
+  const wallet = normalizeWallet(getPayerWallet(c))
   if (!wallet) {
     return c.json(errorResponse('invalid_wallet', 'Valid Ethereum wallet address required'), 400)
   }
