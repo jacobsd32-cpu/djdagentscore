@@ -189,7 +189,7 @@ export async function runSybilMonitor(db: DatabaseType): Promise<void> {
         .get(wallet, wallet, fiveMinAgo)
 
       if (newTx && newTx.count > 0) {
-        log.info('sybil', `Flagged wallet ${wallet} has ${newTx.count} new tx(s) — queued for rescore`)
+        log.info('sybil', `Flagged wallet ${wallet} has ${newTx.count} new tx(s) — has new activity — will be rescored on next hourly refresh`)
         // The scoring engine will re-evaluate sybil on next refresh
       }
     }
