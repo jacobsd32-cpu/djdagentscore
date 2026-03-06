@@ -32,6 +32,7 @@ import { adminWebhooks, publicWebhooks } from './routes/webhooks.js'
 import stripeWebhookRoute from './routes/stripeWebhook.js'
 import billingRoute from './routes/billing.js'
 import pricingRoute from './routes/pricing.js'
+import methodologyRoute from './routes/methodology.js'
 import { initStripe } from './billing/stripeClient.js'
 import { initBillingPlans } from './config/plans.js'
 import { requestIdMiddleware } from './middleware/requestId.js'
@@ -151,6 +152,7 @@ app.route('/docs', docsRoute)                 // free — Swagger UI
 app.route('/metrics', metricsRoute)             // free — Prometheus metrics
 app.route('/billing', billingRoute)             // free — Stripe billing self-service
 app.route('/pricing', pricingRoute)             // free — pricing page
+app.route('/methodology', methodologyRoute)    // free — scoring methodology
 app.route('/.well-known/x402', wellKnownRoute) // free — x402 agent discovery
 
 // ---------- x402 Payment Middleware (v2.5 + Bazaar Discovery) ----------
