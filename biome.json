@@ -37,28 +37,5 @@
   },
   "files": {
     "includes": ["src/**", "tests/**"]
-  },
-  "overrides": [
-    {
-      "includes": [
-        "src/middleware/apiKeyAuth.ts",
-        "src/middleware/paidRateLimit.ts",
-        "src/routes/report.ts",
-        "src/middleware/queryLogger.ts",
-        "src/routes/score.ts",
-        "src/jobs/webhookDelivery.ts",
-        "src/routes/certification.ts",
-        "src/index.ts"
-      ],
-      "formatter": {
-        "enabled": false
-      },
-      "linter": {
-        "enabled": false
-      },
-      "assist": {
-        "enabled": false
-      }
-    }
-  ]
+  }
 }
