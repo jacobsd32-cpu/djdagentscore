@@ -984,7 +984,7 @@ export function getApiKeyAnalytics(wallet: string, days: number): ApiKeyAnalytic
 
   const totalRow = db
     .prepare<[string, string], { count: number }>(
-      "SELECT COUNT(*) as count FROM query_log WHERE requester_wallet = ? AND timestamp > ?",
+      'SELECT COUNT(*) as count FROM query_log WHERE requester_wallet = ? AND timestamp > ?',
     )
     .get(wallet, cutoff)
   const totalRequests = totalRow?.count ?? 0

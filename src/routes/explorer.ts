@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
-import { explorerDashboardHtml } from '../templates/explorer.js'
 import { getEcosystemStats, getRecentActivity } from '../db.js'
+import { explorerDashboardHtml } from '../templates/explorer.js'
 
 const explorer = new Hono()
 
