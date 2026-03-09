@@ -26,12 +26,6 @@ const getCountStmt = db.prepare<[string, string], { count: number }>(
   `SELECT count FROM rate_limits WHERE key = ? AND window = ?`,
 )
 
-/** Clean up old windows. Called periodically (e.g., from hourly job). */
-export function cleanupRateLimits(): void {
-  const window = getCurrentWindow()
-  db.prepare(`DELETE FROM rate_limits WHERE window < ?`).run(window)
-}
-
 export const paidRateLimitMiddleware: MiddlewareHandler = async (c, next) => {
   const wallet = getPayerWallet(c)
 
