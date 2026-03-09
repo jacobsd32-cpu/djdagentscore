@@ -198,9 +198,9 @@ describe('computeAdaptiveWeights', () => {
     insertMany(5, 'no_activity', { rel: 40, via: 40, idn: 40, cap: 40, beh: 40 })
 
     const result = computeAdaptiveWeights(db)!
-    expect(result.sampleSize).toBe(55)
+    expect(result.sampleSize).toBe(55) // all rows with scored outcomes
     expect(result.positiveCount).toBe(45) // successful_tx + multiple_successful_tx
-    expect(result.negativeCount).toBe(10) // fraud_report + no_activity
+    expect(result.negativeCount).toBe(5) // fraud_report only (no_activity removed from NEGATIVE_OUTCOMES)
     expect(result.lastUpdatedAt).toBeTruthy()
   })
 

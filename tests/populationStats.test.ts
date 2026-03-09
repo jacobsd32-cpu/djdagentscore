@@ -104,8 +104,8 @@ describe('computePopulationStats', () => {
     expect(result).not.toBeNull()
     // Mean of 10,20,30,40,50 repeated 10 times = 30
     expect(result!.composite.mean).toBe(30)
-    // Stdev: sqrt(200) ≈ 14.14
-    expect(result!.composite.stdev).toBeCloseTo(14.14, 1)
+    // Stdev with Bessel's correction: sqrt(200 * n/(n-1)) ≈ 14.29 for n=50
+    expect(result!.composite.stdev).toBeCloseTo(14.29, 1)
   })
 
   it('includes computedAt timestamp', () => {

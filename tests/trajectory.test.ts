@@ -252,9 +252,9 @@ describe('computeTrajectory — volatility', () => {
   })
 
   it('computes correct stdev for known values', () => {
-    // Scores: 60, 70 -> mean=65, variance=25, stdev=5.0
+    // Scores: 60, 70 -> mean=65, sample variance (Bessel's)=50, stdev≈7.07
     const result = computeTrajectory({ scores: [entry(60, 1), entry(70, 0)] })
-    expect(result.volatility).toBe(5)
+    expect(result.volatility).toBeCloseTo(7.07, 1)
   })
 })
 
