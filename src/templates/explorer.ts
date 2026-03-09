@@ -1,16 +1,45 @@
 /**
- * Explorer page — fully client-side rendered single-page app.
- * Wallet lookup, score display, and leaderboard table all driven by
- * embedded JS that calls the public API endpoints.
+ * Explorer Dashboard — server-rendered ecosystem stats + client-side wallet lookup.
+ *
+ * Phase 3A: Transformed from a static HTML export into a function that receives
+ * live ecosystem stats from the database and renders them server-side. Client JS
+ * handles wallet lookup, dimension bars, leaderboard, and activity feed polling.
  */
 
-export const explorerHtml = `<!DOCTYPE html>
+import type { EcosystemStats } from '../db/queries.js'
+
+export function explorerDashboardHtml(stats: EcosystemStats): string {
+  const tierOrder = ['Elite', 'Trusted', 'Established', 'Emerging', 'Unverified']
+  const tierColors: Record<string, string> = {
+    Elite: 'var(--accent)',
+    Trusted: 'var(--green)',
+    Established: 'var(--yellow)',
+    Emerging: 'var(--orange)',
+    Unverified: 'var(--muted)',
+  }
+
+  const maxBucket = Math.max(...stats.scoreHistogram.map((b) => b.count), 1)
+  const histogramBars = stats.scoreHistogram
+    .map((b) => {
+      const pct = Math.round((b.count / maxBucket) * 100)
+      return `<div class="histo-col"><div class="histo-bar" style="height:${pct}%" title="${b.count} wallets"></div><div class="histo-label">${b.bucket.split('-')[0]}</div></div>`
+    })
+    .join('')
+
+  const tierBadges = tierOrder
+    .map((t) => {
+      const count = stats.tierDistribution[t] ?? 0
+      return `<div class="tier-stat"><span class="tier-dot" style="background:${tierColors[t]}"></span><span class="tier-stat-name">${t}</span><span class="tier-stat-count mono">${count.toLocaleString()}</span></div>`
+    })
+    .join('')
+
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Explorer - DJD Agent Score</title>
-<meta name="description" content="Look up reputation scores for any Base wallet. Explore the leaderboard, check on-chain history, and verify wallets before your agent transacts.">
+<meta name="description" content="Live dashboard for AI agent reputation scores on Base. Explore wallets, track the ecosystem, and verify agents before transacting.">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -30,6 +59,30 @@ nav{padding:16px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px
 .nav-r a{color:var(--muted);font-size:12px;font-family:'JetBrains Mono',monospace}
 .nav-r a:hover{color:var(--accent);text-decoration:none}
 .wrap{max-width:960px;margin:0 auto;padding:32px 24px}
+
+/* ── Ecosystem Overview ── */
+.eco-panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:28px;margin-bottom:28px}
+.eco-panel h2{font-size:18px;font-weight:700;margin-bottom:4px;letter-spacing:-.2px}
+.eco-panel .sub{font-size:13px;color:var(--dim);margin-bottom:20px}
+.eco-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px}
+.eco-stat{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px}
+.eco-stat-v{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:var(--accent)}
+.eco-stat-l{font-size:11px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.3px}
+.eco-row{display:flex;gap:24px;flex-wrap:wrap}
+.eco-col{flex:1;min-width:200px}
+.eco-col h3{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-family:'JetBrains Mono',monospace;margin-bottom:12px}
+.tier-stat{display:flex;align-items:center;gap:8px;padding:5px 0}
+.tier-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.tier-stat-name{font-size:13px;flex:1}
+.tier-stat-count{font-size:13px;color:var(--dim)}
+.histo-wrap{display:flex;align-items:flex-end;gap:3px;height:80px;padding-top:4px}
+.histo-col{display:flex;flex-direction:column;align-items:center;flex:1;height:100%}
+.histo-bar{width:100%;min-width:12px;background:var(--accent);border-radius:3px 3px 0 0;opacity:.7;transition:opacity .15s}
+.histo-bar:hover{opacity:1}
+.histo-label{font-size:9px;color:var(--muted);margin-top:4px;font-family:'JetBrains Mono',monospace}
+.histo-col{justify-content:flex-end}
+
+/* ── Search Box ── */
 .search-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:28px;margin-bottom:28px}
 .search-box h1{font-size:22px;font-weight:700;margin-bottom:4px;letter-spacing:-.3px}
 .search-box p{font-size:14px;color:var(--dim);margin-bottom:18px}
@@ -42,6 +95,8 @@ nav{padding:16px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px
 .search-row button:disabled{opacity:.5;cursor:not-allowed}
 .search-err{color:var(--red);font-size:13px;margin-top:10px;display:none}
 .search-err.vis{display:block}
+
+/* ── Score Panel ── */
 .panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:28px;margin-bottom:28px;display:none}
 .panel.vis{display:block}
 .panel-hdr{display:flex;align-items:flex-start;gap:24px;margin-bottom:20px;flex-wrap:wrap}
@@ -72,6 +127,16 @@ nav{padding:16px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px
 .detail-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px}
 .detail-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-family:'JetBrains Mono',monospace;margin-bottom:4px}
 .detail-val{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600}
+
+/* ── Dimension Bars ── */
+.dim-section{margin-bottom:18px}
+.dim-section h3{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-family:'JetBrains Mono',monospace;margin-bottom:12px}
+.dim-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.dim-name{font-size:12px;color:var(--dim);width:80px;font-family:'JetBrains Mono',monospace;text-transform:capitalize}
+.dim-bar-bg{flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden}
+.dim-bar{height:100%;border-radius:4px;transition:width .5s ease}
+.dim-val{font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace;width:30px;text-align:right}
+
 .badge-section{border-top:1px solid var(--border);padding-top:16px;margin-top:8px}
 .badge-section label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-family:'JetBrains Mono',monospace;display:block;margin-bottom:8px}
 .badge-section img{height:20px;margin-bottom:8px;display:block}
@@ -80,6 +145,28 @@ nav{padding:16px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px
 .badge-copy-row button{background:var(--surface2);color:var(--dim);border:none;border-radius:6px;padding:6px 12px;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer}
 .disc{font-size:11px;color:var(--muted);line-height:1.6;border-top:1px solid var(--border);padding-top:14px;margin-top:14px}
 .disc a{color:var(--muted)}
+.share-link{display:flex;align-items:center;gap:8px;margin-top:12px}
+.share-link input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);outline:none}
+.share-link button{background:var(--surface2);color:var(--dim);border:none;border-radius:6px;padding:6px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer}
+
+/* ── Activity Feed ── */
+.feed-panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:28px;margin-bottom:28px}
+.feed-panel h2{font-size:18px;font-weight:700;margin-bottom:4px}
+.feed-panel .sub{font-size:13px;color:var(--dim);margin-bottom:16px}
+.feed-list{max-height:320px;overflow-y:auto}
+.feed-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.feed-item:last-child{border-bottom:none}
+.feed-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.feed-icon-score{background:rgba(34,211,238,.1);color:var(--accent)}
+.feed-icon-reg{background:rgba(52,211,153,.1);color:var(--green)}
+.feed-icon-fraud{background:rgba(248,113,113,.1);color:var(--red)}
+.feed-detail{flex:1;min-width:0}
+.feed-text{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.feed-wallet{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);cursor:pointer}
+.feed-wallet:hover{color:var(--accent)}
+.feed-time{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;white-space:nowrap}
+
+/* ── Leaderboard ── */
 .stats{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
 .stat{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px 18px;min-width:120px}
 .stat-v{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--accent)}
@@ -107,15 +194,15 @@ td{padding:10px 14px;font-size:13px;vertical-align:middle}
 .age-col{color:var(--muted);font-size:12px;font-family:'JetBrains Mono',monospace}
 .loading{text-align:center;padding:40px;color:var(--muted);font-size:14px}
 .updated-at{font-size:11px;color:var(--muted);margin-top:10px;text-align:right;font-family:'JetBrains Mono',monospace}
-.share-link{display:flex;align-items:center;gap:8px;margin-top:12px}
-.share-link input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);outline:none}
-.share-link button{background:var(--surface2);color:var(--dim);border:none;border-radius:6px;padding:6px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer}
+
 footer{text-align:center;padding:36px 24px;color:var(--muted);font-size:12px;border-top:1px solid var(--border);margin-top:40px;font-family:'JetBrains Mono',monospace}
 footer a{color:var(--muted)}
 @media(max-width:640px){
   .panel-hdr{flex-direction:column;align-items:center;text-align:center}
   .sc-bar-bg,.age-col,.sig{display:none}
   td,th{padding:8px 8px}
+  .eco-stats{grid-template-columns:repeat(2,1fr)}
+  .eco-row{flex-direction:column}
 }
 </style>
 </head>
@@ -124,12 +211,57 @@ footer a{color:var(--muted)}
   <a class="logo" href="/">DJD <span>Agent Score</span></a>
   <div class="nav-r">
     <a href="/">Home</a>
-    <a href="/leaderboard">Leaderboard</a>
+    <a href="/explorer">Explorer</a>
     <a href="/docs">API Docs</a>
-    <a href="https://github.com/jacobsd32-cpu/djdagentscore">GitHub</a>
+    <a href="/pricing">Pricing</a>
+    <a href="/methodology">Methodology</a>
   </div>
 </nav>
 <div class="wrap">
+
+  <!-- ── Ecosystem Overview (server-rendered) ── -->
+  <div class="eco-panel">
+    <h2>Ecosystem Overview</h2>
+    <p class="sub">Live stats from the DJD Agent Score network on Base L2</p>
+    <div class="eco-stats">
+      <div class="eco-stat">
+        <div class="eco-stat-v">${stats.totalWalletsScored.toLocaleString()}</div>
+        <div class="eco-stat-l">Wallets Scored</div>
+      </div>
+      <div class="eco-stat">
+        <div class="eco-stat-v">${stats.totalWalletsIndexed.toLocaleString()}</div>
+        <div class="eco-stat-l">Wallets Indexed</div>
+      </div>
+      <div class="eco-stat">
+        <div class="eco-stat-v">${stats.totalTransactions.toLocaleString()}</div>
+        <div class="eco-stat-l">Transactions</div>
+      </div>
+      <div class="eco-stat">
+        <div class="eco-stat-v">${stats.totalRegistered.toLocaleString()}</div>
+        <div class="eco-stat-l">Registered Agents</div>
+      </div>
+      <div class="eco-stat">
+        <div class="eco-stat-v">${stats.avgScore}</div>
+        <div class="eco-stat-l">Avg Score</div>
+      </div>
+      <div class="eco-stat">
+        <div class="eco-stat-v">${stats.medianScore}</div>
+        <div class="eco-stat-l">Median Score</div>
+      </div>
+    </div>
+    <div class="eco-row">
+      <div class="eco-col">
+        <h3>Tier Distribution</h3>
+        ${tierBadges}
+      </div>
+      <div class="eco-col">
+        <h3>Score Distribution</h3>
+        <div class="histo-wrap">${histogramBars}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Wallet Lookup ── -->
   <div class="search-box">
     <h1>Wallet Explorer</h1>
     <p>Look up the trust score for any AI agent wallet on Base. Free, no signup.</p>
@@ -139,6 +271,8 @@ footer a{color:var(--muted)}
     </div>
     <div class="search-err" id="err"></div>
   </div>
+
+  <!-- ── Score Result Panel ── -->
   <div class="panel" id="panel">
     <div class="panel-hdr">
       <div class="score-ring" id="ring">
@@ -154,6 +288,10 @@ footer a{color:var(--muted)}
       </div>
     </div>
     <div class="panel-bar"><div class="panel-bar-fill" id="pBar"></div></div>
+    <div class="dim-section" id="dimSection" style="display:none">
+      <h3>Dimension Breakdown</h3>
+      <div id="dimBars"></div>
+    </div>
     <div class="panel-details" id="pDetails"></div>
     <div class="share-link">
       <input type="text" id="shareUrl" readonly>
@@ -173,6 +311,17 @@ footer a{color:var(--muted)}
       <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a>
     </div>
   </div>
+
+  <!-- ── Activity Feed ── -->
+  <div class="feed-panel">
+    <h2>Recent Activity</h2>
+    <p class="sub">Live updates from the scoring network</p>
+    <div class="feed-list" id="feedList">
+      <div class="loading">Loading activity...</div>
+    </div>
+  </div>
+
+  <!-- ── Leaderboard ── -->
   <div class="stats" id="stats"></div>
   <div class="lb-section">
     <h2>Top Agents</h2>
@@ -183,8 +332,9 @@ footer a{color:var(--muted)}
 </div>
 <footer>
   DJD Agent Score &middot; Reputation API for the agent economy &middot;
-  <a href="/v1/leaderboard">API</a> &middot;
-  <a href="https://github.com/jacobsd32-cpu/djdagentscore">GitHub</a> &middot;
+  <a href="/docs">API</a> &middot;
+  <a href="/pricing">Pricing</a> &middot;
+  <a href="/methodology">Methodology</a> &middot;
   <a href="/terms">Terms</a>
 </footer>
 <script>
@@ -209,6 +359,49 @@ function mkEl(tag, cls, txt) {
 }
 function clearChildren(node) {
   while (node.firstChild) node.removeChild(node.firstChild);
+}
+function timeAgo(ts) {
+  var diff = (Date.now() - new Date(ts).getTime()) / 1000;
+  if (diff < 60) return Math.floor(diff) + 's ago';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  return Math.floor(diff / 86400) + 'd ago';
+}
+
+// ── Dimension bars for score panel ──
+function renderDimensions(data) {
+  var section = el('dimSection');
+  var container = el('dimBars');
+  // Try to get dimension data from the full score endpoint
+  if (!data.dimensions) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+  clearChildren(container);
+  var dims = [
+    { key: 'reliability', label: 'Reliability' },
+    { key: 'viability', label: 'Viability' },
+    { key: 'identity', label: 'Identity' },
+    { key: 'behavior', label: 'Behavior' },
+    { key: 'capability', label: 'Capability' },
+  ];
+  dims.forEach(function(dim) {
+    var val = data.dimensions[dim.key];
+    if (val === undefined || val === null) return;
+    var row = mkEl('div', 'dim-row');
+    row.appendChild(mkEl('div', 'dim-name', dim.label));
+    var barBg = mkEl('div', 'dim-bar-bg');
+    var bar = mkEl('div', 'dim-bar');
+    bar.style.width = val + '%';
+    bar.style.background = sColor(val);
+    barBg.appendChild(bar);
+    row.appendChild(barBg);
+    var valEl = mkEl('div', 'dim-val', val);
+    valEl.style.color = sColor(val);
+    row.appendChild(valEl);
+    container.appendChild(row);
+  });
 }
 
 async function lookup(pushState) {
@@ -258,6 +451,10 @@ async function lookup(pushState) {
       card.appendChild(mkEl('div', 'detail-val', item.val));
       details.appendChild(card);
     });
+
+    // Render dimension bars if available in the basic response
+    renderDimensions(d);
+
     el('shareUrl').value = window.location.origin + '/explorer?wallet=' + w;
     var badgeUrl = API + '/v1/badge/' + w + '.svg';
     el('pBadgeImg').src = badgeUrl;
@@ -281,6 +478,45 @@ function copyShare() {
 }
 function copyBadge() { navigator.clipboard.writeText(el('pBadgeCode').value); }
 
+// ── Activity Feed ──
+async function loadFeed() {
+  try {
+    var resp = await fetch(API + '/explorer/api/activity?limit=15');
+    if (!resp.ok) throw new Error(resp.status);
+    var data = await resp.json();
+    var list = el('feedList');
+    clearChildren(list);
+    if (!data.activity || !data.activity.length) {
+      list.appendChild(mkEl('div', 'loading', 'No recent activity yet.'));
+      return;
+    }
+    var iconMap = {
+      score_change: { cls: 'feed-icon-score', txt: 'S' },
+      registration: { cls: 'feed-icon-reg', txt: 'R' },
+      fraud_report: { cls: 'feed-icon-fraud', txt: 'F' },
+    };
+    data.activity.forEach(function(a) {
+      var item = mkEl('div', 'feed-item');
+      var icon = iconMap[a.type] || iconMap.score_change;
+      var iconEl = mkEl('div', 'feed-icon ' + icon.cls, icon.txt);
+      item.appendChild(iconEl);
+      var detail = mkEl('div', 'feed-detail');
+      detail.appendChild(mkEl('div', 'feed-text', a.detail));
+      var walletEl = mkEl('div', 'feed-wallet', a.wallet.slice(0, 10) + '...' + a.wallet.slice(-6));
+      walletEl.onclick = function() { el('q').value = a.wallet; lookup(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+      detail.appendChild(walletEl);
+      item.appendChild(detail);
+      item.appendChild(mkEl('div', 'feed-time', timeAgo(a.timestamp)));
+      list.appendChild(item);
+    });
+  } catch (e) {
+    var list = el('feedList');
+    clearChildren(list);
+    list.appendChild(mkEl('div', 'loading', 'Failed to load activity feed.'));
+  }
+}
+
+// ── Leaderboard ──
 async function loadLB() {
   try {
     var resp = await fetch(API + '/v1/leaderboard');
@@ -370,6 +606,9 @@ async function loadLB() {
   var w = params.get('wallet');
   if (w) { el('q').value = w; lookup(false); }
   loadLB();
+  loadFeed();
+  // Refresh activity feed every 60 seconds
+  setInterval(loadFeed, 60000);
   el('q').addEventListener('keydown', function(e) { if (e.key === 'Enter') lookup(); });
   window.addEventListener('popstate', function() {
     var p = new URLSearchParams(window.location.search);
@@ -380,3 +619,4 @@ async function loadLB() {
 </script>
 </body>
 </html>`
+}

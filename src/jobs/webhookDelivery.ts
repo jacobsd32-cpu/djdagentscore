@@ -72,6 +72,70 @@ export function queueWebhookEvent(eventType: string, payload: Record<string, unk
   }
 }
 
+interface ThresholdWebhookRow {
+  id: number
+  url: string
+  secret: string
+  events: string
+  tier: string
+  failure_count: number
+  threshold_score: number
+}
+
+/**
+ * Check if a score change crosses any webhook's threshold and queue events.
+ * Fires when oldScore was above threshold and newScore dropped below (or vice versa).
+ */
+export function checkScoreThresholds(
+  wallet: string,
+  oldScore: number | null,
+  newScore: number,
+  tier: string,
+): void {
+  if (oldScore === null) return // First score — no comparison possible
+
+  try {
+    const hooks = db.prepare(`
+      SELECT id, url, secret, events, tier, failure_count, threshold_score FROM webhooks
+      WHERE is_active = 1 AND threshold_score IS NOT NULL
+    `).all() as ThresholdWebhookRow[]
+
+    const matching = hooks.filter(w => {
+      const events = JSON.parse(w.events) as string[]
+      if (!events.includes('score.threshold')) return false
+      const t = w.threshold_score
+      // Crossed down: old >= threshold, new < threshold
+      // Crossed up: old < threshold, new >= threshold
+      return (oldScore >= t && newScore < t) || (oldScore < t && newScore >= t)
+    })
+
+    if (matching.length === 0) return
+
+    const crossed = newScore < oldScore ? 'down' : 'up'
+    const payload = JSON.stringify({
+      event: 'score.threshold',
+      timestamp: new Date().toISOString(),
+      data: { wallet, oldScore, newScore, tier, crossed },
+    })
+
+    const insertDelivery = db.prepare(`
+      INSERT INTO webhook_deliveries (webhook_id, event_type, payload)
+      VALUES (?, ?, ?)
+    `)
+
+    const insertMany = db.transaction((hooks: ThresholdWebhookRow[]) => {
+      for (const hook of hooks) {
+        insertDelivery.run(hook.id, 'score.threshold', payload)
+      }
+    })
+
+    insertMany(matching)
+    log.info('webhooks', `Queued ${matching.length} score.threshold deliveries for ${wallet} (${oldScore}→${newScore})`)
+  } catch (err) {
+    log.error('webhooks', 'Failed to check score thresholds', err)
+  }
+}
+
 /**
  * Process pending webhook deliveries.
  * Called on a 30-second interval from index.ts.

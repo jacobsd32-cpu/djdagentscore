@@ -45,15 +45,40 @@ export function successPageHtml(props: SuccessPageProps): string {
           <span class="plan-detail">${(monthlyLimit ?? 0).toLocaleString()} requests/month</span>
         </div>
 
-        <div class="usage-example">
+        <div class="quickstart-tabs">
           <h3>Quick Start</h3>
-          <pre><code>curl -H "Authorization: Bearer ${escapeHtml(apiKey.slice(0, 20))}..." \\
-  https://djd-agent-score.fly.dev/v1/score/full?wallet=0x...</code></pre>
+          <div class="tab-bar">
+            <button class="tab active" data-tab="curl" onclick="switchTab('curl')">cURL</button>
+            <button class="tab" data-tab="typescript" onclick="switchTab('typescript')">TypeScript</button>
+            <button class="tab" data-tab="python" onclick="switchTab('python')">Python</button>
+          </div>
+          <div class="tab-content active" id="tab-curl">
+            <pre><code>curl -H "Authorization: Bearer YOUR_API_KEY" \\
+  "https://djdagentscore.dev/v1/score/full?wallet=0xYOUR_WALLET"</code></pre>
+            <button class="snippet-copy" onclick="copySnippet('curl')">Copy</button>
+          </div>
+          <div class="tab-content" id="tab-typescript">
+            <pre><code>import { AgentScoreClient } from 'djd-agent-score';
+
+const client = new AgentScoreClient('YOUR_API_KEY');
+const score = await client.getScore('0xYOUR_WALLET');
+console.log(score.overall, score.tier);</code></pre>
+            <button class="snippet-copy" onclick="copySnippet('typescript')">Copy</button>
+          </div>
+          <div class="tab-content" id="tab-python">
+            <pre><code>from djd_agent_score import AgentScoreClient
+
+client = AgentScoreClient("YOUR_API_KEY")
+score = client.get_score("0xYOUR_WALLET")
+print(score.overall, score.tier)</code></pre>
+            <button class="snippet-copy" onclick="copySnippet('python')">Copy</button>
+          </div>
         </div>
 
         <div class="links">
-          <a href="/docs" class="btn">📖 API Docs</a>
-          <a href="/v1/data/economy" class="btn btn-secondary">📊 Economy Dashboard</a>
+          <a href="/docs" class="btn">API Docs</a>
+          <a href="/explorer" class="btn btn-secondary">Explorer</a>
+          <a href="/v1/data/economy" class="btn btn-secondary">Economy Dashboard</a>
         </div>
 
         <p class="warning">⚠️ This key is shown <strong>once</strong>. If you lose it, you'll need to cancel and resubscribe.</p>
@@ -216,6 +241,30 @@ export function successPageHtml(props: SuccessPageProps): string {
     margin-top: 20px;
   }
   .error-card { border-color: #9e6a03; }
+  .quickstart-tabs { text-align: left; margin: 20px 0; }
+  .tab-bar { display: flex; gap: 0; border-bottom: 1px solid #30363d; margin-bottom: 0; }
+  .tab {
+    background: transparent; border: 1px solid transparent; border-bottom: none;
+    color: #8b949e; padding: 8px 16px; cursor: pointer; font-size: 13px;
+    border-radius: 6px 6px 0 0; transition: all 0.2s;
+  }
+  .tab:hover { color: #c9d1d9; }
+  .tab.active { background: #0d1117; border-color: #30363d; color: #58a6ff; border-bottom: 1px solid #0d1117; margin-bottom: -1px; }
+  .tab-content {
+    display: none; background: #0d1117; border: 1px solid #30363d; border-top: none;
+    border-radius: 0 0 8px 8px; padding: 16px; position: relative;
+  }
+  .tab-content.active { display: block; }
+  .tab-content pre {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+    font-size: 12px; color: #c9d1d9; overflow-x: auto; white-space: pre-wrap; word-break: break-all; margin: 0;
+  }
+  .snippet-copy {
+    position: absolute; top: 8px; right: 8px; background: #21262d; border: 1px solid #30363d;
+    color: #8b949e; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px;
+  }
+  .snippet-copy:hover { background: #30363d; color: #c9d1d9; }
+  .snippet-copy.copied { background: #238636; border-color: #238636; color: #fff; }
   .footer {
     margin-top: 24px;
     font-size: 12px;
@@ -231,10 +280,26 @@ export function successPageHtml(props: SuccessPageProps): string {
       navigator.clipboard.writeText(key).then(() => {
         const btn = document.getElementById('copy-btn');
         if (btn) {
-          btn.textContent = '✓ Copied!';
+          btn.textContent = 'Copied!';
           btn.classList.add('copied');
-          setTimeout(() => { btn.textContent = '📋 Copy'; btn.classList.remove('copied'); }, 2000);
+          setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
         }
+      });
+    }
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelector('[data-tab="'+name+'"]')?.classList.add('active');
+      document.getElementById('tab-'+name)?.classList.add('active');
+    }
+    function copySnippet(name) {
+      const el = document.querySelector('#tab-'+name+' pre code');
+      if (!el) return;
+      const key = document.getElementById('api-key')?.textContent ?? 'YOUR_API_KEY';
+      const text = el.textContent.replace(/YOUR_API_KEY/g, key);
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('#tab-'+name+' .snippet-copy');
+        if (btn) { btn.textContent = 'Copied!'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000); }
       });
     }
   </script>

@@ -31,6 +31,7 @@ import wellKnownRoute from './routes/wellKnown.js'
 import { adminWebhooks, publicWebhooks } from './routes/webhooks.js'
 import stripeWebhookRoute from './routes/stripeWebhook.js'
 import billingRoute from './routes/billing.js'
+import portalRoute from './routes/portal.js'
 import pricingRoute from './routes/pricing.js'
 import methodologyRoute from './routes/methodology.js'
 import { initStripe } from './billing/stripeClient.js'
@@ -151,6 +152,7 @@ app.route('/v1/data/economy', economyRoute)  // free — ecosystem health metric
 app.route('/docs', docsRoute)                 // free — Swagger UI
 app.route('/metrics', metricsRoute)             // free — Prometheus metrics
 app.route('/billing', billingRoute)             // free — Stripe billing self-service
+app.route('/portal', portalRoute)               // free — developer usage portal
 app.route('/pricing', pricingRoute)             // free — pricing page
 app.route('/methodology', methodologyRoute)    // free — scoring methodology
 app.route('/.well-known/x402', wellKnownRoute) // free — x402 agent discovery

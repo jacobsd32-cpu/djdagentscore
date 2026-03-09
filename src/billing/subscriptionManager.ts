@@ -208,41 +208,80 @@ export async function createPortalSession(customerId: string): Promise<string> {
   return session.url
 }
 
-// ── Temporary Key Store ───────────────────────────────────────────
-// Raw API keys are stored here briefly between webhook (provisioning) and
-// success page (display). Keys auto-expire after 10 minutes.
-// TODO: Persist pending key to database with 10-minute TTL to survive process restarts.
-// Current in-memory Map means the raw key is lost if Fly.io restarts between webhook delivery and user visiting /billing/success.
+// ── Persistent Key Store (Phase 3B) ──────────────────────────────
+// Raw API keys are stored in SQLite (encrypted at rest) between webhook
+// provisioning and the success page display. Keys auto-expire after 10 min.
+// Survives Fly.io restarts — fixes the critical billing bug.
 
-const pendingKeys = new Map<string, { rawKey: string; expiresAt: number }>()
+import crypto from 'node:crypto'
+
 const KEY_TTL_MS = 10 * 60 * 1000 // 10 minutes
 
-export function storePendingKey(sessionId: string, rawKey: string): void {
-  pendingKeys.set(sessionId, { rawKey, expiresAt: Date.now() + KEY_TTL_MS })
+function getEncryptionKey(): Buffer {
+  const adminKey = process.env.ADMIN_KEY ?? 'dev-fallback-key-not-for-production'
+  return crypto.createHash('sha256').update(adminKey).digest()
+}
+
+function encryptKey(rawKey: string): { encrypted: string; iv: string; authTag: string } {
+  const key = getEncryptionKey()
+  const iv = crypto.randomBytes(12)
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv)
+  const encrypted = Buffer.concat([cipher.update(rawKey, 'utf8'), cipher.final()])
+  const authTag = cipher.getAuthTag()
+  return {
+    encrypted: encrypted.toString('base64'),
+    iv: iv.toString('base64'),
+    authTag: authTag.toString('base64'),
+  }
+}
+
+function decryptKey(encrypted: string, iv: string, authTag: string): string {
+  const key = getEncryptionKey()
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(iv, 'base64'))
+  decipher.setAuthTag(Buffer.from(authTag, 'base64'))
+  return decipher.update(Buffer.from(encrypted, 'base64')) + decipher.final('utf8')
+}
+
+export function storePendingKey(sessionId: string, rawKey: string, db: Database.Database = defaultDb): void {
+  const { encrypted, iv, authTag } = encryptKey(rawKey)
+  const expiresAt = new Date(Date.now() + KEY_TTL_MS).toISOString()
+  db.prepare(`
+    INSERT OR REPLACE INTO pending_keys (session_id, key_encrypted, iv, auth_tag, expires_at)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(sessionId, encrypted, iv, authTag, expiresAt)
+  log.info('billing', `Pending key stored for session: ${sessionId}`)
 }
 
 /**
  * Retrieve and DELETE the raw key for a session (one-time read).
  * Returns null if expired or already consumed.
  */
-export function consumePendingKey(sessionId: string): string | null {
-  const entry = pendingKeys.get(sessionId)
-  if (!entry) return null
-  pendingKeys.delete(sessionId)
-  if (Date.now() > entry.expiresAt) return null
-  return entry.rawKey
+export function consumePendingKey(sessionId: string, db: Database.Database = defaultDb): string | null {
+  const row = db
+    .prepare('SELECT key_encrypted, iv, auth_tag, expires_at FROM pending_keys WHERE session_id = ?')
+    .get(sessionId) as { key_encrypted: string; iv: string; auth_tag: string; expires_at: string } | undefined
+
+  if (!row) return null
+
+  // Always delete — one-time read
+  db.prepare('DELETE FROM pending_keys WHERE session_id = ?').run(sessionId)
+
+  // Check expiry
+  if (new Date(row.expires_at).getTime() < Date.now()) return null
+
+  try {
+    return decryptKey(row.key_encrypted, row.iv, row.auth_tag)
+  } catch (err) {
+    log.error('billing', 'Failed to decrypt pending key', err)
+    return null
+  }
 }
 
-// Periodic cleanup of expired entries (runs every 5 minutes)
-setInterval(
-  () => {
-    const now = Date.now()
-    for (const [key, val] of pendingKeys) {
-      if (now > val.expiresAt) pendingKeys.delete(key)
-    }
-  },
-  5 * 60 * 1000,
-).unref()
+/** Cleanup expired pending keys — called from dataPruner job. */
+export function pruneExpiredPendingKeys(db: Database.Database = defaultDb): number {
+  const result = db.prepare("DELETE FROM pending_keys WHERE expires_at < datetime('now')").run()
+  return result.changes
+}
 
 // ── Lookup Helpers ────────────────────────────────────────────────
 

@@ -458,6 +458,21 @@ db.exec(`
 // Add stripe_customer_id to api_keys (nullable — admin-created keys won't have one)
 addColumnIfMissing('api_keys', 'stripe_customer_id', 'TEXT')
 
+// Add threshold_score to webhooks (nullable — only used for score.threshold events)
+addColumnIfMissing('webhooks', 'threshold_score', 'INTEGER')
+
+// ── Pending Keys (Phase 3B: persist across restarts) ──────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS pending_keys (
+    session_id  TEXT PRIMARY KEY,
+    key_encrypted TEXT NOT NULL,
+    iv          TEXT NOT NULL,
+    auth_tag    TEXT NOT NULL,
+    expires_at  TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_pending_keys_expires ON pending_keys(expires_at);
+`)
+
 // ── Wallet address case-normalization migration ─────────────────────────────
 // Ethereum addresses are case-insensitive, but SQLite TEXT PRIMARY KEY is
 // case-sensitive. Older data may contain mixed-case duplicates (e.g.

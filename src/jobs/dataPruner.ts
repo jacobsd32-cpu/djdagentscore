@@ -17,6 +17,7 @@
  *   shrink but doesn't grow either, which prevents disk exhaustion.
  */
 import type { Database } from 'better-sqlite3'
+import { pruneExpiredPendingKeys } from '../billing/subscriptionManager.js'
 import { DATA_PRUNING_CONFIG } from '../config/constants.js'
 import { autoVacuumMode } from '../db/connection.js'
 import { log } from '../logger.js'
@@ -87,7 +88,12 @@ export async function runDataPruner(db: Database): Promise<void> {
     // ── 3. webhook_deliveries ───────────────────────────────────────────
     results.push(await pruneTable(db, 'webhook_deliveries', 'created_at', WEBHOOK_DELIVERIES_RETENTION_DAYS))
 
-    // ── 4. Reclaim freed pages ──────────────────────────────────────────
+    // ── 4. pending_keys (expired billing keys) ────────────────────────
+    const pendingStart = Date.now()
+    const pendingDeleted = pruneExpiredPendingKeys(db)
+    results.push({ table: 'pending_keys', rowsDeleted: pendingDeleted, durationMs: Date.now() - pendingStart })
+
+    // ── 5. Reclaim freed pages ──────────────────────────────────────────
     const freePages = (db.pragma('freelist_count') as { freelist_count: number }[])[0]?.freelist_count ?? 0
     if (freePages > 0) {
       if (autoVacuumMode === 'incremental') {

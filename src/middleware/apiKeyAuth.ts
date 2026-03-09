@@ -95,5 +95,11 @@ export const apiKeyAuthMiddleware: MiddlewareHandler = async (c, next) => {
   // Only increment usage on successful responses (H7 fix)
   if (c.res.status >= 200 && c.res.status < 300) {
     stmtIncrementUsage.run(now.toISOString(), hash)
+    row.monthly_used += 1
   }
+
+  // Rate limit headers — always set for API key requests
+  c.header('X-RateLimit-Limit', String(row.monthly_limit))
+  c.header('X-RateLimit-Remaining', String(Math.max(0, row.monthly_limit - row.monthly_used)))
+  c.header('X-RateLimit-Reset', row.usage_reset_at)
 }

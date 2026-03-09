@@ -824,6 +824,198 @@ export const indexTransferBatch: Transaction<(transfers: IndexedTransfer[]) => v
   },
 )
 
+// ---------- Explorer Dashboard Queries ----------
+
+export interface EcosystemStats {
+  totalWalletsScored: number
+  totalWalletsIndexed: number
+  totalTransactions: number
+  totalRegistered: number
+  avgScore: number
+  medianScore: number
+  tierDistribution: Record<string, number>
+  scoreHistogram: Array<{ bucket: string; count: number }>
+}
+
+export function getEcosystemStats(): EcosystemStats {
+  const scored = stmtCountScores.get()!.count
+  const indexed = db.prepare<[], { count: number }>('SELECT COUNT(*) as count FROM wallet_index').get()!.count
+  const txCount = db.prepare<[], { count: number }>('SELECT COUNT(*) as count FROM raw_transactions').get()!.count
+  const registered = stmtCountRegistered.get()!.count
+
+  const avgRow = db
+    .prepare<[], { avg_score: number; median_score: number }>(`
+    SELECT
+      COALESCE(AVG(composite_score), 0) as avg_score,
+      COALESCE((SELECT composite_score FROM scores ORDER BY composite_score LIMIT 1 OFFSET (SELECT COUNT(*)/2 FROM scores)), 0) as median_score
+    FROM scores
+  `)
+    .get()!
+
+  // Tier distribution
+  const tierRows = db
+    .prepare<[], { tier: string; count: number }>(`
+    SELECT tier, COUNT(*) as count FROM scores GROUP BY tier
+  `)
+    .all()
+  const tierDistribution: Record<string, number> = {}
+  for (const row of tierRows) {
+    tierDistribution[row.tier] = row.count
+  }
+
+  // Score histogram (10-point buckets: 0-9, 10-19, ..., 90-100)
+  const histogramRows = db
+    .prepare<[], { bucket: number; count: number }>(`
+    SELECT (composite_score / 10) * 10 as bucket, COUNT(*) as count
+    FROM scores
+    GROUP BY bucket
+    ORDER BY bucket
+  `)
+    .all()
+  const scoreHistogram = histogramRows.map((r) => ({
+    bucket: r.bucket >= 90 ? '90-100' : `${r.bucket}-${r.bucket + 9}`,
+    count: r.count,
+  }))
+
+  return {
+    totalWalletsScored: scored,
+    totalWalletsIndexed: indexed,
+    totalTransactions: txCount,
+    totalRegistered: registered,
+    avgScore: Math.round(avgRow.avg_score * 10) / 10,
+    medianScore: avgRow.median_score,
+    tierDistribution,
+    scoreHistogram,
+  }
+}
+
+export interface ActivityEntry {
+  type: 'score_change' | 'registration' | 'fraud_report'
+  wallet: string
+  timestamp: string
+  detail: string
+}
+
+export function getRecentActivity(limit: number): ActivityEntry[] {
+  const activities: ActivityEntry[] = []
+
+  // Recent score changes (wallets that were re-scored recently)
+  const scoreChanges = db
+    .prepare<[number], { wallet: string; score: number; calculated_at: string }>(`
+    SELECT wallet, score, calculated_at
+    FROM score_history
+    ORDER BY calculated_at DESC
+    LIMIT ?
+  `)
+    .all(limit)
+  for (const row of scoreChanges) {
+    activities.push({
+      type: 'score_change',
+      wallet: row.wallet,
+      timestamp: row.calculated_at,
+      detail: `Score updated to ${row.score}`,
+    })
+  }
+
+  // Recent registrations
+  const registrations = db
+    .prepare<[number], { wallet: string; name: string | null; registered_at: string }>(`
+    SELECT wallet, name, registered_at FROM agent_registrations
+    ORDER BY registered_at DESC
+    LIMIT ?
+  `)
+    .all(limit)
+  for (const row of registrations) {
+    activities.push({
+      type: 'registration',
+      wallet: row.wallet,
+      timestamp: row.registered_at,
+      detail: row.name ? `Agent "${row.name}" registered` : 'New agent registered',
+    })
+  }
+
+  // Recent fraud reports (redacted reporter)
+  const reports = db
+    .prepare<[number], { target_wallet: string; reason: string; created_at: string }>(`
+    SELECT target_wallet, reason, created_at FROM fraud_reports
+    ORDER BY created_at DESC
+    LIMIT ?
+  `)
+    .all(limit)
+  for (const row of reports) {
+    activities.push({
+      type: 'fraud_report',
+      wallet: row.target_wallet,
+      timestamp: row.created_at,
+      detail: `Fraud report: ${row.reason}`,
+    })
+  }
+
+  // Sort by timestamp descending and take the top N
+  activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+  return activities.slice(0, limit)
+}
+
+// ---------- API Key Analytics (Portal) ----------
+
+export interface EndpointStat {
+  endpoint: string
+  count: number
+}
+
+export interface DailyVolume {
+  date: string
+  count: number
+}
+
+export interface ApiKeyAnalytics {
+  totalRequests: number
+  endpointBreakdown: EndpointStat[]
+  dailyVolume: DailyVolume[]
+  topWallets: Array<{ wallet: string; count: number }>
+}
+
+/**
+ * Analytics for a specific API key's usage. Uses requester_wallet
+ * (set to `stripe:{customerId}` for API key users) as the lookup key.
+ */
+export function getApiKeyAnalytics(wallet: string, days: number): ApiKeyAnalytics {
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+
+  const totalRow = db
+    .prepare<[string, string], { count: number }>(
+      "SELECT COUNT(*) as count FROM query_log WHERE requester_wallet = ? AND timestamp > ?",
+    )
+    .get(wallet, cutoff)
+  const totalRequests = totalRow?.count ?? 0
+
+  const endpointBreakdown = db
+    .prepare<[string, string], EndpointStat>(
+      `SELECT endpoint, COUNT(*) as count FROM query_log
+       WHERE requester_wallet = ? AND timestamp > ?
+       GROUP BY endpoint ORDER BY count DESC LIMIT 10`,
+    )
+    .all(wallet, cutoff)
+
+  const dailyVolume = db
+    .prepare<[string, string], DailyVolume>(
+      `SELECT DATE(timestamp) as date, COUNT(*) as count FROM query_log
+       WHERE requester_wallet = ? AND timestamp > ?
+       GROUP BY DATE(timestamp) ORDER BY date ASC`,
+    )
+    .all(wallet, cutoff)
+
+  const topWallets = db
+    .prepare<[string, string], { wallet: string; count: number }>(
+      `SELECT target_wallet as wallet, COUNT(*) as count FROM query_log
+       WHERE requester_wallet = ? AND timestamp > ? AND target_wallet IS NOT NULL
+       GROUP BY target_wallet ORDER BY count DESC LIMIT 10`,
+    )
+    .all(wallet, cutoff)
+
+  return { totalRequests, endpointBreakdown, dailyVolume, topWallets }
+}
+
 // ---------- ERC-8004 Reputation Publications ----------
 
 export interface ReputationPublication {
