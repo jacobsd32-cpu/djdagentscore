@@ -125,17 +125,9 @@ const stmtCountReports = db.prepare<[string], { count: number }>(`
   SELECT COUNT(*) as count FROM fraud_reports WHERE target_wallet = ?
 `)
 
-const stmtCountReportsAfter = db.prepare<[string, string], { count: number }>(`
-  SELECT COUNT(*) as count FROM fraud_reports WHERE target_wallet = ? AND created_at > ?
-`)
-
 const stmtCountReporterReportsForTarget = db.prepare<[string, string], { count: number }>(`
   SELECT COUNT(*) as count FROM fraud_reports
   WHERE reporter_wallet = ? AND target_wallet = ?
-`)
-
-const stmtGetReportsByTarget = db.prepare<[string], FraudReportRow>(`
-  SELECT * FROM fraud_reports WHERE target_wallet = ? ORDER BY created_at DESC
 `)
 
 const stmtApplyPenalty = db.prepare(`
@@ -379,10 +371,6 @@ export function countReportsByTarget(wallet: string): number {
   return stmtCountReports.get(wallet)!.count
 }
 
-export function countReportsAfterDate(wallet: string, afterDate: string): number {
-  return stmtCountReportsAfter.get(wallet, afterDate)!.count
-}
-
 export function countReporterReportsForTarget(reporter: string, target: string): number {
   return stmtCountReporterReportsForTarget.get(reporter, target)!.count
 }
@@ -393,10 +381,6 @@ export function applyReportPenalty(wallet: string, penalty: number): void {
   const newScore = Math.max(0, row.composite_score - penalty)
   const newTier = scoreToTier(newScore)
   stmtApplyPenalty.run(penalty, newTier, wallet)
-}
-
-export function getReportsByTarget(wallet: string): FraudReportRow[] {
-  return stmtGetReportsByTarget.all(wallet)
 }
 
 // ---------- query_log helpers ----------
@@ -527,16 +511,6 @@ export function getServiceLongevityDays(wallet: string): number {
   if (!row?.first_ts || !row?.last_ts) return 0
   const days = (new Date(row.last_ts).getTime() - new Date(row.first_ts).getTime()) / 86_400_000
   return Math.round(days * 10) / 10
-}
-
-export function getWalletFirstX402Seen(wallet: string): string | null {
-  const w = wallet.toLowerCase()
-  const row = db
-    .prepare<[string, string], { first_seen: string | null }>(
-      `SELECT MIN(timestamp) as first_seen FROM raw_transactions WHERE from_wallet = ? OR to_wallet = ?`,
-    )
-    .get(w, w)
-  return row?.first_seen ?? null
 }
 
 export function getWalletIndexFirstSeen(wallet: string): string | null {
@@ -1026,10 +1000,6 @@ export interface ReputationPublication {
   published_at: string
 }
 
-const stmtGetPublication = db.prepare<[string], ReputationPublication>(
-  `SELECT * FROM reputation_publications WHERE wallet = ?`,
-)
-
 const stmtUpsertPublication = db.prepare(`
   INSERT INTO reputation_publications (wallet, composite_score, model_version, tx_hash, published_at)
   VALUES (@wallet, @composite_score, @model_version, @tx_hash, @published_at)
@@ -1039,10 +1009,6 @@ const stmtUpsertPublication = db.prepare(`
     tx_hash         = excluded.tx_hash,
     published_at    = excluded.published_at
 `)
-
-export function getPublication(wallet: string): ReputationPublication | undefined {
-  return stmtGetPublication.get(wallet)
-}
 
 export function upsertPublication(pub: {
   wallet: string
