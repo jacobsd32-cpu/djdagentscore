@@ -21,14 +21,6 @@ export const ENDPOINT_PRICING: Record<string, number> = {
 
 // ── Tier Configuration ──────────────────────────────────────────────────────
 
-/** Default tier score thresholds (can be overridden by auto-recalibration). */
-export const DEFAULT_TIER_THRESHOLDS = {
-  Elite: 90,
-  Trusted: 75,
-  Established: 50,
-  Emerging: 25,
-} as const
-
 /** Tier → color mapping for SVG badges. */
 export const TIER_COLORS: Record<string, string> = {
   Elite: '#d97706',
@@ -122,17 +114,6 @@ export const WEBHOOK_CONFIG = {
 } as const
 
 // ── Score Queue ─────────────────────────────────────────────────────────────
-
-export const SCORE_QUEUE_CONFIG = {
-  /** Time-to-live for a queued job before cleanup (ms) */
-  JOB_TTL_MS: 10 * 60 * 1000,
-  /** How often to clean up expired jobs (ms) */
-  CLEANUP_INTERVAL_MS: 5 * 60 * 1000,
-  /** Max concurrent scoring jobs */
-  MAX_CONCURRENT_JOBS: 1,
-  /** Max pending jobs in queue */
-  MAX_PENDING_JOBS: 50,
-} as const
 
 // ── Blockchain Indexer (x402 payments) ──────────────────────────────────
 

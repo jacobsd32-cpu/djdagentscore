@@ -25,7 +25,7 @@ export function blockToIsoTimestamp(blockNumber: bigint, anchorBlock: bigint, an
  * Extract the suggested safe end-block from a BlastAPI "too many results" error.
  * Error format: "query exceeds max results 20000, retry with the range START-END"
  */
-export function parseSuggestedEnd(err: unknown): bigint | null {
+function parseSuggestedEnd(err: unknown): bigint | null {
   const msg =
     (err as { details?: string; message?: string })?.details ?? (err as { message?: string })?.message ?? String(err)
   const m = msg.match(/retry with the range \d+-(\d+)/)

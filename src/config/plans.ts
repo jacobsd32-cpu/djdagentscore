@@ -62,7 +62,3 @@ export function initBillingPlans(): void {
   }
 }
 
-/** Lookup a plan by its Stripe price ID (used in webhook to identify which plan was purchased) */
-export function planFromPriceId(priceId: string): BillingPlan | undefined {
-  return Object.values(BILLING_PLANS).find((p) => p.stripePriceId === priceId)
-}

@@ -6,7 +6,7 @@ import type { AppEnv } from '../types/hono-env.js'
  * The header is a base64-encoded JSON payload whose structure depends on
  * the facilitator version; we try common paths and fall back to null.
  */
-export function extractPayerWallet(header: string | undefined): string | null {
+function extractPayerWallet(header: string | undefined): string | null {
   if (!header) return null
   try {
     const json = JSON.parse(Buffer.from(header, 'base64').toString('utf8'))
@@ -20,7 +20,7 @@ export function extractPayerWallet(header: string | undefined): string | null {
  * Read the X-PAYMENT header from a Hono request context.
  * Normalizes the case-insensitive header lookup.
  */
-export function getPaymentHeader(c: Context): string | undefined {
+function getPaymentHeader(c: Context): string | undefined {
   return c.req.header('X-PAYMENT') ?? c.req.header('x-payment') ?? undefined
 }
 

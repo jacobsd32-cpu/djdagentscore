@@ -248,13 +248,6 @@ export async function getCurrentBlock(): Promise<bigint> {
   return getPublicClient().getBlockNumber()
 }
 
-/** Convert raw USDC units (6 decimals) to a USD dollar string, e.g. "12.50" */
-export function usdcToUsd(raw: bigint): string {
-  const whole = raw / 1_000_000n
-  const frac = raw % 1_000_000n
-  return `${whole}.${frac.toString().padStart(6, '0').slice(0, 2)}`
-}
-
 /** Convert raw USDC units to a float */
 export function usdcToFloat(raw: bigint): number {
   return Number(raw) / 1_000_000
