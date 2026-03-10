@@ -107,8 +107,23 @@ certification.get('/badge/:wallet', (c) => {
 })
 
 // ── Paid: Apply for certification ($99 USDC) ───────────────────────────────
+// Certification requires x402 payment of $99 USDC. API key auth alone is NOT
+// sufficient — the key bypasses per-request x402 fees but certification is a
+// one-time purchase that must be paid via x402.
 
 certification.post('/apply', (c) => {
+  // Certification MUST be paid via x402 — reject API key-only requests.
+  // API keys bypass x402 for per-query convenience, but certification is a
+  // $99 purchase that requires actual payment proof.
+  const apiKeyId = c.get('apiKeyId') as string | undefined
+  const paymentHeader = c.req.header('X-PAYMENT') ?? c.req.header('x-payment')
+  if (apiKeyId && !paymentHeader) {
+    return c.json(
+      errorResponse('payment_required', 'Certification requires $99 USDC payment via x402. API key authentication alone is not sufficient for this endpoint.'),
+      402,
+    )
+  }
+
   // Extract payer wallet using the shared utility (handles both x402 and API key auth)
   const wallet = normalizeWallet(getPayerWallet(c))
   if (!wallet) {
