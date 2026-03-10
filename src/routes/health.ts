@@ -28,15 +28,24 @@ const CACHE_TTL_MS = 10_000
 let cachedPayload: any = null
 let cachedAt = 0
 
-function buildHealthPayload() {
+function buildHealthPayload(detailed: boolean) {
+  // Public health check: minimal (for Fly.io probes and uptime monitors)
+  const base = {
+    status: 'ok',
+    version: MODEL_VERSION,
+    uptime: Math.floor((Date.now() - startTime) / 1000),
+  }
+
+  if (!detailed) return base
+
+  // Detailed health: includes DB stats, indexer state, job stats.
+  // Only returned when X-Admin-Key header is present.
   const indexer = getIndexerStatus()
 
   return {
-    status: 'ok',
-    version: MODEL_VERSION,
+    ...base,
     modelVersion: MODEL_VERSION,
     experimentalStatus: true,
-    uptime: Math.floor((Date.now() - startTime) / 1000),
     database: {
       cachedScores: countCachedScores(),
       indexedWallets: countIndexedWallets(),
@@ -78,17 +87,25 @@ const health = new Hono()
 health.get('/', (c) => {
   const now = Date.now()
 
+  // Check if admin key is present for detailed response
+  const adminKey = process.env.ADMIN_KEY
+  const requestKey = c.req.header('x-admin-key')
+  const isAdmin = !!(adminKey && requestKey && adminKey === requestKey)
+
   // Serve cached payload if fresh; otherwise rebuild (and cache)
-  if (!cachedPayload || now - cachedAt > CACHE_TTL_MS) {
-    cachedPayload = buildHealthPayload()
-    cachedAt = now
-  } else {
-    // Update the uptime counter even when serving from cache — it's the one
-    // field consumers expect to always be fresh, and it's free to compute.
-    cachedPayload.uptime = Math.floor((now - startTime) / 1000)
+  // Cache only the public (minimal) payload to avoid leaking admin data
+  if (!isAdmin) {
+    if (!cachedPayload || now - cachedAt > CACHE_TTL_MS) {
+      cachedPayload = buildHealthPayload(false)
+      cachedAt = now
+    } else {
+      cachedPayload.uptime = Math.floor((now - startTime) / 1000)
+    }
+    return c.json(cachedPayload)
   }
 
-  return c.json(cachedPayload)
+  // Admin: always build fresh detailed payload (no caching)
+  return c.json(buildHealthPayload(true))
 })
 
 export default health

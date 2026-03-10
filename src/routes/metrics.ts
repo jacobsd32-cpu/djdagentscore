@@ -1,15 +1,16 @@
 /**
  * GET /metrics — Prometheus-compatible metrics endpoint.
  * Returns plain text in Prometheus exposition format.
- * No payment required.
+ * Protected by admin auth to prevent exposing operational telemetry publicly.
  */
 import { Hono } from 'hono'
 import { db } from '../db.js'
 import { getHttpCounters, uptimeSeconds } from '../metrics.js'
+import { adminAuth } from '../middleware/adminAuth.js'
 
 const metrics = new Hono()
 
-metrics.get('/', (c) => {
+metrics.get('/', adminAuth, (c) => {
   const lines: string[] = []
 
   // ── HTTP request counters ─────────────────────────────────────────

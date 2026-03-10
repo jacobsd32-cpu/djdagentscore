@@ -134,10 +134,25 @@ billing.get('/success', (c) => {
 // ── GET /billing/portal ──────────────────────────────────────────────
 // Creates a Stripe Customer Portal session for self-service management
 // (cancel, change plan, update payment method).
+// Requires API key authentication to prevent unauthorized access to
+// billing management (customer_id alone is not a secret).
 
 billing.get('/portal', async (c) => {
   const guard = requireStripe(c)
   if (guard) return guard
+
+  // Require API key auth — the API key is tied to a subscription,
+  // so the key holder is the legitimate billing owner.
+  const apiKeyId = c.get('apiKeyId') as string | undefined
+  if (!apiKeyId) {
+    return c.json(
+      errorResponse(
+        ErrorCodes.BILLING_SESSION_NOT_FOUND,
+        'API key authentication required. Include your API key in the Authorization header.',
+      ),
+      401,
+    )
+  }
 
   const customerId = c.req.query('customer_id')
   if (!customerId) {
