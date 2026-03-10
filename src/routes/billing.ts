@@ -24,6 +24,7 @@ import { BILLING_PLANS } from '../config/plans.js'
 import { ErrorCodes, errorResponse } from '../errors.js'
 import { log } from '../logger.js'
 import { successPageHtml } from '../templates/billingSuccess.js'
+import type { AppEnv } from '../types/hono-env.js'
 
 const billing = new Hono()
 
@@ -143,7 +144,7 @@ billing.get('/portal', async (c) => {
 
   // Require API key auth — the API key is tied to a subscription,
   // so the key holder is the legitimate billing owner.
-  const apiKeyId = c.get('apiKeyId') as string | undefined
+  const apiKeyId = (c as unknown as Context<AppEnv>).get('apiKeyId')
   if (!apiKeyId) {
     return c.json(
       errorResponse(

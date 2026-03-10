@@ -13,7 +13,9 @@
  *   POST /admin/:id/revoke   — revoke a certification
  *   GET  /admin/revenue      — revenue summary
  */
+import type { Context } from 'hono'
 import { Hono } from 'hono'
+import type { AppEnv } from '../types/hono-env.js'
 import { db } from '../db.js'
 import { errorResponse } from '../errors.js'
 import { adminAuth } from '../middleware/adminAuth.js'
@@ -115,7 +117,7 @@ certification.post('/apply', (c) => {
   // Certification MUST be paid via x402 — reject API key-only requests.
   // API keys bypass x402 for per-query convenience, but certification is a
   // $99 purchase that requires actual payment proof.
-  const apiKeyId = c.get('apiKeyId') as string | undefined
+  const apiKeyId = (c as unknown as Context<AppEnv>).get('apiKeyId')
   const paymentHeader = c.req.header('X-PAYMENT') ?? c.req.header('x-payment')
   if (apiKeyId && !paymentHeader) {
     return c.json(
