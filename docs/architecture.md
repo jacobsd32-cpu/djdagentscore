@@ -37,7 +37,8 @@ src/
 │   ├── requestId.ts                # X-Request-ID generation
 │   └── responseHeaders.ts          # Standard response + security headers
 ├── services/
-│   └── certificationService.ts     # Certification rules and workflow orchestration
+│   ├── certificationService.ts     # Certification rules and workflow orchestration
+│   └── registrationService.ts      # Agent registration and GitHub identity workflow
 ├── utils/
 │   ├── walletUtils.ts              # Wallet address normalisation and validation
 │   ├── paymentUtils.ts             # x402 payment amount/pricing helpers
