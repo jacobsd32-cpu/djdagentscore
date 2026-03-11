@@ -259,6 +259,11 @@ Recommended deployment shape:
 - Worker process: `npm run start:worker`
 - Combined runtime: only for local development or backwards-compatible single-process deploys
 
+Current production note:
+
+- The Fly deployment should remain on the combined runtime until storage changes.
+- This app still uses SQLite on a Fly volume, and that storage model blocks a safe API/worker machine split against the same database file.
+
 ### Environment variables
 
 | Variable | Default | Description |

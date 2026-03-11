@@ -22,7 +22,10 @@ src/
 ├── db/
 │   ├── connection.ts               # SQLite connection (DELETE journal mode)
 │   ├── schema.ts                   # 31-table schema, migrations, indexes
-│   └── queries.ts                  # Parameterised query helpers
+│   ├── reputationQueries.ts        # Scores, registrations, fraud reporting
+│   ├── evidenceQueries.ts          # Query logs, indexer state, transfer evidence
+│   ├── analyticsQueries.ts         # Revenue, explorer, economy, publication queries
+│   └── queries.ts                  # Query barrel over domain modules
 ├── runtime/
 │   └── worker.ts                   # Background job scheduler and worker lifecycle
 ├── middleware/
@@ -107,6 +110,11 @@ Recommended production topology is two processes against the same SQLite volume:
 - Worker process for indexing, refresh, delivery, and analytics jobs
 
 This keeps the core request path isolated from long-running job pressure while preserving a single repo and schema.
+
+Current deployment constraint:
+
+- Fly volumes are still the limiting factor for a true production split.
+- AgentScore uses SQLite on a mounted Fly volume, so API and worker cannot yet run as separate machines against the same live database file.
 
 ## Key components
 
