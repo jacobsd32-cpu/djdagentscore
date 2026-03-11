@@ -4,7 +4,10 @@
 
 ```
 src/
-├── index.ts                        # Hono app, x402 middleware, background jobs
+├── app.ts                          # Shared Hono app construction, routes, middleware, x402
+├── api.ts                          # API-only runtime entrypoint
+├── worker.ts                       # Worker-only runtime entrypoint
+├── index.ts                        # Legacy combined runtime (API + worker)
 ├── types.ts                        # TypeScript interfaces
 ├── types/
 │   └── hono-env.ts                 # Hono environment type bindings
@@ -14,11 +17,14 @@ src/
 ├── metrics.ts                      # Prometheus metrics
 ├── db.ts                           # Barrel re-export for db/ modules
 ├── config/
-│   └── constants.ts                # Centralised magic numbers (scoring, blockchain, jobs, API)
+│   ├── constants.ts                # Centralised magic numbers (scoring, blockchain, jobs, API)
+│   └── env.ts                      # Environment helpers and runtime toggles
 ├── db/
 │   ├── connection.ts               # SQLite connection (DELETE journal mode)
 │   ├── schema.ts                   # 31-table schema, migrations, indexes
 │   └── queries.ts                  # Parameterised query helpers
+├── runtime/
+│   └── worker.ts                   # Background job scheduler and worker lifecycle
 ├── middleware/
 │   ├── adminAuth.ts                # Admin endpoint authentication (SHA-256 + timing-safe)
 │   ├── apiKeyAuth.ts               # API key authentication (Bearer token)
@@ -87,6 +93,20 @@ src/
     ├── webhookDelivery.ts          # Webhook event delivery + retries
     └── githubReverify.ts           # Periodic GitHub verification refresh
 ```
+
+## Runtime topology
+
+- `app.ts` is the shared composition root for the HTTP surface.
+- `api.ts` starts only the Hono server.
+- `worker.ts` starts only background jobs.
+- `index.ts` preserves the historical single-process boot path by starting API and worker together.
+
+Recommended production topology is two processes against the same SQLite volume:
+
+- API process for synchronous request handling
+- Worker process for indexing, refresh, delivery, and analytics jobs
+
+This keeps the core request path isolated from long-running job pressure while preserving a single repo and schema.
 
 ## Key components
 

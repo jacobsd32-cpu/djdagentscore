@@ -138,7 +138,7 @@ export function checkScoreThresholds(
 
 /**
  * Process pending webhook deliveries.
- * Called on a 30-second interval from index.ts.
+ * Called on a 30-second interval by the worker runtime.
  */
 export async function processWebhookQueue(): Promise<void> {
   const pending = db.prepare(`

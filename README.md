@@ -230,7 +230,34 @@ npm install
 npm run dev
 ```
 
-Requires **Node.js v22**. Starts on `http://localhost:3000`.
+Requires **Node.js v22**. `npm run dev` keeps the legacy combined runtime. Starts on `http://localhost:3000`.
+
+To run the split runtimes independently:
+
+```bash
+npm run dev:api
+npm run dev:worker
+```
+
+Production-style entrypoints are also available after build:
+
+```bash
+npm run start:api
+npm run start:worker
+```
+
+### Runtime topology
+
+- `src/app.ts` builds the shared Hono app: routes, middleware, billing, and x402.
+- `src/api.ts` runs the HTTP API only.
+- `src/worker.ts` runs indexers, refreshers, anomaly detection, webhook delivery, and publishing jobs.
+- `src/index.ts` is the legacy combined runtime and remains the default `npm run dev` / `npm start` path.
+
+Recommended deployment shape:
+
+- API process: `npm run start:api`
+- Worker process: `npm run start:worker`
+- Combined runtime: only for local development or backwards-compatible single-process deploys
 
 ### Environment variables
 
@@ -240,6 +267,9 @@ Requires **Node.js v22**. Starts on `http://localhost:3000`.
 | `PAY_TO` | `0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528` | USDC recipient for x402 payments |
 | `FACILITATOR_URL` | `https://x402.org/facilitator` | x402 facilitator endpoint |
 | `BASE_RPC_URL` | `https://base-mainnet.public.blastapi.io` | Base RPC (BlastAPI recommended) |
+| `ENABLE_BLOCKCHAIN_INDEXER` | `true` | Enable x402 settlement indexing in worker/combined runtime |
+| `ENABLE_USDC_INDEXER` | `true` | Enable USDC transfer indexing in worker/combined runtime |
+| `ENABLE_HOURLY_REFRESH` | `true` | Enable hourly score refresh in worker/combined runtime |
 
 ---
 

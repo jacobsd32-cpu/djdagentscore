@@ -6,7 +6,7 @@
  * bypassing x402.  Once exhausted, next() is called and x402 handles
  * the normal payment flow.
  *
- * Register this middleware BEFORE paymentMiddleware in index.ts.
+ * Register this middleware before the paid x402 middleware in the shared app.
  */
 import { createHash } from 'node:crypto'
 import type { MiddlewareHandler } from 'hono'
