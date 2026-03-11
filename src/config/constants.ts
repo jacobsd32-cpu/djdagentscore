@@ -146,15 +146,15 @@ export const BLOCKCHAIN_INDEXER_CONFIG = {
   /** Delay on RPC error before retry */
   RETRY_DELAY_MS: 30_000,
   /** Blocks per getLogs call (reduced for Base's high volume) */
-  LOG_CHUNK_SIZE: 500n,
+  LOG_CHUNK_SIZE: 200n,
   /** Event loop yield between chunks so health checks can be served */
-  EVENT_LOOP_YIELD_MS: 100,
+  EVENT_LOOP_YIELD_MS: 200,
   /** Max gap to index on startup — skip to current if further behind */
   MAX_CATCHUP_BLOCKS: 43_200n,
   /** SQLite micro-batch size for INSERT transactions */
-  MICRO_BATCH_SIZE: 50,
+  MICRO_BATCH_SIZE: 25,
   /** Max blocks to process per poll cycle. Caps event-loop cost of catch-up. */
-  MAX_BLOCKS_PER_CYCLE: 2_000n,
+  MAX_BLOCKS_PER_CYCLE: 500n,
 } as const
 
 // ── USDC Transfer Indexer ───────────────────────────────────────────────
@@ -165,23 +165,23 @@ export const USDC_INDEXER_CONFIG = {
   /** Delay on RPC error before retry */
   RETRY_DELAY_MS: 30_000,
   /** Blocks per getLogs call (reduced to limit transfers per cycle) */
-  LOG_CHUNK_SIZE: 50n,
+  LOG_CHUNK_SIZE: 25n,
   /** ~5 getLogs/sec to avoid rate limits */
-  RATE_LIMIT_DELAY_MS: 200,
+  RATE_LIMIT_DELAY_MS: 250,
   /** Max gap to index on startup (~12h at 2s/block) */
   MAX_CATCHUP_BLOCKS: 21_600n,
   /** Cap expensive wallet stats refresh per chunk */
-  MAX_WALLET_REFRESH_PER_CHUNK: 3,
+  MAX_WALLET_REFRESH_PER_CHUNK: 2,
   /** SQLite micro-batch size to avoid blocking the event loop */
-  MICRO_BATCH_SIZE: 50,
+  MICRO_BATCH_SIZE: 25,
   /** Event loop yield between micro-batches (ms) */
-  EVENT_LOOP_YIELD_MS: 50,
+  EVENT_LOOP_YIELD_MS: 100,
   /** Blocks behind tip at which we skip wallet stats refresh */
   CATCHUP_THRESHOLD: 50n,
   /** Max blocks to process in a single poll cycle.
    *  Caps the event-loop cost of catch-up — excess blocks are processed in
    *  subsequent 15s poll cycles instead of one giant batch. */
-  MAX_BLOCKS_PER_CYCLE: 200n,
+  MAX_BLOCKS_PER_CYCLE: 100n,
 } as const
 
 // ── Data Pruning ────────────────────────────────────────────────────────
