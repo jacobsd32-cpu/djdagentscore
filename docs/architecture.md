@@ -36,6 +36,8 @@ src/
 │   ├── queryLogger.ts              # Per-request query logging
 │   ├── requestId.ts                # X-Request-ID generation
 │   └── responseHeaders.ts          # Standard response + security headers
+├── services/
+│   └── certificationService.ts     # Certification rules and workflow orchestration
 ├── utils/
 │   ├── walletUtils.ts              # Wallet address normalisation and validation
 │   ├── paymentUtils.ts             # x402 payment amount/pricing helpers

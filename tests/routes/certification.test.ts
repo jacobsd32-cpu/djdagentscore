@@ -57,6 +57,67 @@ const { testDb } = vi.hoisted(() => {
 
 vi.mock('../../src/db.js', () => ({
   db: testDb,
+  getScore: (wallet: string) =>
+    testDb.prepare('SELECT * FROM scores WHERE wallet = ? LIMIT 1').get(wallet),
+  getRegistration: (wallet: string) =>
+    testDb.prepare('SELECT * FROM agent_registrations WHERE wallet = ? LIMIT 1').get(wallet),
+  getActiveCertification: (wallet: string) =>
+    testDb.prepare(
+      `SELECT * FROM certifications
+       WHERE wallet = ? AND is_active = 1 AND expires_at > datetime('now')
+       LIMIT 1`,
+    ).get(wallet),
+  insertCertification: (wallet: string, tier: string, scoreAtCertification: number) => {
+    const result = testDb
+      .prepare(
+        `INSERT INTO certifications (wallet, tier, score_at_certification, expires_at)
+         VALUES (?, ?, ?, datetime('now', '+1 year'))`,
+      )
+      .run(wallet, tier, scoreAtCertification)
+    return testDb.prepare('SELECT * FROM certifications WHERE id = ?').get(Number(result.lastInsertRowid))
+  },
+  listCertifications: () =>
+    testDb.prepare('SELECT * FROM certifications ORDER BY granted_at DESC').all(),
+  revokeCertification: (id: number, reason: string) =>
+    testDb.prepare(
+      `UPDATE certifications
+       SET is_active = 0, revoked_at = datetime('now'), revocation_reason = ?
+       WHERE id = ? AND is_active = 1`,
+    ).run(reason, id).changes > 0,
+  getCertificationRevenueSummary: () => {
+    const total = (testDb.prepare('SELECT COUNT(*) as count FROM certifications').get() as { count: number }).count
+    const active = (
+      testDb.prepare(
+        `SELECT COUNT(*) as count FROM certifications WHERE is_active = 1 AND expires_at > datetime('now')`,
+      ).get() as { count: number }
+    ).count
+    const revoked = (
+      testDb.prepare(
+        'SELECT COUNT(*) as count FROM certifications WHERE revoked_at IS NOT NULL',
+      ).get() as { count: number }
+    ).count
+    const byMonth = testDb.prepare(
+      `SELECT
+         strftime('%Y-%m', granted_at) as month,
+         COUNT(*) as count,
+         SUM(CASE WHEN revoked_at IS NOT NULL THEN 1 ELSE 0 END) as revoked_count,
+         SUM(99) as gross_revenue_usd,
+         SUM(CASE WHEN revoked_at IS NULL THEN 99 ELSE 0 END) as net_revenue_usd
+       FROM certifications
+       GROUP BY strftime('%Y-%m', granted_at)
+       ORDER BY month DESC`,
+    ).all()
+
+    return {
+      total_certifications: total,
+      active_certifications: active,
+      revoked_certifications: revoked,
+      gross_revenue_usd: total * 99,
+      net_revenue_usd: (total - revoked) * 99,
+      price_per_cert_usd: 99,
+      by_month: byMonth,
+    }
+  },
 }))
 
 import { Hono } from 'hono'
