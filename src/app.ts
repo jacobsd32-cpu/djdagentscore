@@ -30,6 +30,7 @@ import billingRoute from './routes/billing.js'
 import blacklistRoute from './routes/blacklist.js'
 import blogRoute from './routes/blog.js'
 import certificationRoute from './routes/certification.js'
+import dataRoute from './routes/data.js'
 import docsRoute from './routes/docs.js'
 import economyRoute from './routes/economy.js'
 import explorerRoute from './routes/explorer.js'
@@ -224,6 +225,67 @@ const x402Middleware = paymentMiddlewareFromConfig(
           },
           output: {
             example: { wallet: '0x1234...', reported: false, reportCount: 0, reasons: [], disputeStatus: 'none' },
+          },
+        }),
+      },
+    },
+    '/v1/data/decay': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/data/decay'])],
+      description: 'Historical score decay curve for a wallet with trend and trajectory analysis',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { wallet: '0x1234567890abcdef1234567890abcdef12345678', limit: 50 },
+          inputSchema: {
+            properties: {
+              wallet: { type: 'string', description: 'Wallet address to inspect' },
+              limit: { type: 'integer', description: 'Max snapshots to return (default 50)' },
+              after: { type: 'string', description: 'ISO date filter start' },
+              before: { type: 'string', description: 'ISO date filter end' },
+            },
+            required: ['wallet'],
+          },
+          output: {
+            example: {
+              wallet: '0x1234...',
+              current_score: 74,
+              current_tier: 'Established',
+              decay: [{ score: 74, recorded_at: '2026-03-12T10:00:00Z' }],
+              trajectory: { direction: 'stable', modifier: 0 },
+            },
+          },
+        }),
+      },
+    },
+    '/v1/data/graph': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/data/graph'])],
+      description: 'Relationship graph for a wallet with top counterparties and directional flow totals',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { wallet: '0x1234567890abcdef1234567890abcdef12345678', limit: 25 },
+          inputSchema: {
+            properties: {
+              wallet: { type: 'string', description: 'Wallet address to inspect' },
+              limit: { type: 'integer', description: 'Max counterparties to return (default 25)' },
+            },
+            required: ['wallet'],
+          },
+          output: {
+            example: {
+              wallet: '0x1234...',
+              counterparties: [
+                {
+                  rank: 1,
+                  wallet: '0xabcd...',
+                  total_tx_count: 14,
+                  total_volume: 2200,
+                },
+              ],
+              summary: {
+                counterparty_count: 8,
+                total_tx_count: 42,
+                total_volume: 6900,
+              },
+            },
           },
         }),
       },
@@ -495,6 +557,8 @@ const PAID_ROUTES = new Set([
   '/v1/score/refresh',
   '/v1/report',
   '/v1/data/fraud/blacklist',
+  '/v1/data/decay',
+  '/v1/data/graph',
   '/v1/score/batch',
   '/v1/score/history',
   '/v1/forensics/summary',
@@ -526,12 +590,15 @@ app.use(async (c, next) => {
 app.use('/v1/score/*', paidRateLimitMiddleware)
 app.use('/v1/report', paidRateLimitMiddleware)
 app.use('/v1/data/fraud/*', paidRateLimitMiddleware)
+app.use('/v1/data/decay', paidRateLimitMiddleware)
+app.use('/v1/data/graph', paidRateLimitMiddleware)
 app.use('/v1/forensics/*', paidRateLimitMiddleware)
 
 app.route('/health', healthRoute)
 app.route('/v1/score/history', historyRoute)
 app.route('/v1/score', scoreRoute)
 app.route('/v1/report', reportRoute)
+app.route('/v1/data', dataRoute)
 app.route('/v1/monitor', monitoringRoute)
 app.route('/v1/forensics', forensicsRoute)
 app.route('/v1/leaderboard', leaderboardRoute)

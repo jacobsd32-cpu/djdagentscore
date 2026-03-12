@@ -39,6 +39,8 @@ describe('GET /.well-known/x402', () => {
     expect(body.service.openapi).toBe('https://api.example.test/openapi.json')
     expect(body.service.version).toBeTruthy()
     expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/score/basic' && endpoint.price === 0)).toBe(true)
+    expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/data/decay' && endpoint.price === 0.15)).toBe(true)
+    expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/data/graph' && endpoint.price === 0.2)).toBe(true)
     expect(body.integration.quickstart).toContain('https://api.example.test/v1/score/basic')
   })
 })

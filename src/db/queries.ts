@@ -7,6 +7,7 @@
 
 export * from './analyticsQueries.js'
 export * from './certificationQueries.js'
+export * from './dataQueries.js'
 export * from './directoryQueries.js'
 export * from './evidenceQueries.js'
 export * from './forensicsQueries.js'

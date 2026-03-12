@@ -242,6 +242,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
       <li>All paid endpoints</li>
       <li>Full dimension breakdown</li>
       <li>Score history &amp; trends</li>
+      <li>Relationship graph and score decay data products</li>
       <li>DJD Forensics summaries, feeds, watchlists, reports, &amp; disputes</li>
       <li>Standard API key</li>
     </ul>
@@ -324,7 +325,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
       <span>What endpoints are included?</span>
       <span class="faq-toggle">+</span>
     </div>
-    <div class="faq-a">All paid plans include access to every endpoint: full scores, score history, DJD Forensics summaries, dispute intake, network feeds, watchlists, incident feeds, merged timelines, batch scoring, certification, force-refresh, and the legacy blacklist check. Growth and Scale also support wallet-scoped webhook monitoring, including preset score, anomaly, and Forensics alert bundles. The free tier is limited to the basic score endpoint.</div>
+    <div class="faq-a">All paid plans include access to every endpoint: full scores, score history, score decay curves, relationship graph reads, DJD Forensics summaries, dispute intake, network feeds, watchlists, incident feeds, merged timelines, batch scoring, certification, force-refresh, and the legacy blacklist check. Growth and Scale also support wallet-scoped webhook monitoring, including preset score, anomaly, and Forensics alert bundles. The free tier is limited to the basic score endpoint.</div>
   </div>
   <div class="faq-item">
     <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">

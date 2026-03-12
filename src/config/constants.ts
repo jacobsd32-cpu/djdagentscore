@@ -16,6 +16,8 @@ export const ENDPOINT_PRICING: Record<string, number> = {
   '/v1/score/refresh': 0.25,
   '/v1/report': 0.02,
   '/v1/data/fraud/blacklist': 0.05,
+  '/v1/data/decay': 0.15,
+  '/v1/data/graph': 0.2,
   '/v1/score/batch': 0.5,
   '/v1/score/history': 0.15,
   '/v1/forensics/summary': 0.1,

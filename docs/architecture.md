@@ -22,6 +22,7 @@ src/
 ├── db/
 │   ├── connection.ts               # SQLite connection (DELETE journal mode)
 │   ├── schema.ts                   # 32-table schema, migrations, indexes
+│   ├── dataQueries.ts              # Score-decay and relationship-graph read models for DJD data products
 │   ├── certificationQueries.ts     # DJD Certify persistence and certification revenue rollups
 │   ├── directoryQueries.ts         # Public leaderboard and trust-directory read models
 │   ├── forensicsQueries.ts         # Fraud report/dispute persistence, active-report filtering, and forensics read models
@@ -53,6 +54,7 @@ src/
 │   ├── analyticsService.ts         # Public observatory-lite APIs for economy metrics and explorer data
 │   ├── billingService.ts           # Billing checkout, success-page, and customer-portal workflows
 │   ├── certificationService.ts     # Certification rules and workflow orchestration
+│   ├── dataProductService.ts       # DJD data-product endpoints for score-decay curves and relationship-graph reads
 │   ├── discoveryService.ts         # Public docs, OpenAPI, and x402 manifest assembly
 │   ├── directoryService.ts         # Public trust-surface APIs for leaderboard and score badges
 │   ├── evidenceService.ts          # Fraud report/dispute intake plus DJD Forensics wallet/corpus views and score-history APIs
@@ -81,6 +83,7 @@ src/
 │   ├── forensics.ts                # /v1/forensics/* (summary, dispute intake, feed, watchlist, reports, merged timeline)
 │   ├── leaderboard.ts              # GET /v1/leaderboard
 │   ├── badge.ts                    # GET /v1/badge/*.svg
+│   ├── data.ts                     # /v1/data/decay and /v1/data/graph
 │   ├── agent.ts                    # GET /agent/{wallet} (HTML)
 │   ├── blacklist.ts                # GET /v1/data/fraud/blacklist
 │   ├── certification.ts            # /v1/certification/* (apply, status, badge)

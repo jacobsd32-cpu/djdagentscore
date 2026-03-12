@@ -206,6 +206,32 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
         input: { query: { wallet: { type: 'string', required: true } } },
       },
       {
+        path: '/v1/data/decay',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/data/decay'],
+        description: 'Historical score decay curve for a wallet with trend and trajectory analysis.',
+        input: {
+          query: {
+            wallet: { type: 'string', required: true },
+            limit: { type: 'integer' },
+            after: { type: 'string' },
+            before: { type: 'string' },
+          },
+        },
+      },
+      {
+        path: '/v1/data/graph',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/data/graph'],
+        description: 'Relationship graph data for a wallet with top counterparties and directional volume totals.',
+        input: {
+          query: {
+            wallet: { type: 'string', required: true },
+            limit: { type: 'integer' },
+          },
+        },
+      },
+      {
         path: '/v1/forensics/summary',
         method: 'GET',
         price: ENDPOINT_PRICING['/v1/forensics/summary'],
