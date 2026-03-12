@@ -38,7 +38,7 @@ function shutdown() {
 process.on('SIGINT', shutdown)
 process.on('SIGTERM', shutdown)
 
-server = serve({ fetch: app.fetch, port: PORT }, (info) => {
+server = serve({ fetch: app.fetch, port: PORT, hostname: '0.0.0.0' }, (info) => {
   log.info('server', `DJD Agent Score API running on http://localhost:${info.port}`)
   log.info('server', `payTo: ${PAY_TO}`)
   log.info('server', `facilitator: ${FACILITATOR_URL}`)
