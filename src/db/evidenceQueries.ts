@@ -296,6 +296,29 @@ export interface WebhookDeliveryRow {
   created_at: string
 }
 
+export interface ActiveWebhookRow {
+  id: number
+  url: string
+  secret: string
+  events: string
+  tier: string
+  failure_count: number
+}
+
+export interface ThresholdWebhookRow extends ActiveWebhookRow {
+  threshold_score: number
+}
+
+export interface PendingWebhookDeliveryRow {
+  id: number
+  webhook_id: number
+  event_type: string
+  payload: string
+  attempt: number
+  url: string
+  secret: string
+}
+
 const stmtInsertWebhook = db.prepare<[string, string, string, string, string]>(`
   INSERT INTO webhooks (wallet, url, secret, events, tier)
   VALUES (?, ?, ?, ?, ?)
@@ -327,6 +350,63 @@ const stmtListWebhooksForWallet = db.prepare<[string], WebhookRow>(
 
 const stmtDeactivateWebhookForWallet = db.prepare(`
   UPDATE webhooks SET is_active = 0, disabled_at = datetime('now') WHERE id = ? AND wallet = ? AND is_active = 1
+`)
+
+const stmtListActiveWebhooks = db.prepare<[], ActiveWebhookRow>(`
+  SELECT id, url, secret, events, tier, failure_count FROM webhooks
+  WHERE is_active = 1
+`)
+
+const stmtListThresholdWebhooks = db.prepare<[], ThresholdWebhookRow>(`
+  SELECT id, url, secret, events, tier, failure_count, threshold_score FROM webhooks
+  WHERE is_active = 1 AND threshold_score IS NOT NULL
+`)
+
+const stmtInsertWebhookDelivery = db.prepare<[number, string, string]>(`
+  INSERT INTO webhook_deliveries (webhook_id, event_type, payload)
+  VALUES (?, ?, ?)
+`)
+
+const insertWebhookDeliveriesTxn = db.transaction((webhooks: Array<{ id: number }>, eventType: string, payload: string) => {
+  for (const webhook of webhooks) {
+    stmtInsertWebhookDelivery.run(webhook.id, eventType, payload)
+  }
+})
+
+const stmtListPendingWebhookDeliveries = db.prepare<[number], PendingWebhookDeliveryRow>(`
+  SELECT wd.id, wd.webhook_id, wd.event_type, wd.payload, wd.attempt,
+         w.url, w.secret
+  FROM webhook_deliveries wd
+  JOIN webhooks w ON w.id = wd.webhook_id
+  WHERE wd.delivered_at IS NULL
+    AND (wd.next_retry_at IS NULL OR wd.next_retry_at <= datetime('now'))
+    AND wd.attempt <= ?
+  ORDER BY wd.created_at ASC
+  LIMIT 50
+`)
+
+const stmtMarkWebhookDeliverySuccess = db.prepare(`
+  UPDATE webhook_deliveries SET delivered_at = datetime('now'), status_code = ? WHERE id = ?
+`)
+
+const stmtResetWebhookFailureCount = db.prepare(`
+  UPDATE webhooks SET failure_count = 0, last_delivery_at = datetime('now') WHERE id = ?
+`)
+
+const stmtMarkWebhookDeliveryFinalFailure = db.prepare(`
+  UPDATE webhook_deliveries SET status_code = ?, attempt = ? WHERE id = ?
+`)
+
+const stmtIncrementWebhookFailureCount = db.prepare<[number], { failure_count: number }>(`
+  UPDATE webhooks SET failure_count = failure_count + 1 WHERE id = ? RETURNING failure_count
+`)
+
+const stmtDisableWebhook = db.prepare(`
+  UPDATE webhooks SET is_active = 0, disabled_at = datetime('now') WHERE id = ?
+`)
+
+const stmtScheduleWebhookRetry = db.prepare(`
+  UPDATE webhook_deliveries SET attempt = ?, next_retry_at = ?, status_code = ? WHERE id = ?
 `)
 
 export function insertWebhook(input: {
@@ -373,4 +453,48 @@ export function listWebhooksForWallet(wallet: string): WebhookRow[] {
 
 export function deactivateWebhookForWallet(id: number, wallet: string): boolean {
   return stmtDeactivateWebhookForWallet.run(id, wallet).changes > 0
+}
+
+export function listActiveWebhooks(): ActiveWebhookRow[] {
+  return stmtListActiveWebhooks.all()
+}
+
+export function listThresholdWebhooks(): ThresholdWebhookRow[] {
+  return stmtListThresholdWebhooks.all()
+}
+
+export function insertWebhookDeliveries(webhooks: Array<{ id: number }>, eventType: string, payload: string): void {
+  insertWebhookDeliveriesTxn(webhooks, eventType, payload)
+}
+
+export function listPendingWebhookDeliveries(maxAttempts: number): PendingWebhookDeliveryRow[] {
+  return stmtListPendingWebhookDeliveries.all(maxAttempts)
+}
+
+export function markWebhookDeliverySuccess(deliveryId: number, webhookId: number, statusCode: number): void {
+  stmtMarkWebhookDeliverySuccess.run(statusCode, deliveryId)
+  stmtResetWebhookFailureCount.run(webhookId)
+}
+
+export function markWebhookDeliveryFinalFailure(
+  deliveryId: number,
+  nextAttempt: number,
+  webhookId: number,
+  statusCode: number | null,
+): number | null {
+  stmtMarkWebhookDeliveryFinalFailure.run(statusCode, nextAttempt, deliveryId)
+  return stmtIncrementWebhookFailureCount.get(webhookId)?.failure_count ?? null
+}
+
+export function disableWebhook(id: number): void {
+  stmtDisableWebhook.run(id)
+}
+
+export function scheduleWebhookDeliveryRetry(
+  deliveryId: number,
+  nextAttempt: number,
+  nextRetryAt: string,
+  statusCode: number | null,
+): void {
+  stmtScheduleWebhookRetry.run(nextAttempt, nextRetryAt, statusCode, deliveryId)
 }

@@ -41,6 +41,7 @@ src/
 │   ├── apiKeyService.ts            # Admin API key lifecycle and reset policy
 │   ├── certificationService.ts     # Certification rules and workflow orchestration
 │   ├── registrationService.ts      # Agent registration and GitHub identity workflow
+│   ├── webhookQueueService.ts      # Worker-side webhook queueing, delivery, and retry policy
 │   └── webhookService.ts           # Webhook validation, lifecycle, and test delivery
 ├── utils/
 │   ├── walletUtils.ts              # Wallet address normalisation and validation
@@ -99,7 +100,7 @@ src/
     ├── dailyAggregator.ts          # Daily wallet metrics aggregation
     ├── autoRecalibration.ts        # Auto-adjust tier thresholds from outcome data
     ├── jobStats.ts                 # Background job statistics
-    ├── webhookDelivery.ts          # Webhook event delivery + retries
+    ├── webhookDelivery.ts          # Thin worker adapter over webhookQueueService
     └── githubReverify.ts           # Periodic GitHub verification refresh
 ```
 

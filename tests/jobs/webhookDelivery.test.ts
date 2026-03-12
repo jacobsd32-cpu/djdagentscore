@@ -42,7 +42,83 @@ const { testDb } = vi.hoisted(() => {
 })
 
 vi.mock('../../src/db.js', () => ({
-  db: testDb,
+  listActiveWebhooks: () =>
+    testDb
+      .prepare('SELECT id, url, secret, events, tier, failure_count FROM webhooks WHERE is_active = 1')
+      .all(),
+  listThresholdWebhooks: () =>
+    testDb
+      .prepare(`
+        SELECT id, url, secret, events, tier, failure_count, threshold_score
+        FROM webhooks
+        WHERE is_active = 1 AND threshold_score IS NOT NULL
+      `)
+      .all(),
+  insertWebhookDeliveries: (webhooks: Array<{ id: number }>, eventType: string, payload: string) => {
+    const stmt = testDb.prepare(`
+      INSERT INTO webhook_deliveries (webhook_id, event_type, payload)
+      VALUES (?, ?, ?)
+    `)
+    const run = testDb.transaction((rows: Array<{ id: number }>) => {
+      for (const webhook of rows) {
+        stmt.run(webhook.id, eventType, payload)
+      }
+    })
+    run(webhooks)
+  },
+  listPendingWebhookDeliveries: (maxAttempts: number) =>
+    testDb
+      .prepare(`
+        SELECT wd.id, wd.webhook_id, wd.event_type, wd.payload, wd.attempt,
+               w.url, w.secret
+        FROM webhook_deliveries wd
+        JOIN webhooks w ON w.id = wd.webhook_id
+        WHERE wd.delivered_at IS NULL
+          AND (wd.next_retry_at IS NULL OR wd.next_retry_at <= datetime('now'))
+          AND wd.attempt <= ?
+        ORDER BY wd.created_at ASC
+        LIMIT 50
+      `)
+      .all(maxAttempts),
+  markWebhookDeliverySuccess: (deliveryId: number, webhookId: number, statusCode: number) => {
+    testDb.prepare('UPDATE webhook_deliveries SET delivered_at = datetime(\'now\'), status_code = ? WHERE id = ?').run(
+      statusCode,
+      deliveryId,
+    )
+    testDb.prepare('UPDATE webhooks SET failure_count = 0, last_delivery_at = datetime(\'now\') WHERE id = ?').run(
+      webhookId,
+    )
+  },
+  markWebhookDeliveryFinalFailure: (
+    deliveryId: number,
+    nextAttempt: number,
+    webhookId: number,
+    statusCode: number | null,
+  ) => {
+    testDb.prepare('UPDATE webhook_deliveries SET status_code = ?, attempt = ? WHERE id = ?').run(
+      statusCode,
+      nextAttempt,
+      deliveryId,
+    )
+    testDb.prepare('UPDATE webhooks SET failure_count = failure_count + 1 WHERE id = ?').run(webhookId)
+    const row = testDb.prepare('SELECT failure_count FROM webhooks WHERE id = ?').get(webhookId) as {
+      failure_count: number
+    }
+    return row.failure_count
+  },
+  disableWebhook: (id: number) => {
+    testDb.prepare('UPDATE webhooks SET is_active = 0, disabled_at = datetime(\'now\') WHERE id = ?').run(id)
+  },
+  scheduleWebhookDeliveryRetry: (
+    deliveryId: number,
+    nextAttempt: number,
+    nextRetryAt: string,
+    statusCode: number | null,
+  ) => {
+    testDb
+      .prepare('UPDATE webhook_deliveries SET attempt = ?, next_retry_at = ?, status_code = ? WHERE id = ?')
+      .run(nextAttempt, nextRetryAt, statusCode, deliveryId)
+  },
 }))
 
 vi.mock('../../src/logger.js', () => ({
