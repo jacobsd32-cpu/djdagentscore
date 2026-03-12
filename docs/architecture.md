@@ -24,6 +24,7 @@ src/
 │   ├── schema.ts                   # 31-table schema, migrations, indexes
 │   ├── reputationQueries.ts        # Scores, registrations, fraud reporting
 │   ├── evidenceQueries.ts          # Query logs, indexer state, transfer evidence, webhook persistence
+│   ├── platformQueries.ts          # API key persistence and developer platform records
 │   ├── analyticsQueries.ts         # Revenue, explorer, economy, publication queries
 │   └── queries.ts                  # Query barrel over domain modules
 ├── runtime/
@@ -37,6 +38,7 @@ src/
 │   ├── requestId.ts                # X-Request-ID generation
 │   └── responseHeaders.ts          # Standard response + security headers
 ├── services/
+│   ├── apiKeyService.ts            # Admin API key lifecycle and reset policy
 │   ├── certificationService.ts     # Certification rules and workflow orchestration
 │   ├── registrationService.ts      # Agent registration and GitHub identity workflow
 │   └── webhookService.ts           # Webhook validation, lifecycle, and test delivery

@@ -1,27 +1,102 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-// Track all DB operations for assertions
-const mockDbRuns: Array<{ sql: string; params: unknown[] }> = []
-const mockDbRows: Record<string, unknown>[] = []
-let lastInsertRowid = 1
+interface StoredApiKey {
+  id: number
+  key_hash: string
+  key_prefix: string
+  wallet: string
+  name: string | null
+  tier: string
+  monthly_limit: number
+  monthly_used: number
+  usage_reset_at: string
+  is_active: number
+  created_at: string
+  last_used_at: string | null
+  revoked_at: string | null
+  stripe_customer_id: string | null
+}
 
-vi.mock('../../src/db.js', () => ({
-  db: {
-    prepare: vi.fn((sql: string) => ({
-      get: vi.fn(),
-      all: vi.fn(() => mockDbRows),
-      run: vi.fn((...params: unknown[]) => {
-        mockDbRuns.push({ sql, params })
-        return { lastInsertRowid: lastInsertRowid++, changes: sql.includes('UPDATE') ? 1 : 0 }
-      }),
-    })),
-  },
+const state = vi.hoisted(() => ({
+  rows: [] as StoredApiKey[],
+  nextId: 1,
 }))
 
-vi.mock('../../src/errors.js', () => ({
-  errorResponse: (code: string, message: string, details?: Record<string, unknown>) => ({
-    error: { code, message, ...(details ? { details } : {}) },
-  }),
+vi.mock('../../src/db.js', () => ({
+  insertApiKey: (input: {
+    key_hash: string
+    key_prefix: string
+    wallet: string
+    name: string | null
+    tier: string
+    monthly_limit: number
+    usage_reset_at: string
+    stripe_customer_id?: string | null
+  }) => {
+    const row: StoredApiKey = {
+      id: state.nextId++,
+      key_hash: input.key_hash,
+      key_prefix: input.key_prefix,
+      wallet: input.wallet,
+      name: input.name,
+      tier: input.tier,
+      monthly_limit: input.monthly_limit,
+      monthly_used: 0,
+      usage_reset_at: input.usage_reset_at,
+      is_active: 1,
+      created_at: '2026-03-12T00:00:00.000Z',
+      last_used_at: null,
+      revoked_at: null,
+      stripe_customer_id: input.stripe_customer_id ?? null,
+    }
+    state.rows.unshift(row)
+
+    return {
+      id: row.id,
+      key_prefix: row.key_prefix,
+      wallet: row.wallet,
+      name: row.name,
+      tier: row.tier,
+      monthly_limit: row.monthly_limit,
+      monthly_used: row.monthly_used,
+      usage_reset_at: row.usage_reset_at,
+      is_active: row.is_active,
+      created_at: row.created_at,
+      last_used_at: row.last_used_at,
+      revoked_at: row.revoked_at,
+      stripe_customer_id: row.stripe_customer_id,
+    }
+  },
+  listApiKeys: () =>
+    state.rows.map((row) => ({
+      id: row.id,
+      key_prefix: row.key_prefix,
+      wallet: row.wallet,
+      name: row.name,
+      tier: row.tier,
+      monthly_limit: row.monthly_limit,
+      monthly_used: row.monthly_used,
+      usage_reset_at: row.usage_reset_at,
+      is_active: row.is_active,
+      created_at: row.created_at,
+      last_used_at: row.last_used_at,
+      revoked_at: row.revoked_at,
+      stripe_customer_id: row.stripe_customer_id,
+    })),
+  revokeApiKey: (id: number) => {
+    const row = state.rows.find((entry) => entry.id === id && entry.revoked_at === null)
+    if (!row) return false
+    row.revoked_at = '2026-03-12T00:00:00.000Z'
+    row.is_active = 0
+    return true
+  },
+  resetApiKeyUsage: (id: number, usageResetAt: string) => {
+    const row = state.rows.find((entry) => entry.id === id)
+    if (!row) return false
+    row.monthly_used = 0
+    row.usage_reset_at = usageResetAt
+    return true
+  },
 }))
 
 describe('apiKeys admin routes', () => {
@@ -34,12 +109,9 @@ describe('apiKeys admin routes', () => {
     } else {
       delete process.env.ADMIN_KEY
     }
-    mockDbRuns.length = 0
-    mockDbRows.length = 0
-    lastInsertRowid = 1
+    state.rows.length = 0
+    state.nextId = 1
   })
-
-  // ── Auth tests ──
 
   it('returns 401 without X-ADMIN-KEY header', async () => {
     process.env.ADMIN_KEY = ADMIN_KEY
@@ -90,8 +162,6 @@ describe('apiKeys admin routes', () => {
     expect(res.status).toBe(503)
   })
 
-  // ── POST / — Create key ──
-
   it('creates a new API key and returns the raw key only on creation', async () => {
     process.env.ADMIN_KEY = ADMIN_KEY
 
@@ -117,13 +187,10 @@ describe('apiKeys admin routes', () => {
 
     expect(res.status).toBe(201)
     const body = (await res.json()) as Record<string, unknown>
-    // The raw key is returned
     expect(typeof body.key).toBe('string')
     expect((body.key as string).startsWith('djd_live_')).toBe(true)
-    // The prefix is returned (first 16 chars + ...)
     expect(typeof body.key_prefix).toBe('string')
     expect((body.key_prefix as string).endsWith('...')).toBe(true)
-    // Wallet is lowercased
     expect(body.wallet).toBe('0xabcd1234')
     expect(body.name).toBe('My Test Key')
     expect(body.tier).toBe('premium')
@@ -154,14 +221,12 @@ describe('apiKeys admin routes', () => {
     expect(body.error.code).toBe('invalid_request')
   })
 
-  // ── GET / — List keys ──
-
-  it('lists keys without exposing raw key values', async () => {
+  it('lists keys without exposing raw key values or hashes', async () => {
     process.env.ADMIN_KEY = ADMIN_KEY
 
-    // Set up mock rows that would be returned by the listing query
-    mockDbRows.push({
+    state.rows.push({
       id: 1,
+      key_hash: 'hashed-value',
       key_prefix: 'djd_live_abc123...',
       wallet: '0xabcd1234',
       name: 'Test',
@@ -173,6 +238,7 @@ describe('apiKeys admin routes', () => {
       created_at: '2026-02-24T00:00:00.000Z',
       last_used_at: null,
       revoked_at: null,
+      stripe_customer_id: null,
     })
 
     const { Hono } = await import('hono')
@@ -190,15 +256,28 @@ describe('apiKeys admin routes', () => {
     const body = (await res.json()) as { keys: Record<string, unknown>[]; count: number }
     expect(body.count).toBe(1)
     expect(body.keys[0]!.key_prefix).toBe('djd_live_abc123...')
-    // The raw key or hash should NOT be in the listing
     expect(body.keys[0]!).not.toHaveProperty('key')
     expect(body.keys[0]!).not.toHaveProperty('key_hash')
   })
 
-  // ── DELETE /:id — Revoke key ──
-
-  it('revokes a key by ID (soft delete)', async () => {
+  it('revokes a key by ID', async () => {
     process.env.ADMIN_KEY = ADMIN_KEY
+    state.rows.push({
+      id: 1,
+      key_hash: 'hashed-value',
+      key_prefix: 'djd_live_abc123...',
+      wallet: '0xabcd1234',
+      name: 'Test',
+      tier: 'standard',
+      monthly_limit: 10000,
+      monthly_used: 42,
+      usage_reset_at: '2026-04-01T00:00:00.000Z',
+      is_active: 1,
+      created_at: '2026-02-24T00:00:00.000Z',
+      last_used_at: null,
+      revoked_at: null,
+      stripe_customer_id: null,
+    })
 
     const { Hono } = await import('hono')
     const { default: apiKeysRoute } = await import('../../src/routes/apiKeys.js')
@@ -215,6 +294,24 @@ describe('apiKeys admin routes', () => {
     const body = (await res.json()) as Record<string, unknown>
     expect(body.success).toBe(true)
     expect(body.message).toBe('API key revoked')
+    expect(state.rows[0]!.is_active).toBe(0)
+  })
+
+  it('returns 404 when revoking a missing key', async () => {
+    process.env.ADMIN_KEY = ADMIN_KEY
+
+    const { Hono } = await import('hono')
+    const { default: apiKeysRoute } = await import('../../src/routes/apiKeys.js')
+
+    const app = new Hono()
+    app.route('/admin/api-keys', apiKeysRoute)
+
+    const res = await app.request('/admin/api-keys/999', {
+      method: 'DELETE',
+      headers: { 'x-admin-key': ADMIN_KEY },
+    })
+
+    expect(res.status).toBe(404)
   })
 
   it('returns 400 for invalid key ID on revoke', async () => {
@@ -234,10 +331,24 @@ describe('apiKeys admin routes', () => {
     expect(res.status).toBe(400)
   })
 
-  // ── POST /:id/reset — Reset usage ──
-
   it('resets monthly usage counter for a key', async () => {
     process.env.ADMIN_KEY = ADMIN_KEY
+    state.rows.push({
+      id: 1,
+      key_hash: 'hashed-value',
+      key_prefix: 'djd_live_abc123...',
+      wallet: '0xabcd1234',
+      name: 'Test',
+      tier: 'standard',
+      monthly_limit: 10000,
+      monthly_used: 42,
+      usage_reset_at: '2026-04-01T00:00:00.000Z',
+      is_active: 1,
+      created_at: '2026-02-24T00:00:00.000Z',
+      last_used_at: null,
+      revoked_at: null,
+      stripe_customer_id: null,
+    })
 
     const { Hono } = await import('hono')
     const { default: apiKeysRoute } = await import('../../src/routes/apiKeys.js')
@@ -254,6 +365,24 @@ describe('apiKeys admin routes', () => {
     const body = (await res.json()) as Record<string, unknown>
     expect(body.success).toBe(true)
     expect(body.message).toBe('Usage counter reset')
+    expect(state.rows[0]!.monthly_used).toBe(0)
+  })
+
+  it('returns 404 when resetting a missing key', async () => {
+    process.env.ADMIN_KEY = ADMIN_KEY
+
+    const { Hono } = await import('hono')
+    const { default: apiKeysRoute } = await import('../../src/routes/apiKeys.js')
+
+    const app = new Hono()
+    app.route('/admin/api-keys', apiKeysRoute)
+
+    const res = await app.request('/admin/api-keys/999/reset', {
+      method: 'POST',
+      headers: { 'x-admin-key': ADMIN_KEY },
+    })
+
+    expect(res.status).toBe(404)
   })
 
   it('returns 400 for invalid key ID on reset', async () => {

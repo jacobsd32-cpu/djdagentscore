@@ -7,4 +7,5 @@
 
 export * from './analyticsQueries.js'
 export * from './evidenceQueries.js'
+export * from './platformQueries.js'
 export * from './reputationQueries.js'
