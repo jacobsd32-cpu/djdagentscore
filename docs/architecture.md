@@ -44,6 +44,7 @@ src/
 │   ├── apiKeyService.ts            # Admin API key lifecycle and reset policy
 │   ├── apiKeyAuthService.ts        # API key auth validation, quota reset, and usage accounting
 │   ├── certificationService.ts     # Certification rules and workflow orchestration
+│   ├── directoryService.ts         # Public trust-surface APIs for leaderboard, badges, and blacklist status
 │   ├── evidenceService.ts          # Fraud report intake and score-history/forensics timeline APIs
 │   ├── portalService.ts            # Developer portal usage and analytics lookup
 │   ├── registrationService.ts      # Agent registration and GitHub identity workflow
