@@ -23,7 +23,9 @@ src/
 │   ├── connection.ts               # SQLite connection (DELETE journal mode)
 │   ├── schema.ts                   # 31-table schema, migrations, indexes
 │   ├── certificationQueries.ts     # DJD Certify persistence and certification revenue rollups
-│   ├── reputationQueries.ts        # Scores, registrations, and fraud reporting
+│   ├── forensicsQueries.ts         # Fraud report persistence and penalty application for evidence workflows
+│   ├── identityQueries.ts          # Agent registration and GitHub identity persistence
+│   ├── reputationQueries.ts        # Scores and reputation-history persistence
 │   ├── evidenceQueries.ts          # Query logs, indexer state, transfer evidence, webhook persistence
 │   ├── platformQueries.ts          # API key persistence and developer platform records
 │   ├── analyticsQueries.ts         # Revenue, explorer, economy, publication queries

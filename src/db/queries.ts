@@ -8,5 +8,7 @@
 export * from './analyticsQueries.js'
 export * from './certificationQueries.js'
 export * from './evidenceQueries.js'
+export * from './forensicsQueries.js'
+export * from './identityQueries.js'
 export * from './platformQueries.js'
 export * from './reputationQueries.js'
