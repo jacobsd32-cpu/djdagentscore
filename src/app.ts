@@ -30,6 +30,7 @@ import billingRoute from './routes/billing.js'
 import blacklistRoute from './routes/blacklist.js'
 import blogRoute from './routes/blog.js'
 import certificationRoute from './routes/certification.js'
+import clusterRoute from './routes/cluster.js'
 import dataRoute from './routes/data.js'
 import docsRoute from './routes/docs.js'
 import economyRoute from './routes/economy.js'
@@ -47,7 +48,9 @@ import portalRoute from './routes/portal.js'
 import pricingRoute from './routes/pricing.js'
 import registerRoute from './routes/register.js'
 import reportRoute from './routes/report.js'
+import ratingsRoute from './routes/ratings.js'
 import scoreRoute from './routes/score.js'
+import stakeRoute from './routes/stake.js'
 import stripeWebhookRoute from './routes/stripeWebhook.js'
 import { adminWebhooks, publicWebhooks } from './routes/webhooks.js'
 import wellKnownRoute from './routes/wellKnown.js'
@@ -175,6 +178,59 @@ const x402Middleware = paymentMiddlewareFromConfig(
         }),
       },
     },
+    '/v1/score/risk': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/score/risk'])],
+      description:
+        'Risk prediction view for a wallet using fraud pressure, sybil/gaming signals, counterparty ratings, and intent outcomes',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { wallet: '0x1234567890abcdef1234567890abcdef12345678' },
+          inputSchema: {
+            properties: { wallet: { type: 'string', description: 'Wallet address to inspect for risk' } },
+            required: ['wallet'],
+          },
+          output: {
+            example: {
+              wallet: '0x1234...',
+              risk_score: 68,
+              risk_level: 'elevated',
+              action: 'review',
+              factors: [
+                {
+                  key: 'fraud_reports',
+                  contribution: 31,
+                },
+              ],
+            },
+          },
+        }),
+      },
+    },
+    '/v1/cluster': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/cluster'])],
+      description: 'Cluster analysis view for a wallet using graph structure, risk profile, and persisted cluster assignments',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { wallet: '0x1234567890abcdef1234567890abcdef12345678', limit: 10 },
+          inputSchema: {
+            properties: {
+              wallet: { type: 'string', description: 'Wallet address to inspect for cluster analysis' },
+              limit: { type: 'integer', description: 'Max members and linked wallets to return (default 10)' },
+            },
+            required: ['wallet'],
+          },
+          output: {
+            example: {
+              wallet: '0x1234...',
+              cluster_name: 'repeat_counterparty_network',
+              cluster_id: 'repeat_counterparty_network:0xabcd',
+              confidence: 0.72,
+              linked_wallets: [{ wallet: '0xabcd...', total_tx_count: 14 }],
+            },
+          },
+        }),
+      },
+    },
     '/v1/score/refresh': {
       accepts: [payment(ENDPOINT_PRICING['/v1/score/refresh'])],
       description: 'Force live recalculation of agent reputation score from on-chain data',
@@ -210,6 +266,41 @@ const x402Middleware = paymentMiddlewareFromConfig(
             required: ['target', 'reason', 'details'],
           },
           output: { example: { reportId: 'rpt_abc123', status: 'accepted' } },
+        }),
+      },
+    },
+    '/v1/rate': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/rate'])],
+      description: 'Submit a transaction-backed 1-5 star counterparty rating for a wallet',
+      extensions: {
+        ...declareDiscoveryExtension({
+          bodyType: 'json',
+          input: {
+            rated_wallet: '0x1234...',
+            tx_hash: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            rating: 5,
+            comment: 'Fast payment and clean delivery.',
+          },
+          inputSchema: {
+            properties: {
+              rated_wallet: { type: 'string', description: 'Wallet being rated' },
+              tx_hash: { type: 'string', description: 'Indexed transaction hash between payer and rated wallet' },
+              rating: { type: 'integer', description: 'Star rating from 1 to 5' },
+              comment: { type: 'string', description: 'Optional short note about the transaction' },
+            },
+            required: ['rated_wallet', 'tx_hash', 'rating'],
+          },
+          output: {
+            example: {
+              ratingId: 'rate_abc123',
+              status: 'accepted',
+              ratedWallet: '0x1234...',
+              txHash: '0xaaaa...',
+              rating: 5,
+              averageRating: 4.8,
+              ratingCount: 12,
+            },
+          },
         }),
       },
     },
@@ -285,6 +376,136 @@ const x402Middleware = paymentMiddlewareFromConfig(
                 total_tx_count: 42,
                 total_volume: 6900,
               },
+            },
+          },
+        }),
+      },
+    },
+    '/v1/data/ratings': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/data/ratings'])],
+      description: 'Counterparty rating history and aggregate sentiment for a wallet',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { wallet: '0x1234567890abcdef1234567890abcdef12345678', limit: 25 },
+          inputSchema: {
+            properties: {
+              wallet: { type: 'string', description: 'Wallet address to inspect' },
+              limit: { type: 'integer', description: 'Max ratings to return (default 25)' },
+            },
+            required: ['wallet'],
+          },
+          output: {
+            example: {
+              wallet: '0x1234...',
+              average_rating: 4.7,
+              rating_count: 12,
+              unique_raters: 9,
+              breakdown: [{ rating: 5, count: 8 }],
+            },
+          },
+        }),
+      },
+    },
+    '/v1/data/intent': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/data/intent'])],
+      description: 'Transaction-intent conversion data showing whether paid lookups of a wallet led to deals',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { wallet: '0x1234567890abcdef1234567890abcdef12345678', limit: 25 },
+          inputSchema: {
+            properties: {
+              wallet: { type: 'string', description: 'Wallet address to inspect' },
+              limit: { type: 'integer', description: 'Max intent signals to return (default 25)' },
+            },
+            required: ['wallet'],
+          },
+          output: {
+            example: {
+              wallet: '0x1234...',
+              summary: {
+                intent_count: 18,
+                conversions: 6,
+                conversion_rate: 33.3,
+              },
+              intents: [
+                {
+                  counterparty_wallet: '0xabcd...',
+                  followed_by_tx: true,
+                  endpoint: '/v1/score/full',
+                },
+              ],
+            },
+          },
+        }),
+      },
+    },
+    '/v1/data/economy/survival': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/data/economy/survival'])],
+      description: 'Economy survival analytics built from wallet activity cohorts and recent score decay',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { limit: 20 },
+          inputSchema: {
+            properties: {
+              limit: { type: 'integer', description: 'Max at-risk wallets to return (default 20)' },
+            },
+          },
+          output: {
+            example: {
+              summary: {
+                total_wallets: 420,
+                active_30d: 311,
+              },
+              cohorts: [
+                {
+                  horizon_days: 30,
+                  survival_rate: 74.1,
+                },
+              ],
+            },
+          },
+        }),
+      },
+    },
+    '/v1/data/economy/summary': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/data/economy/summary'])],
+      description: 'Economy summary time series drawn from aggregated ecosystem metrics',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { period: 'daily', limit: 30 },
+          inputSchema: {
+            properties: {
+              period: { type: 'string', description: 'Aggregation period: daily | weekly | monthly' },
+              limit: { type: 'integer', description: 'Max periods to return (default 30)' },
+            },
+          },
+          output: {
+            example: {
+              period: 'daily',
+              count: 30,
+              metrics: [{ period_start: '2026-03-01', total_wallets: 420, total_queries: 1380 }],
+            },
+          },
+        }),
+      },
+    },
+    '/v1/data/economy/volume': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/data/economy/volume'])],
+      description: 'Economy volume time series showing transaction counts and total USDC flow by period',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { period: 'daily', limit: 30 },
+          inputSchema: {
+            properties: {
+              period: { type: 'string', description: 'Aggregation period: daily | weekly | monthly' },
+              limit: { type: 'integer', description: 'Max periods to return (default 30)' },
+            },
+          },
+          output: {
+            example: {
+              period: 'daily',
+              count: 30,
+              series: [{ period_start: '2026-03-01', total_volume: 12450, total_tx_count: 912 }],
             },
           },
         }),
@@ -554,11 +775,19 @@ const x402Middleware = paymentMiddlewareFromConfig(
 
 const PAID_ROUTES = new Set([
   '/v1/score/full',
+  '/v1/score/risk',
+  '/v1/cluster',
   '/v1/score/refresh',
   '/v1/report',
+  '/v1/rate',
   '/v1/data/fraud/blacklist',
   '/v1/data/decay',
   '/v1/data/graph',
+  '/v1/data/intent',
+  '/v1/data/ratings',
+  '/v1/data/economy/summary',
+  '/v1/data/economy/volume',
+  '/v1/data/economy/survival',
   '/v1/score/batch',
   '/v1/score/history',
   '/v1/forensics/summary',
@@ -588,16 +817,26 @@ app.use(async (c, next) => {
 })
 
 app.use('/v1/score/*', paidRateLimitMiddleware)
+app.use('/v1/cluster', paidRateLimitMiddleware)
 app.use('/v1/report', paidRateLimitMiddleware)
+app.use('/v1/rate', paidRateLimitMiddleware)
 app.use('/v1/data/fraud/*', paidRateLimitMiddleware)
 app.use('/v1/data/decay', paidRateLimitMiddleware)
 app.use('/v1/data/graph', paidRateLimitMiddleware)
+app.use('/v1/data/intent', paidRateLimitMiddleware)
+app.use('/v1/data/ratings', paidRateLimitMiddleware)
+app.use('/v1/data/economy/summary', paidRateLimitMiddleware)
+app.use('/v1/data/economy/volume', paidRateLimitMiddleware)
+app.use('/v1/data/economy/survival', paidRateLimitMiddleware)
 app.use('/v1/forensics/*', paidRateLimitMiddleware)
 
 app.route('/health', healthRoute)
 app.route('/v1/score/history', historyRoute)
 app.route('/v1/score', scoreRoute)
+app.route('/v1/cluster', clusterRoute)
 app.route('/v1/report', reportRoute)
+app.route('/v1/rate', ratingsRoute)
+app.route('/v1/stake', stakeRoute)
 app.route('/v1/data', dataRoute)
 app.route('/v1/monitor', monitoringRoute)
 app.route('/v1/forensics', forensicsRoute)

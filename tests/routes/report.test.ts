@@ -3,17 +3,25 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mockInsertReport = vi.fn()
 const mockGetScore = vi.fn().mockReturnValue({ composite_score: 50 })
 const mockApplyReportPenalty = vi.fn()
+const mockAdjustScoreByStakeBoost = vi.fn()
 const mockCountReporterReportsForTarget = vi.fn().mockReturnValue(0)
+const mockSlashActiveCreatorStakesForAgent = vi.fn().mockReturnValue({
+  stake_count: 0,
+  total_stake_amount: 0,
+  total_score_boost: 0,
+})
 const mockQueueWebhookEvent = vi.fn()
 
 vi.mock('../../src/db.js', () => ({
   insertReport: (...args: unknown[]) => mockInsertReport(...args),
   getScore: (...args: unknown[]) => mockGetScore(...args),
   applyReportPenalty: (...args: unknown[]) => mockApplyReportPenalty(...args),
+  adjustScoreByStakeBoost: (...args: unknown[]) => mockAdjustScoreByStakeBoost(...args),
   createFraudDispute: vi.fn(),
   getFraudDisputeByReportId: () => undefined,
   getFraudReportById: () => undefined,
   countReporterReportsForTarget: (...args: unknown[]) => mockCountReporterReportsForTarget(...args),
+  slashActiveCreatorStakesForAgent: (...args: unknown[]) => mockSlashActiveCreatorStakesForAgent(...args),
   countFraudDisputesByTarget: () => 0,
   countScoreHistory: () => 0,
   countFraudReportsByTarget: () => 0,
@@ -65,6 +73,11 @@ describe('POST /v1/report', () => {
     vi.clearAllMocks()
     mockCountReporterReportsForTarget.mockReturnValue(0)
     mockGetScore.mockReturnValue({ composite_score: 50 })
+    mockSlashActiveCreatorStakesForAgent.mockReturnValue({
+      stake_count: 0,
+      total_stake_amount: 0,
+      total_score_boost: 0,
+    })
   })
 
   it('accepts a valid report and returns 201', async () => {
@@ -81,6 +94,7 @@ describe('POST /v1/report', () => {
     expect(body.penaltyApplied).toBe(5)
     expect(mockInsertReport).toHaveBeenCalledOnce()
     expect(mockApplyReportPenalty).toHaveBeenCalledOnce()
+    expect(mockSlashActiveCreatorStakesForAgent).toHaveBeenCalledOnce()
     expect(mockQueueWebhookEvent).toHaveBeenCalledWith(
       'fraud.reported',
       expect.objectContaining({

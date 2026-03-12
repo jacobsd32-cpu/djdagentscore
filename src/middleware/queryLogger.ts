@@ -42,15 +42,25 @@ const FREE_ENDPOINT_PREFIXES = [
   '/v1/monitor/',
 ]
 
+const ONCHAIN_FEE_ENDPOINTS = new Set([
+  '/v1/stake',
+])
+
 function tierFromEndpoint(endpoint: string): string {
   if (endpoint.includes('/score/basic')) return 'basic'
   if (endpoint.includes('/score/full')) return 'full'
+  if (endpoint.includes('/score/risk')) return 'risk'
   if (endpoint.includes('/score/refresh')) return 'refresh'
   if (endpoint.includes('/score/batch')) return 'batch'
   if (endpoint.includes('/score/history')) return 'history'
   if (endpoint.includes('/certification/apply')) return 'certification'
+  if (endpoint === '/v1/rate') return 'rating'
+  if (endpoint === '/v1/stake') return 'staking'
   if (endpoint.includes('/data/decay')) return 'decay'
   if (endpoint.includes('/data/graph')) return 'graph'
+  if (endpoint.includes('/data/intent')) return 'intent'
+  if (endpoint.includes('/data/ratings')) return 'ratings'
+  if (endpoint.includes('/cluster')) return 'cluster'
   if (endpoint.includes('/data/economy')) return 'economy'
   if (endpoint.includes('/forensics/')) return 'forensics'
   if (endpoint.includes('/monitor')) return 'monitoring'
@@ -72,6 +82,7 @@ export const queryLoggerMiddleware: MiddlewareHandler = async (c, next) => {
   try {
     const path = c.req.path
     const pricePaid = ENDPOINT_PRICING[path] ?? 0
+    const isOnchainFeeEndpoint = ONCHAIN_FEE_ENDPOINTS.has(path)
     const isFreeEndpoint = FREE_ENDPOINTS.has(path) || FREE_ENDPOINT_PREFIXES.some((prefix) => path.startsWith(prefix))
       ? 1
       : 0
@@ -93,6 +104,8 @@ export const queryLoggerMiddleware: MiddlewareHandler = async (c, next) => {
       ? 'payment_rejected'
       : hasApiKey
         ? 'api_key'
+        : isOnchainFeeEndpoint
+          ? 'onchain_fee'
         : isFreeTier
           ? 'free_tier'
           : 'paid'

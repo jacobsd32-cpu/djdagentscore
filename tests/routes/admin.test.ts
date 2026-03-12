@@ -22,6 +22,8 @@ const state = vi.hoisted(() => ({
   getFraudDisputeById: vi.fn(),
   getFraudReportById: vi.fn(),
   resolveFraudDispute: vi.fn(),
+  restoreSlashedCreatorStakesForAgent: vi.fn(),
+  adjustScoreByStakeBoost: vi.fn(),
   queueWebhookEvent: vi.fn(),
 }))
 
@@ -66,6 +68,8 @@ vi.mock('../../src/db.js', () => ({
   getFraudDisputeById: (...args: unknown[]) => state.getFraudDisputeById(...args),
   getFraudReportById: (...args: unknown[]) => state.getFraudReportById(...args),
   resolveFraudDispute: (...args: unknown[]) => state.resolveFraudDispute(...args),
+  restoreSlashedCreatorStakesForAgent: (...args: unknown[]) => state.restoreSlashedCreatorStakesForAgent(...args),
+  adjustScoreByStakeBoost: (...args: unknown[]) => state.adjustScoreByStakeBoost(...args),
 }))
 
 vi.mock('../../src/jobs/webhookDelivery.js', () => ({
@@ -105,6 +109,8 @@ describe('admin middleware', () => {
     state.getFraudDisputeById.mockReset()
     state.getFraudReportById.mockReset()
     state.resolveFraudDispute.mockReset()
+    state.restoreSlashedCreatorStakesForAgent.mockReset()
+    state.adjustScoreByStakeBoost.mockReset()
     state.queueWebhookEvent.mockReset()
   })
 
@@ -332,6 +338,7 @@ describe('admin middleware', () => {
     expect(body.preserved).toContain('raw_transactions')
     expect(state.deletedTables).toContain('query_log')
     expect(state.deletedTables).toContain('certifications')
+    expect(state.deletedTables).toContain('creator_stakes')
   })
 
   it('returns the forensics dispute queue', async () => {
@@ -393,6 +400,7 @@ describe('admin middleware', () => {
     state.getFraudReportById.mockReturnValue({
       id: 'rpt-1',
       penalty_applied: 5,
+      reason: 'payment_fraud',
     })
     state.countFraudReportsByTarget.mockReturnValueOnce(1).mockReturnValueOnce(0)
     state.sumFraudPenaltyByTarget.mockReturnValueOnce(5).mockReturnValueOnce(0)
@@ -400,6 +408,11 @@ describe('admin middleware', () => {
       resolvedAt: '2026-03-12T12:00:00Z',
       penaltyRestored: 5,
       reportInvalidated: true,
+    })
+    state.restoreSlashedCreatorStakesForAgent.mockReturnValue({
+      stake_count: 2,
+      total_stake_amount: 125,
+      total_score_boost: 3,
     })
 
     const { Hono } = await import('hono')
@@ -422,6 +435,8 @@ describe('admin middleware', () => {
     expect(body.resolution).toBe('upheld')
     expect(body.reportInvalidated).toBe(true)
     expect(body.penaltyRestored).toBe(5)
+    expect(body.stakesRestored).toBe(2)
+    expect(body.stakeBoostRestored).toBe(3)
     expect(state.resolveFraudDispute).toHaveBeenCalledWith({
       disputeId: 'disp-1',
       reportId: 'rpt-1',
@@ -431,11 +446,20 @@ describe('admin middleware', () => {
       resolvedBy: 'admin',
       penaltyApplied: 5,
     })
+    expect(state.restoreSlashedCreatorStakesForAgent).toHaveBeenCalledWith(
+      '0x1111111111111111111111111111111111111111',
+    )
+    expect(state.adjustScoreByStakeBoost).toHaveBeenCalledWith(
+      '0x1111111111111111111111111111111111111111',
+      3,
+    )
     expect(state.queueWebhookEvent).toHaveBeenCalledWith(
       'fraud.dispute.resolved',
       expect.objectContaining({
         disputeId: 'disp-1',
         resolution: 'upheld',
+        stakesRestored: 2,
+        stakeBoostRestored: 3,
       }),
     )
   })

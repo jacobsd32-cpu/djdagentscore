@@ -1,5 +1,6 @@
 import { Hono, type Context } from 'hono'
 import { errorResponse, ErrorCodes } from '../errors.js'
+import { getRiskScore } from '../services/riskService.js'
 import {
   getBasicScore,
   getBatchScores,
@@ -24,6 +25,16 @@ score.get('/basic', async (c) => {
 // GET /v1/score/full?wallet=0x...
 score.get('/full', async (c) => {
   const outcome = await getFullScore(c.req.query('wallet'))
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
+  }
+
+  return c.json(outcome.data)
+})
+
+// GET /v1/score/risk?wallet=0x...
+score.get('/risk', async (c) => {
+  const outcome = await getRiskScore(c.req.query('wallet'))
   if (!outcome.ok) {
     return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
   }
