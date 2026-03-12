@@ -48,6 +48,7 @@ src/
 │   ├── certificationService.ts     # Certification rules and workflow orchestration
 │   ├── directoryService.ts         # Public trust-surface APIs for leaderboard, badges, and blacklist status
 │   ├── evidenceService.ts          # Fraud report intake and score-history/forensics timeline APIs
+│   ├── opsService.ts               # Health and Prometheus metrics payload assembly with runtime-safe caching
 │   ├── portalService.ts            # Developer portal usage and analytics lookup
 │   ├── registrationService.ts      # Agent registration and GitHub identity workflow
 │   ├── scoreService.ts             # Score request orchestration for sync, batch, and async job APIs
