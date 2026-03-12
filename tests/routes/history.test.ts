@@ -19,7 +19,45 @@ const { testDb } = vi.hoisted(() => {
 })
 
 vi.mock('../../src/db.js', () => ({
-  db: testDb,
+  listScoreHistory: (
+    wallet: string,
+    options: { after?: string; before?: string; limit: number },
+  ) => {
+    let sql = 'SELECT * FROM score_history WHERE wallet = ?'
+    const args: Array<string | number> = [wallet]
+
+    if (options.after) {
+      sql += ' AND calculated_at >= ?'
+      args.push(options.after)
+    }
+    if (options.before) {
+      sql += ' AND calculated_at <= ?'
+      args.push(options.before)
+    }
+
+    sql += ' ORDER BY calculated_at DESC LIMIT ?'
+    args.push(options.limit)
+
+    return testDb.prepare(sql).all(...args)
+  },
+  countScoreHistory: (
+    wallet: string,
+    options: { after?: string; before?: string } = {},
+  ) => {
+    let sql = 'SELECT COUNT(*) as count FROM score_history WHERE wallet = ?'
+    const args: string[] = [wallet]
+
+    if (options.after) {
+      sql += ' AND calculated_at >= ?'
+      args.push(options.after)
+    }
+    if (options.before) {
+      sql += ' AND calculated_at <= ?'
+      args.push(options.before)
+    }
+
+    return (testDb.prepare(sql).get(...args) as { count: number } | undefined)?.count ?? 0
+  },
 }))
 
 import { Hono } from 'hono'
