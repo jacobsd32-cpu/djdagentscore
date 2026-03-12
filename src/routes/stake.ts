@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 
-import { errorResponse, ErrorCodes } from '../errors.js'
+import { ErrorCodes, errorResponse } from '../errors.js'
 import { submitCreatorStake } from '../services/stakingService.js'
 import type { StakeBody } from '../types.js'
 import { getPayerWallet } from '../utils/paymentUtils.js'

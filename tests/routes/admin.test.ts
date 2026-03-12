@@ -446,13 +446,8 @@ describe('admin middleware', () => {
       resolvedBy: 'admin',
       penaltyApplied: 5,
     })
-    expect(state.restoreSlashedCreatorStakesForAgent).toHaveBeenCalledWith(
-      '0x1111111111111111111111111111111111111111',
-    )
-    expect(state.adjustScoreByStakeBoost).toHaveBeenCalledWith(
-      '0x1111111111111111111111111111111111111111',
-      3,
-    )
+    expect(state.restoreSlashedCreatorStakesForAgent).toHaveBeenCalledWith('0x1111111111111111111111111111111111111111')
+    expect(state.adjustScoreByStakeBoost).toHaveBeenCalledWith('0x1111111111111111111111111111111111111111', 3)
     expect(state.queueWebhookEvent).toHaveBeenCalledWith(
       'fraud.dispute.resolved',
       expect.objectContaining({

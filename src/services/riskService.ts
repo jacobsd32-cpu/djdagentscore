@@ -197,24 +197,42 @@ export async function getRiskScore(rawWallet: string | undefined): Promise<RiskS
   const factors: RiskFactorView[] = []
   let riskScore = 0
 
-  riskScore += addFactor(factors, 'fraud_reports', 'Fraud report pressure', Math.min(42, reportCount * 8 + Math.max(0, uniqueReporters - 1) * 3 + Math.min(totalPenaltyApplied, 12)), {
-    report_count: reportCount,
-    unique_reporters: uniqueReporters,
-    total_penalty_applied: totalPenaltyApplied,
-    top_reason: reasonBreakdown[0]?.reason ?? null,
-  })
+  riskScore += addFactor(
+    factors,
+    'fraud_reports',
+    'Fraud report pressure',
+    Math.min(42, reportCount * 8 + Math.max(0, uniqueReporters - 1) * 3 + Math.min(totalPenaltyApplied, 12)),
+    {
+      report_count: reportCount,
+      unique_reporters: uniqueReporters,
+      total_penalty_applied: totalPenaltyApplied,
+      top_reason: reasonBreakdown[0]?.reason ?? null,
+    },
+  )
 
   if (score.sybilFlag || sybilIndicators.length > 0) {
-    riskScore += addFactor(factors, 'sybil_signals', 'Sybil detection signals', 22 + Math.min(10, sybilIndicators.length * 3), {
-      sybil_flagged: score.sybilFlag,
-      indicators: sybilIndicators,
-    })
+    riskScore += addFactor(
+      factors,
+      'sybil_signals',
+      'Sybil detection signals',
+      22 + Math.min(10, sybilIndicators.length * 3),
+      {
+        sybil_flagged: score.sybilFlag,
+        indicators: sybilIndicators,
+      },
+    )
   }
 
   if (gamingIndicators.length > 0) {
-    riskScore += addFactor(factors, 'gaming_signals', 'Gaming or manipulation indicators', Math.min(18, gamingIndicators.length * 5), {
-      indicators: gamingIndicators,
-    })
+    riskScore += addFactor(
+      factors,
+      'gaming_signals',
+      'Gaming or manipulation indicators',
+      Math.min(18, gamingIndicators.length * 5),
+      {
+        indicators: gamingIndicators,
+      },
+    )
   }
 
   if (ratings.rating_count >= 2 && ratings.average_rating !== null && ratings.average_rating <= 3.5) {
@@ -227,11 +245,17 @@ export async function getRiskScore(rawWallet: string | undefined): Promise<RiskS
   }
 
   if (intent.intent_count >= 5 && intent.conversion_rate <= 10) {
-    riskScore += addFactor(factors, 'intent_conversion', 'Heavy evaluation with weak conversion', intent.conversion_rate === 0 ? 10 : 8, {
-      intent_count: intent.intent_count,
-      conversions: intent.conversions,
-      conversion_rate: intent.conversion_rate,
-    })
+    riskScore += addFactor(
+      factors,
+      'intent_conversion',
+      'Heavy evaluation with weak conversion',
+      intent.conversion_rate === 0 ? 10 : 8,
+      {
+        intent_count: intent.intent_count,
+        conversions: intent.conversions,
+        conversion_rate: intent.conversion_rate,
+      },
+    )
   }
 
   if (score.confidence >= 0.5 && score.score < 25) {
@@ -249,7 +273,10 @@ export async function getRiskScore(rawWallet: string | undefined): Promise<RiskS
   }
 
   if (matchedPatterns.length > 0) {
-    const contribution = Math.min(18, Math.round(matchedPatterns.reduce((sum, pattern) => sum + pattern.risk_weight * 4, 0)))
+    const contribution = Math.min(
+      18,
+      Math.round(matchedPatterns.reduce((sum, pattern) => sum + pattern.risk_weight * 4, 0)),
+    )
     riskScore += addFactor(factors, 'fraud_patterns', 'Matched fraud-pattern signatures', contribution, {
       matched_patterns: matchedPatterns.map((pattern) => pattern.pattern_name),
       pattern_count: matchedPatterns.length,

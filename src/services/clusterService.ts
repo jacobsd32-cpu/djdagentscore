@@ -164,9 +164,7 @@ function buildClassification(
   }
 }
 
-export async function getClusterView(
-  params: ClusterParams,
-): Promise<
+export async function getClusterView(params: ClusterParams): Promise<
   ClusterServiceResult<{
     wallet: Address
     cluster_id: string

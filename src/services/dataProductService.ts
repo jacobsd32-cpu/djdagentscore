@@ -339,9 +339,7 @@ export function getIntentSignalsView(params: IntentParams): DataProductServiceRe
         conversion_rate: summary.conversion_rate,
         avg_time_to_tx_ms: summary.avg_time_to_tx_ms,
         avg_time_to_tx_hours:
-          summary.avg_time_to_tx_ms !== null
-            ? Math.round((summary.avg_time_to_tx_ms / 3_600_000) * 100) / 100
-            : null,
+          summary.avg_time_to_tx_ms !== null ? Math.round((summary.avg_time_to_tx_ms / 3_600_000) * 100) / 100 : null,
         most_recent_query_at: summary.most_recent_query_at,
         most_recent_conversion_at: summary.most_recent_conversion_at,
       },

@@ -46,9 +46,9 @@ import monitoringRoute from './routes/monitoring.js'
 import openapiRoute from './routes/openapi.js'
 import portalRoute from './routes/portal.js'
 import pricingRoute from './routes/pricing.js'
+import ratingsRoute from './routes/ratings.js'
 import registerRoute from './routes/register.js'
 import reportRoute from './routes/report.js'
-import ratingsRoute from './routes/ratings.js'
 import scoreRoute from './routes/score.js'
 import stakeRoute from './routes/stake.js'
 import stripeWebhookRoute from './routes/stripeWebhook.js'
@@ -208,7 +208,8 @@ const x402Middleware = paymentMiddlewareFromConfig(
     },
     '/v1/cluster': {
       accepts: [payment(ENDPOINT_PRICING['/v1/cluster'])],
-      description: 'Cluster analysis view for a wallet using graph structure, risk profile, and persisted cluster assignments',
+      description:
+        'Cluster analysis view for a wallet using graph structure, risk profile, and persisted cluster assignments',
       extensions: {
         ...declareDiscoveryExtension({
           input: { wallet: '0x1234567890abcdef1234567890abcdef12345678', limit: 10 },

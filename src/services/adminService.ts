@@ -9,8 +9,8 @@ import {
   getRevenueSummary,
   getTopPayers,
   listFraudDisputes,
-  restoreSlashedCreatorStakesForAgent,
   resolveFraudDispute,
+  restoreSlashedCreatorStakesForAgent,
   sumFraudPenaltyByTarget,
 } from '../db.js'
 import { ErrorCodes } from '../errors.js'

@@ -47,9 +47,15 @@ describe('GET /.well-known/x402', () => {
     expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/data/graph' && endpoint.price === 0.2)).toBe(true)
     expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/data/intent' && endpoint.price === 0.25)).toBe(true)
     expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/data/ratings' && endpoint.price === 0.1)).toBe(true)
-    expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/data/economy/summary' && endpoint.price === 0.1)).toBe(true)
-    expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/data/economy/volume' && endpoint.price === 0.1)).toBe(true)
-    expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/data/economy/survival' && endpoint.price === 0.15)).toBe(true)
+    expect(
+      body.endpoints.some((endpoint) => endpoint.path === '/v1/data/economy/summary' && endpoint.price === 0.1),
+    ).toBe(true)
+    expect(
+      body.endpoints.some((endpoint) => endpoint.path === '/v1/data/economy/volume' && endpoint.price === 0.1),
+    ).toBe(true)
+    expect(
+      body.endpoints.some((endpoint) => endpoint.path === '/v1/data/economy/survival' && endpoint.price === 0.15),
+    ).toBe(true)
     expect(body.integration.quickstart).toContain('https://api.example.test/v1/score/basic')
   })
 })

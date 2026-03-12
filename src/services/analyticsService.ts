@@ -110,9 +110,7 @@ export function getEconomyVolumeView(
   }
 }
 
-export function getEconomySurvivalView(
-  rawLimit: string | undefined,
-): AnalyticsServiceResult<{
+export function getEconomySurvivalView(rawLimit: string | undefined): AnalyticsServiceResult<{
   as_of: string
   summary: {
     total_wallets: number

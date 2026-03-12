@@ -1,5 +1,5 @@
-import { db } from './connection.js'
 import type { MutualRatingRow } from '../types.js'
+import { db } from './connection.js'
 
 export interface IndexedTransactionRow {
   tx_hash: string
@@ -40,7 +40,10 @@ const stmtGetMutualRatingByTxAndPair = db.prepare<[string, string, string], Mutu
   LIMIT 1
 `)
 
-const stmtGetIndexedTransactionBetweenWallets = db.prepare<[string, string, string, string, string], IndexedTransactionRow>(`
+const stmtGetIndexedTransactionBetweenWallets = db.prepare<
+  [string, string, string, string, string],
+  IndexedTransactionRow
+>(`
   SELECT tx_hash, from_wallet, to_wallet, timestamp
   FROM raw_transactions
   WHERE tx_hash = ?

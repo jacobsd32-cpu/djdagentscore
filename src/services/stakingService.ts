@@ -144,7 +144,10 @@ export function submitCreatorStake(
     return invalidStakeError('fee_tx_hash must reference an indexed USDC transfer')
   }
 
-  if (normalizeWallet(feeTransfer.from_wallet) !== derivedCreatorWallet || normalizeWallet(feeTransfer.to_wallet) !== payToWallet) {
+  if (
+    normalizeWallet(feeTransfer.from_wallet) !== derivedCreatorWallet ||
+    normalizeWallet(feeTransfer.to_wallet) !== payToWallet
+  ) {
     return invalidStakeError('fee_tx_hash must be a creator-to-DJD fee transfer sent to PAY_TO', {
       expected_creator_wallet: derivedCreatorWallet,
       expected_pay_to: payToWallet,

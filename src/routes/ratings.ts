@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
-import type { RatingBody } from '../types.js'
-import { errorResponse, ErrorCodes } from '../errors.js'
+import { ErrorCodes, errorResponse } from '../errors.js'
 import { submitMutualRating } from '../services/ratingsService.js'
+import type { RatingBody } from '../types.js'
 import { getPayerWallet } from '../utils/paymentUtils.js'
 
 const ratingsRoute = new Hono()

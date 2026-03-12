@@ -182,10 +182,7 @@ export function getIndexedUsdcTransferByHash(txHash: string): IndexedUsdcTransfe
   return stmtGetIndexedUsdcTransferByHash.get(txHash, txHash)
 }
 
-export function getActiveCreatorStakeByPair(
-  creatorWallet: string,
-  agentWallet: string,
-): CreatorStakeRow | undefined {
+export function getActiveCreatorStakeByPair(creatorWallet: string, agentWallet: string): CreatorStakeRow | undefined {
   return stmtGetActiveCreatorStakeByPair.get(creatorWallet, agentWallet)
 }
 
@@ -229,7 +226,10 @@ export function adjustScoreByStakeBoost(wallet: string, boostDelta: number): num
   return adjustedScore
 }
 
-export function slashActiveCreatorStakesForAgent(agentWallet: string, slashReportId: string): CreatorStakeChangeSummary {
+export function slashActiveCreatorStakesForAgent(
+  agentWallet: string,
+  slashReportId: string,
+): CreatorStakeChangeSummary {
   return (
     slashActiveCreatorStakesTx(agentWallet, slashReportId, new Date().toISOString()) ?? {
       stake_count: 0,

@@ -79,10 +79,9 @@ vi.mock('../../src/db.js', () => ({
       )
       .all(wallet),
   getRatingsSummaryForWallet: (wallet: string) =>
-    (
-      testDb
-        .prepare(
-          `
+    testDb
+      .prepare(
+        `
             SELECT
               COUNT(*) as rating_count,
               COUNT(DISTINCT rater_wallet) as unique_raters,
@@ -91,9 +90,8 @@ vi.mock('../../src/db.js', () => ({
             FROM mutual_ratings
             WHERE rated_wallet = ?
           `,
-        )
-        .get(wallet)
-    ) ?? {
+      )
+      .get(wallet) ?? {
       rating_count: 0,
       unique_raters: 0,
       average_rating: null,
@@ -343,7 +341,9 @@ describe('ratings routes', () => {
 
   describe('GET /v1/data/ratings', () => {
     it('returns aggregate rating data for a wallet', async () => {
-      testDb.prepare('INSERT INTO scores (wallet, composite_score, tier) VALUES (?, ?, ?)').run(RATED_WALLET, 88, 'Trusted')
+      testDb
+        .prepare('INSERT INTO scores (wallet, composite_score, tier) VALUES (?, ?, ?)')
+        .run(RATED_WALLET, 88, 'Trusted')
 
       seedRating({
         id: 'rating-1',

@@ -94,7 +94,8 @@ export function listClusterMembers(
 
 export function countClusterMembers(clusterId: string): number {
   return (
-    db.prepare<[string], { count: number }>('SELECT COUNT(*) as count FROM cluster_assignments WHERE cluster_id = ?').get(clusterId)
-      ?.count ?? 0
+    db
+      .prepare<[string], { count: number }>('SELECT COUNT(*) as count FROM cluster_assignments WHERE cluster_id = ?')
+      .get(clusterId)?.count ?? 0
   )
 }

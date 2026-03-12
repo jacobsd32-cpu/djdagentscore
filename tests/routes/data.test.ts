@@ -62,10 +62,9 @@ vi.mock('../../src/db.js', () => ({
     most_recent_rating_at: null,
   }),
   getIntentSummaryByTarget: (wallet: string) =>
-    (
-      testDb
-        .prepare(
-          `
+    testDb
+      .prepare(
+        `
             SELECT
               COUNT(*) as intent_count,
               COALESCE(SUM(followed_by_tx), 0) as conversions,
@@ -82,9 +81,8 @@ vi.mock('../../src/db.js', () => ({
             FROM intent_signals
             WHERE target_wallet = ?
           `,
-        )
-        .get(wallet)
-    ) ?? {
+      )
+      .get(wallet) ?? {
       intent_count: 0,
       conversions: 0,
       conversion_rate: 0,

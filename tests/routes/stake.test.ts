@@ -95,10 +95,9 @@ vi.mock('../../src/db.js', () => ({
       )
       .get(creatorWallet, agentWallet),
   getCreatorStakeSummary: (agentWallet: string) =>
-    (
-      testDb
-        .prepare(
-          `
+    testDb
+      .prepare(
+        `
             SELECT
               SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_stake_count,
               COALESCE(SUM(CASE WHEN status = 'active' THEN stake_amount ELSE 0 END), 0) as active_staked_amount,
@@ -109,9 +108,8 @@ vi.mock('../../src/db.js', () => ({
             FROM creator_stakes
             WHERE agent_wallet = ?
           `,
-        )
-        .get(agentWallet)
-    ) ?? {
+      )
+      .get(agentWallet) ?? {
       active_stake_count: 0,
       active_staked_amount: 0,
       active_score_boost: 0,

@@ -181,7 +181,8 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
         path: '/v1/cluster',
         method: 'GET',
         price: ENDPOINT_PRICING['/v1/cluster'],
-        description: 'Cluster analysis for a wallet using graph structure, risk signals, and persisted cluster assignments.',
+        description:
+          'Cluster analysis for a wallet using graph structure, risk signals, and persisted cluster assignments.',
         input: { query: { wallet: { type: 'string', required: true }, limit: { type: 'integer' } } },
       },
       {
