@@ -22,7 +22,8 @@ src/
 ├── db/
 │   ├── connection.ts               # SQLite connection (DELETE journal mode)
 │   ├── schema.ts                   # 31-table schema, migrations, indexes
-│   ├── reputationQueries.ts        # Scores, registrations, fraud reporting
+│   ├── certificationQueries.ts     # DJD Certify persistence and certification revenue rollups
+│   ├── reputationQueries.ts        # Scores, registrations, and fraud reporting
 │   ├── evidenceQueries.ts          # Query logs, indexer state, transfer evidence, webhook persistence
 │   ├── platformQueries.ts          # API key persistence and developer platform records
 │   ├── analyticsQueries.ts         # Revenue, explorer, economy, publication queries
@@ -48,6 +49,7 @@ src/
 │   ├── analyticsService.ts         # Public observatory-lite APIs for economy metrics and explorer data
 │   ├── billingService.ts           # Billing checkout, success-page, and customer-portal workflows
 │   ├── certificationService.ts     # Certification rules and workflow orchestration
+│   ├── discoveryService.ts         # Public docs, OpenAPI, and x402 manifest assembly
 │   ├── directoryService.ts         # Public trust-surface APIs for leaderboard, badges, and blacklist status
 │   ├── evidenceService.ts          # Fraud report intake and score-history/forensics timeline APIs
 │   ├── opsService.ts               # Health and Prometheus metrics payload assembly with runtime-safe caching
