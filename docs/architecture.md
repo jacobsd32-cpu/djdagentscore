@@ -44,12 +44,14 @@ src/
 │   ├── apiKeyService.ts            # Admin API key lifecycle and reset policy
 │   ├── apiKeyAuthService.ts        # API key auth validation, quota reset, and usage accounting
 │   ├── agentProfileService.ts      # Public agent profile rendering and cache-miss score lookup
+│   ├── billingService.ts           # Billing checkout, success-page, and customer-portal workflows
 │   ├── certificationService.ts     # Certification rules and workflow orchestration
 │   ├── directoryService.ts         # Public trust-surface APIs for leaderboard, badges, and blacklist status
 │   ├── evidenceService.ts          # Fraud report intake and score-history/forensics timeline APIs
 │   ├── portalService.ts            # Developer portal usage and analytics lookup
 │   ├── registrationService.ts      # Agent registration and GitHub identity workflow
 │   ├── scoreService.ts             # Score request orchestration for sync, batch, and async job APIs
+│   ├── stripeWebhookService.ts     # Stripe signature verification and webhook event handling
 │   ├── webhookQueueService.ts      # Worker-side webhook queueing, delivery, and retry policy
 │   └── webhookService.ts           # Webhook validation, lifecycle, and test delivery
 ├── utils/
