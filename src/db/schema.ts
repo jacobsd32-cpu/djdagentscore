@@ -487,6 +487,10 @@ addColumnIfMissing('webhooks', 'failure_count', 'INTEGER NOT NULL DEFAULT 0')
 addColumnIfMissing('webhooks', 'last_delivery_at', 'TEXT')
 addColumnIfMissing('webhooks', 'disabled_at', 'TEXT')
 
+addColumnIfMissing('monitoring_subscriptions', 'subscriber_wallet', 'TEXT')
+addColumnIfMissing('monitoring_subscriptions', 'target_wallet', 'TEXT')
+addColumnIfMissing('monitoring_subscriptions', 'webhook_id', 'INTEGER')
+addColumnIfMissing('monitoring_subscriptions', 'policy_type', 'TEXT')
 addColumnIfMissing('monitoring_subscriptions', 'is_active', 'INTEGER NOT NULL DEFAULT 1')
 addColumnIfMissing('monitoring_subscriptions', 'created_at', 'TEXT')
 addColumnIfMissing('monitoring_subscriptions', 'disabled_at', 'TEXT')
@@ -496,6 +500,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_api_keys_wallet ON api_keys(wallet);
   CREATE INDEX IF NOT EXISTS idx_webhooks_wallet ON webhooks(wallet);
   CREATE INDEX IF NOT EXISTS idx_webhooks_active ON webhooks(is_active, events);
+  CREATE INDEX IF NOT EXISTS idx_monitoring_subs_webhook ON monitoring_subscriptions(webhook_id);
   CREATE INDEX IF NOT EXISTS idx_monitoring_subs_subscriber ON monitoring_subscriptions(subscriber_wallet, is_active);
   CREATE INDEX IF NOT EXISTS idx_monitoring_subs_target ON monitoring_subscriptions(target_wallet, is_active);
 `)
