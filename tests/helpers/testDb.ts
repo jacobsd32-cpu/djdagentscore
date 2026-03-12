@@ -207,6 +207,15 @@ export function createTestDb(): Database.Database {
       current_period_end        TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS pending_keys (
+      session_id  TEXT PRIMARY KEY,
+      key_encrypted TEXT NOT NULL,
+      iv          TEXT NOT NULL,
+      auth_tag    TEXT NOT NULL,
+      expires_at  TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_pending_keys_expires ON pending_keys(expires_at);
+
     CREATE TABLE IF NOT EXISTS score_history (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       wallet TEXT NOT NULL,

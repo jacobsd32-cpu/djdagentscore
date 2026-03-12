@@ -27,6 +27,9 @@ src/
 │   ├── platformQueries.ts          # API key persistence and developer platform records
 │   ├── analyticsQueries.ts         # Revenue, explorer, economy, publication queries
 │   └── queries.ts                  # Query barrel over domain modules
+├── billing/
+│   ├── billingStore.ts             # Billing/subscription persistence and pending key storage
+│   └── subscriptionManager.ts      # Stripe orchestration, provisioning, and key encryption
 ├── runtime/
 │   └── worker.ts                   # Background job scheduler and worker lifecycle
 ├── middleware/
@@ -39,6 +42,7 @@ src/
 │   └── responseHeaders.ts          # Standard response + security headers
 ├── services/
 │   ├── apiKeyService.ts            # Admin API key lifecycle and reset policy
+│   ├── apiKeyAuthService.ts        # API key auth validation, quota reset, and usage accounting
 │   ├── certificationService.ts     # Certification rules and workflow orchestration
 │   ├── portalService.ts            # Developer portal usage and analytics lookup
 │   ├── registrationService.ts      # Agent registration and GitHub identity workflow

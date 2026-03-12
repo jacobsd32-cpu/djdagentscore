@@ -15,16 +15,13 @@ futureDate.setDate(1)
 futureDate.setHours(0, 0, 0, 0)
 const FUTURE_RESET = futureDate.toISOString()
 
-// Mock database with controllable row data
+// Mock database helpers with controllable row data
 let mockRow: Record<string, unknown> | undefined
 
 vi.mock('../../src/db.js', () => ({
-  db: {
-    prepare: vi.fn().mockReturnValue({
-      get: vi.fn((..._args: unknown[]) => mockRow),
-      run: vi.fn(),
-    }),
-  },
+  findApiKeyAuthByHash: vi.fn((_keyHash: string) => mockRow),
+  resetApiKeyUsageByHash: vi.fn(),
+  incrementApiKeyUsageByHash: vi.fn(),
 }))
 
 vi.mock('../../src/errors.js', () => ({
