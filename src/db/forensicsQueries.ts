@@ -1,5 +1,10 @@
+import type { ScoreHistoryRow } from '../types.js'
 import { scoreToTier } from './reputationQueries.js'
 import { db } from './connection.js'
+
+const stmtGetHistory = db.prepare<[string], ScoreHistoryRow>(`
+  SELECT * FROM score_history WHERE wallet = ? ORDER BY calculated_at DESC LIMIT 10
+`)
 
 const stmtInsertReport = db.prepare(`
   INSERT INTO fraud_reports (id, target_wallet, reporter_wallet, reason, details, created_at, penalty_applied)
@@ -46,6 +51,58 @@ export function insertReport(report: {
     ...report,
     created_at: new Date().toISOString(),
   })
+}
+
+export function getScoreHistory(wallet: string): ScoreHistoryRow[] {
+  return stmtGetHistory.all(wallet)
+}
+
+export function listScoreHistory(
+  wallet: string,
+  options: {
+    after?: string
+    before?: string
+    limit: number
+  },
+): ScoreHistoryRow[] {
+  let sql = 'SELECT * FROM score_history WHERE wallet = ?'
+  const args: (string | number)[] = [wallet]
+
+  if (options.after) {
+    sql += ' AND calculated_at >= ?'
+    args.push(options.after)
+  }
+  if (options.before) {
+    sql += ' AND calculated_at <= ?'
+    args.push(options.before)
+  }
+
+  sql += ' ORDER BY calculated_at DESC LIMIT ?'
+  args.push(options.limit)
+
+  return db.prepare(sql).all(...args) as ScoreHistoryRow[]
+}
+
+export function countScoreHistory(
+  wallet: string,
+  options: {
+    after?: string
+    before?: string
+  } = {},
+): number {
+  let sql = 'SELECT COUNT(*) as count FROM score_history WHERE wallet = ?'
+  const args: string[] = [wallet]
+
+  if (options.after) {
+    sql += ' AND calculated_at >= ?'
+    args.push(options.after)
+  }
+  if (options.before) {
+    sql += ' AND calculated_at <= ?'
+    args.push(options.before)
+  }
+
+  return (db.prepare(sql).get(...args) as { count: number } | undefined)?.count ?? 0
 }
 
 export function countReportsByTarget(wallet: string): number {

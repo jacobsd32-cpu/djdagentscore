@@ -1,5 +1,5 @@
 import { log } from '../logger.js'
-import type { AgentRegistrationRow, LeaderboardRow, ScoreHistoryRow, ScoreRow, Tier } from '../types.js'
+import type { ScoreRow, Tier } from '../types.js'
 import { db } from './connection.js'
 
 const stmtUpsertScore = db.prepare(`
@@ -39,10 +39,6 @@ const stmtInsertHistory = db.prepare(`
   VALUES (?, ?, ?, ?, ?)
 `)
 
-const stmtGetHistory = db.prepare<[string], ScoreHistoryRow>(`
-  SELECT * FROM score_history WHERE wallet = ? ORDER BY calculated_at DESC LIMIT 10
-`)
-
 const stmtInsertDecay = db.prepare(`INSERT INTO score_decay (wallet, composite_score) VALUES (?, ?)`)
 const stmtUpdateWalletIndex = db.prepare(`UPDATE wallet_index SET is_scored = 1, last_seen = ? WHERE wallet = ?`)
 const stmtPruneHistory = db.prepare(
@@ -78,17 +74,6 @@ const stmtGetUnscoredWallets = db.prepare<[number], { wallet: string }>(`
 
 const stmtCountScores = db.prepare<[], { count: number }>(`
   SELECT COUNT(*) as count FROM scores
-`)
-
-const stmtLeaderboard = db.prepare<[], LeaderboardRow>(`
-  SELECT s.*,
-         CASE WHEN r.wallet IS NOT NULL THEN 1 ELSE 0 END AS is_registered,
-         COALESCE(r.github_verified, 0)                   AS github_verified_badge
-  FROM scores s
-  LEFT JOIN agent_registrations r ON LOWER(s.wallet) = r.wallet
-  WHERE s.composite_score > 0
-  ORDER BY s.composite_score DESC
-  LIMIT 50
 `)
 
 const TTL_MS = 60 * 60 * 1000
@@ -220,58 +205,6 @@ export function getScore(wallet: string): ScoreRow | undefined {
   return stmtGetScore.get(wallet)
 }
 
-export function getScoreHistory(wallet: string): ScoreHistoryRow[] {
-  return stmtGetHistory.all(wallet)
-}
-
-export function listScoreHistory(
-  wallet: string,
-  options: {
-    after?: string
-    before?: string
-    limit: number
-  },
-): ScoreHistoryRow[] {
-  let sql = 'SELECT * FROM score_history WHERE wallet = ?'
-  const args: (string | number)[] = [wallet]
-
-  if (options.after) {
-    sql += ' AND calculated_at >= ?'
-    args.push(options.after)
-  }
-  if (options.before) {
-    sql += ' AND calculated_at <= ?'
-    args.push(options.before)
-  }
-
-  sql += ' ORDER BY calculated_at DESC LIMIT ?'
-  args.push(options.limit)
-
-  return db.prepare(sql).all(...args) as ScoreHistoryRow[]
-}
-
-export function countScoreHistory(
-  wallet: string,
-  options: {
-    after?: string
-    before?: string
-  } = {},
-): number {
-  let sql = 'SELECT COUNT(*) as count FROM score_history WHERE wallet = ?'
-  const args: string[] = [wallet]
-
-  if (options.after) {
-    sql += ' AND calculated_at >= ?'
-    args.push(options.after)
-  }
-  if (options.before) {
-    sql += ' AND calculated_at <= ?'
-    args.push(options.before)
-  }
-
-  return (db.prepare(sql).get(...args) as { count: number } | undefined)?.count ?? 0
-}
-
 export function getExpiredWallets(): string[] {
   return stmtGetExpired.all().map((row) => row.wallet)
 }
@@ -282,8 +215,4 @@ export function getUnscoredWallets(limit: number): string[] {
 
 export function countCachedScores(): number {
   return stmtCountScores.get()!.count
-}
-
-export function getLeaderboard(): LeaderboardRow[] {
-  return stmtLeaderboard.all()
 }
