@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DJD Agent Score — Reputation API for the Agent Economy</title>
-<meta name="description" content="Screen Base wallets before your agent sends funds or fulfills a paid x402 request. One API call returns a 0-100 trust score in under 200ms.">
+<title>DJD Agent Score — Governance Layer for Paid Agent Commerce</title>
+<meta name="description" content="Govern paid agent commerce on Base. Screen wallets before money moves, gate paid x402 routes, and add ratings, monitoring, and forensics when you need more accountability.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="DJD Agent Score — Reputation API for the Agent Economy">
-<meta property="og:description" content="Screen Base wallets before your agent sends funds or fulfills a paid x402 request. One API call returns a 0-100 trust score in under 200ms.">
+<meta property="og:title" content="DJD Agent Score — Governance Layer for Paid Agent Commerce">
+<meta property="og:description" content="Govern paid agent commerce on Base. Screen wallets before money moves, gate paid x402 routes, and add ratings, monitoring, and forensics when you need more accountability.">
 <meta property="og:url" content="https://djdagentscore.dev/">
 <meta property="og:site_name" content="DJD Agent Score">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="DJD Agent Score — Reputation API for the Agent Economy">
-<meta name="twitter:description" content="Screen Base wallets before your agent sends funds or fulfills a paid x402 request. One API call returns a 0-100 trust score in under 200ms.">
+<meta name="twitter:title" content="DJD Agent Score — Governance Layer for Paid Agent Commerce">
+<meta name="twitter:description" content="Govern paid agent commerce on Base. Screen wallets before money moves, gate paid x402 routes, and add ratings, monitoring, and forensics when you need more accountability.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -304,17 +304,17 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 
 <!-- HERO -->
 <div class="hero">
-  <div class="hero-chip"><span class="dot"></span> Live on Base &middot; Free tier available</div>
-  <h1>Stop your agent from <em>paying the wrong wallet.</em></h1>
-  <p class="hero-sub">Use the free score to screen counterparties before your agent sends funds. When you are ready, drop in <span class="mono">x402-agent-score</span> to block low-trust payers before your paid route runs.</p>
+  <div class="hero-chip"><span class="dot"></span> Governance layer for paid agent commerce</div>
+  <h1>Govern agent commerce <em>before money moves.</em></h1>
+  <p class="hero-sub">Start with the practical wedge: screen counterparties before your agent sends funds or your paid x402 route runs. Then add ratings, monitoring, certification, and forensics as you need more accountability.</p>
   <div class="hero-actions">
     <a href="#lookup" class="btn btn-primary" data-track="cta_try_api">Try the API</a>
     <a href="#x402-path" class="btn btn-ghost" data-track="path_x402">See the x402 path</a>
   </div>
   <div class="hero-proof">
-    <span>No signup for basic lookups</span>
-    <span>Hono middleware for x402 routes</span>
-    <span>SDK, Python, and MCP options</span>
+    <span>Before: score and gate</span>
+    <span>During: certify and monitor</span>
+    <span>After: rate and investigate</span>
     <span>Live chain data on Base</span>
   </div>
 </div>
@@ -459,6 +459,38 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
       <p>Publish basic identity and project metadata so your wallet has more context attached to its score and profile page.</p>
       <div class="step-code">POST /v1/agent/register</div>
       <a class="step-link" href="#register-path" data-track="cta_register">See the registration payload</a>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- GOVERNANCE LIFECYCLE -->
+<div class="sec">
+  <div class="sec-label">Governance Layer</div>
+  <div class="sec-title">Before, during, and after a paid agent interaction</div>
+  <div class="sec-desc">The first wedge is x402 trust gating, but the shipped platform already covers more of the accountability loop than a score alone.</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-tag">Before</div>
+      <h3>Screen and qualify counterparties</h3>
+      <p>Use wallet scores, trust tiers, identity context, and certification status before your agent sends funds or accepts a paid request.</p>
+      <div class="step-code">/v1/score/basic · /v1/score/full · x402-agent-score</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-tag">During</div>
+      <h3>Monitor live agent relationships</h3>
+      <p>Attach webhooks and monitoring policies to active wallets so risky changes or anomalies can trigger review before damage compounds.</p>
+      <div class="step-code">/v1/monitor/* · /v1/webhooks/*</div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-tag">After</div>
+      <h3>Capture evidence when something breaks</h3>
+      <p>Turn failed interactions into governance data with ratings, fraud reports, disputes, and forensics timelines that other operators can learn from.</p>
+      <div class="step-code">/v1/rate · /v1/report · /v1/forensics/*</div>
     </div>
   </div>
 </div>
