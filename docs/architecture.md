@@ -23,7 +23,7 @@ src/
 │   ├── connection.ts               # SQLite connection (DELETE journal mode)
 │   ├── schema.ts                   # 31-table schema, migrations, indexes
 │   ├── reputationQueries.ts        # Scores, registrations, fraud reporting
-│   ├── evidenceQueries.ts          # Query logs, indexer state, transfer evidence
+│   ├── evidenceQueries.ts          # Query logs, indexer state, transfer evidence, webhook persistence
 │   ├── analyticsQueries.ts         # Revenue, explorer, economy, publication queries
 │   └── queries.ts                  # Query barrel over domain modules
 ├── runtime/
@@ -38,7 +38,8 @@ src/
 │   └── responseHeaders.ts          # Standard response + security headers
 ├── services/
 │   ├── certificationService.ts     # Certification rules and workflow orchestration
-│   └── registrationService.ts      # Agent registration and GitHub identity workflow
+│   ├── registrationService.ts      # Agent registration and GitHub identity workflow
+│   └── webhookService.ts           # Webhook validation, lifecycle, and test delivery
 ├── utils/
 │   ├── walletUtils.ts              # Wallet address normalisation and validation
 │   ├── paymentUtils.ts             # x402 payment amount/pricing helpers

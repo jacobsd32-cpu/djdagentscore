@@ -271,3 +271,106 @@ export const indexTransferBatch: Transaction<(transfers: IndexedTransfer[]) => v
     }
   },
 )
+
+export interface WebhookRow {
+  id: number
+  wallet: string
+  url: string
+  secret: string
+  events: string
+  tier: string
+  is_active: number
+  created_at: string
+  failure_count: number
+  last_delivery_at: string | null
+  disabled_at: string | null
+  threshold_score?: number | null
+}
+
+export interface WebhookDeliveryRow {
+  id: number
+  event_type: string
+  status_code: number | null
+  attempt: number
+  delivered_at: string | null
+  created_at: string
+}
+
+const stmtInsertWebhook = db.prepare<[string, string, string, string, string]>(`
+  INSERT INTO webhooks (wallet, url, secret, events, tier)
+  VALUES (?, ?, ?, ?, ?)
+`)
+
+const stmtGetWebhookById = db.prepare<[number], WebhookRow>('SELECT * FROM webhooks WHERE id = ?')
+
+const stmtListWebhooks = db.prepare<[], WebhookRow>('SELECT * FROM webhooks ORDER BY created_at DESC')
+
+const stmtListRecentWebhookDeliveries = db.prepare<[number, number], WebhookDeliveryRow>(`
+  SELECT id, event_type, status_code, attempt, delivered_at, created_at
+  FROM webhook_deliveries
+  WHERE webhook_id = ?
+  ORDER BY created_at DESC
+  LIMIT ?
+`)
+
+const stmtDeactivateWebhook = db.prepare(`
+  UPDATE webhooks SET is_active = 0, disabled_at = datetime('now') WHERE id = ? AND is_active = 1
+`)
+
+const stmtCountActiveWebhooksForWallet = db.prepare<[string], { count: number }>(
+  'SELECT COUNT(*) as count FROM webhooks WHERE wallet = ? AND is_active = 1',
+)
+
+const stmtListWebhooksForWallet = db.prepare<[string], WebhookRow>(
+  'SELECT * FROM webhooks WHERE wallet = ? ORDER BY created_at DESC',
+)
+
+const stmtDeactivateWebhookForWallet = db.prepare(`
+  UPDATE webhooks SET is_active = 0, disabled_at = datetime('now') WHERE id = ? AND wallet = ? AND is_active = 1
+`)
+
+export function insertWebhook(input: {
+  wallet: string
+  url: string
+  secret: string
+  events: string[]
+  tier: string
+}): WebhookRow {
+  const result = stmtInsertWebhook.run(
+    input.wallet,
+    input.url,
+    input.secret,
+    JSON.stringify(input.events),
+    input.tier,
+  )
+
+  return stmtGetWebhookById.get(Number(result.lastInsertRowid))!
+}
+
+export function listWebhooks(): WebhookRow[] {
+  return stmtListWebhooks.all()
+}
+
+export function getWebhookById(id: number): WebhookRow | undefined {
+  return stmtGetWebhookById.get(id)
+}
+
+export function listRecentWebhookDeliveries(webhookId: number, limit = 20): WebhookDeliveryRow[] {
+  return stmtListRecentWebhookDeliveries.all(webhookId, limit)
+}
+
+export function deactivateWebhook(id: number): boolean {
+  return stmtDeactivateWebhook.run(id).changes > 0
+}
+
+export function countActiveWebhooksForWallet(wallet: string): number {
+  return stmtCountActiveWebhooksForWallet.get(wallet)?.count ?? 0
+}
+
+export function listWebhooksForWallet(wallet: string): WebhookRow[] {
+  return stmtListWebhooksForWallet.all(wallet)
+}
+
+export function deactivateWebhookForWallet(id: number, wallet: string): boolean {
+  return stmtDeactivateWebhookForWallet.run(id, wallet).changes > 0
+}

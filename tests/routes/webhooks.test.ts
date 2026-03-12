@@ -43,16 +43,69 @@ const { testDb } = vi.hoisted(() => {
 
 vi.mock('../../src/db.js', () => ({
   db: testDb,
+  insertWebhook: (input: {
+    wallet: string
+    url: string
+    secret: string
+    events: string[]
+    tier: string
+  }) => {
+    const result = testDb
+      .prepare(`
+        INSERT INTO webhooks (wallet, url, secret, events, tier)
+        VALUES (?, ?, ?, ?, ?)
+      `)
+      .run(input.wallet, input.url, input.secret, JSON.stringify(input.events), input.tier)
+
+    return testDb.prepare('SELECT * FROM webhooks WHERE id = ?').get(Number(result.lastInsertRowid))
+  },
+  listWebhooks: () => testDb.prepare('SELECT * FROM webhooks ORDER BY created_at DESC').all(),
+  getWebhookById: (id: number) => testDb.prepare('SELECT * FROM webhooks WHERE id = ?').get(id),
+  listRecentWebhookDeliveries: (webhookId: number, limit = 20) =>
+    testDb
+      .prepare(`
+        SELECT id, event_type, status_code, attempt, delivered_at, created_at
+        FROM webhook_deliveries
+        WHERE webhook_id = ?
+        ORDER BY created_at DESC
+        LIMIT ?
+      `)
+      .all(webhookId, limit),
+  deactivateWebhook: (id: number) =>
+    testDb
+      .prepare(`UPDATE webhooks SET is_active = 0, disabled_at = datetime('now') WHERE id = ? AND is_active = 1`)
+      .run(id).changes > 0,
+  countActiveWebhooksForWallet: (wallet: string) =>
+    (testDb.prepare('SELECT COUNT(*) as count FROM webhooks WHERE wallet = ? AND is_active = 1').get(wallet) as {
+      count: number
+    }).count,
+  listWebhooksForWallet: (wallet: string) =>
+    testDb.prepare('SELECT * FROM webhooks WHERE wallet = ? ORDER BY created_at DESC').all(wallet),
+  deactivateWebhookForWallet: (id: number, wallet: string) =>
+    testDb
+      .prepare(`UPDATE webhooks SET is_active = 0, disabled_at = datetime('now') WHERE id = ? AND wallet = ? AND is_active = 1`)
+      .run(id, wallet).changes > 0,
 }))
 
 import { Hono } from 'hono'
-import { adminWebhooks } from '../../src/routes/webhooks.js'
+import { adminWebhooks, publicWebhooks } from '../../src/routes/webhooks.js'
 
 const ADMIN_KEY = 'test-admin-key-12345'
+const API_KEY_WALLET = '0xfeedface'
 
-function makeApp() {
+function makeAdminApp() {
   const app = new Hono()
   app.route('/webhooks', adminWebhooks)
+  return app
+}
+
+function makePublicApp(wallet: string | null = API_KEY_WALLET) {
+  const app = new Hono<{ Variables: { apiKeyWallet?: string } }>()
+  app.use('*', async (c, next) => {
+    if (wallet) c.set('apiKeyWallet', wallet)
+    await next()
+  })
+  app.route('/v1/webhooks', publicWebhooks)
   return app
 }
 
@@ -69,12 +122,12 @@ describe('Admin webhook routes', () => {
 
   beforeEach(() => {
     process.env.ADMIN_KEY = ADMIN_KEY
-    // Clear tables before each test
     testDb.prepare('DELETE FROM webhook_deliveries').run()
     testDb.prepare('DELETE FROM webhooks').run()
   })
 
   afterEach(() => {
+    vi.unstubAllGlobals()
     if (originalKey !== undefined) {
       process.env.ADMIN_KEY = originalKey
     } else {
@@ -82,11 +135,9 @@ describe('Admin webhook routes', () => {
     }
   })
 
-  // ---------- Auth ----------
-
   it('returns 503 when ADMIN_KEY is not configured', async () => {
     delete process.env.ADMIN_KEY
-    const app = makeApp()
+    const app = makeAdminApp()
     const res = await app.request('/webhooks', {
       headers: { 'x-admin-key': 'anything' },
     })
@@ -96,7 +147,7 @@ describe('Admin webhook routes', () => {
   })
 
   it('returns 401 when wrong key is provided', async () => {
-    const app = makeApp()
+    const app = makeAdminApp()
     const res = await app.request('/webhooks', {
       headers: { 'x-admin-key': 'wrong-key-wrong' },
     })
@@ -106,15 +157,13 @@ describe('Admin webhook routes', () => {
   })
 
   it('returns 401 when no key is provided', async () => {
-    const app = makeApp()
+    const app = makeAdminApp()
     const res = await app.request('/webhooks')
     expect(res.status).toBe(401)
   })
 
-  // ---------- POST / — Create webhook ----------
-
   it('creates a webhook and returns id + secret', async () => {
-    const app = makeApp()
+    const app = makeAdminApp()
     const res = await app.request('/webhooks', {
       method: 'POST',
       headers: adminHeaders(),
@@ -129,8 +178,8 @@ describe('Admin webhook routes', () => {
     const body = await res.json()
     expect(body.id).toBeDefined()
     expect(typeof body.secret).toBe('string')
-    expect(body.secret.length).toBe(64) // 32 bytes hex
-    expect(body.wallet).toBe('0xabc123') // lowercased
+    expect(body.secret.length).toBe(64)
+    expect(body.wallet).toBe('0xabc123')
     expect(body.url).toBe('https://example.com/hook')
     expect(body.events).toEqual(['score.updated', 'fraud.reported'])
     expect(body.tier).toBe('basic')
@@ -138,7 +187,7 @@ describe('Admin webhook routes', () => {
   })
 
   it('creates a webhook with custom tier', async () => {
-    const app = makeApp()
+    const app = makeAdminApp()
     const res = await app.request('/webhooks', {
       method: 'POST',
       headers: adminHeaders(),
@@ -155,12 +204,9 @@ describe('Admin webhook routes', () => {
     expect(body.tier).toBe('premium')
   })
 
-  // ---------- GET / — List webhooks ----------
-
   it('lists webhooks with parsed events array', async () => {
-    const app = makeApp()
+    const app = makeAdminApp()
 
-    // Create a webhook first
     await app.request('/webhooks', {
       method: 'POST',
       headers: adminHeaders(),
@@ -181,14 +227,12 @@ describe('Admin webhook routes', () => {
     expect(body.webhooks[0].events).toEqual(['score.updated', 'agent.registered'])
     expect(body.webhooks[0].wallet).toBe('0xabc123')
     expect(body.webhooks[0].is_active).toBe(1)
+    expect(body.webhooks[0].secret).toBeUndefined()
   })
 
-  // ---------- GET /:id — Webhook detail ----------
-
   it('returns webhook detail with recent deliveries', async () => {
-    const app = makeApp()
+    const app = makeAdminApp()
 
-    // Create a webhook
     const createRes = await app.request('/webhooks', {
       method: 'POST',
       headers: adminHeaders(),
@@ -200,12 +244,11 @@ describe('Admin webhook routes', () => {
     })
     const { id } = await createRes.json()
 
-    // Insert a test delivery
     testDb
       .prepare(`
-      INSERT INTO webhook_deliveries (webhook_id, event_type, payload, status_code, delivered_at)
-      VALUES (?, 'score.updated', '{}', 200, datetime('now'))
-    `)
+        INSERT INTO webhook_deliveries (webhook_id, event_type, payload, status_code, delivered_at)
+        VALUES (?, 'score.updated', '{}', 200, datetime('now'))
+      `)
       .run(id)
 
     const res = await app.request(`/webhooks/${id}`, {
@@ -214,6 +257,7 @@ describe('Admin webhook routes', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.id).toBe(id)
+    expect(body.secret).toHaveLength(64)
     expect(body.events).toEqual(['score.updated'])
     expect(body.recent_deliveries).toHaveLength(1)
     expect(body.recent_deliveries[0].event_type).toBe('score.updated')
@@ -221,7 +265,7 @@ describe('Admin webhook routes', () => {
   })
 
   it('returns 404 for nonexistent webhook detail', async () => {
-    const app = makeApp()
+    const app = makeAdminApp()
     const res = await app.request('/webhooks/9999', {
       headers: adminHeaders(),
     })
@@ -230,12 +274,9 @@ describe('Admin webhook routes', () => {
     expect(body.error.code).toBe('webhook_not_found')
   })
 
-  // ---------- DELETE /:id — Deactivate webhook ----------
-
   it('deactivates a webhook', async () => {
-    const app = makeApp()
+    const app = makeAdminApp()
 
-    // Create a webhook
     const createRes = await app.request('/webhooks', {
       method: 'POST',
       headers: adminHeaders(),
@@ -247,16 +288,14 @@ describe('Admin webhook routes', () => {
     })
     const { id } = await createRes.json()
 
-    // Deactivate
-    const delRes = await app.request(`/webhooks/${id}`, {
+    const deleteRes = await app.request(`/webhooks/${id}`, {
       method: 'DELETE',
       headers: adminHeaders(),
     })
-    expect(delRes.status).toBe(200)
-    const delBody = await delRes.json()
-    expect(delBody.success).toBe(true)
+    expect(deleteRes.status).toBe(200)
+    const deleteBody = await deleteRes.json()
+    expect(deleteBody.success).toBe(true)
 
-    // Verify not listed as active
     const row = testDb.prepare('SELECT is_active, disabled_at FROM webhooks WHERE id = ?').get(id) as {
       is_active: number
       disabled_at: string
@@ -266,7 +305,7 @@ describe('Admin webhook routes', () => {
   })
 
   it('returns 404 when deactivating nonexistent webhook', async () => {
-    const app = makeApp()
+    const app = makeAdminApp()
     const res = await app.request('/webhooks/9999', {
       method: 'DELETE',
       headers: adminHeaders(),
@@ -277,9 +316,8 @@ describe('Admin webhook routes', () => {
   })
 
   it('returns 404 when deactivating already-disabled webhook', async () => {
-    const app = makeApp()
+    const app = makeAdminApp()
 
-    // Create and deactivate
     const createRes = await app.request('/webhooks', {
       method: 'POST',
       headers: adminHeaders(),
@@ -296,7 +334,6 @@ describe('Admin webhook routes', () => {
       headers: adminHeaders(),
     })
 
-    // Try again
     const res = await app.request(`/webhooks/${id}`, {
       method: 'DELETE',
       headers: adminHeaders(),
@@ -304,10 +341,8 @@ describe('Admin webhook routes', () => {
     expect(res.status).toBe(404)
   })
 
-  // ---------- Validation errors ----------
-
   it('returns 400 for missing required fields', async () => {
-    const app = makeApp()
+    const app = makeAdminApp()
     const res = await app.request('/webhooks', {
       method: 'POST',
       headers: adminHeaders(),
@@ -320,7 +355,7 @@ describe('Admin webhook routes', () => {
   })
 
   it('returns 400 for invalid URL', async () => {
-    const app = makeApp()
+    const app = makeAdminApp()
     const res = await app.request('/webhooks', {
       method: 'POST',
       headers: adminHeaders(),
@@ -336,7 +371,7 @@ describe('Admin webhook routes', () => {
   })
 
   it('returns 400 for invalid events', async () => {
-    const app = makeApp()
+    const app = makeAdminApp()
     const res = await app.request('/webhooks', {
       method: 'POST',
       headers: adminHeaders(),
@@ -353,7 +388,7 @@ describe('Admin webhook routes', () => {
   })
 
   it('returns 400 for empty events array', async () => {
-    const app = makeApp()
+    const app = makeAdminApp()
     const res = await app.request('/webhooks', {
       method: 'POST',
       headers: adminHeaders(),
@@ -369,7 +404,7 @@ describe('Admin webhook routes', () => {
   })
 
   it('returns 400 for non-array events', async () => {
-    const app = makeApp()
+    const app = makeAdminApp()
     const res = await app.request('/webhooks', {
       method: 'POST',
       headers: adminHeaders(),
@@ -380,5 +415,122 @@ describe('Admin webhook routes', () => {
       }),
     })
     expect(res.status).toBe(400)
+  })
+
+  it('sends a test webhook delivery', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })))
+
+    const app = makeAdminApp()
+    const createRes = await app.request('/webhooks', {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({
+        wallet: '0xABC123',
+        url: 'https://example.com/hook',
+        events: ['score.updated'],
+      }),
+    })
+    const { id } = await createRes.json()
+
+    const res = await app.request(`/webhooks/${id}/test`, {
+      method: 'POST',
+      headers: adminHeaders(),
+    })
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(body.status_code).toBe(204)
+    expect(body.message).toContain('successful')
+  })
+})
+
+describe('Public webhook routes', () => {
+  beforeEach(() => {
+    testDb.prepare('DELETE FROM webhook_deliveries').run()
+    testDb.prepare('DELETE FROM webhooks').run()
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('requires an API key wallet to create a webhook', async () => {
+    const app = makePublicApp(null)
+    const res = await app.request('/v1/webhooks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: 'https://example.com/public-hook',
+        events: ['score.updated'],
+      }),
+    })
+
+    expect(res.status).toBe(401)
+    const body = await res.json()
+    expect(body.error.code).toBe('unauthorized')
+  })
+
+  it('creates, lists, and deactivates own webhooks without exposing wallet or secret in list responses', async () => {
+    const app = makePublicApp()
+
+    const createRes = await app.request('/v1/webhooks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: 'https://example.com/public-hook',
+        events: ['score.updated', 'score.expired'],
+      }),
+    })
+
+    expect(createRes.status).toBe(201)
+    const created = await createRes.json()
+    expect(created.url).toBe('https://example.com/public-hook')
+    expect(created.secret).toHaveLength(64)
+    expect(created.events).toEqual(['score.updated', 'score.expired'])
+
+    const listRes = await app.request('/v1/webhooks')
+    expect(listRes.status).toBe(200)
+    const listBody = await listRes.json()
+    expect(listBody.count).toBe(1)
+    expect(listBody.webhooks[0].url).toBe('https://example.com/public-hook')
+    expect(listBody.webhooks[0].events).toEqual(['score.updated', 'score.expired'])
+    expect(listBody.webhooks[0].wallet).toBeUndefined()
+    expect(listBody.webhooks[0].secret).toBeUndefined()
+
+    const deleteRes = await app.request(`/v1/webhooks/${created.id}`, {
+      method: 'DELETE',
+    })
+    expect(deleteRes.status).toBe(200)
+    expect(await deleteRes.json()).toEqual({ success: true })
+  })
+
+  it('enforces the active webhook limit per wallet', async () => {
+    const app = makePublicApp()
+
+    for (let index = 0; index < 10; index += 1) {
+      const res = await app.request('/v1/webhooks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: `https://example.com/hook-${index}`,
+          events: ['score.updated'],
+        }),
+      })
+      expect(res.status).toBe(201)
+    }
+
+    const limitedRes = await app.request('/v1/webhooks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: 'https://example.com/hook-11',
+        events: ['score.updated'],
+      }),
+    })
+
+    expect(limitedRes.status).toBe(429)
+    const body = await limitedRes.json()
+    expect(body.error.code).toBe('webhook_limit_exceeded')
   })
 })
