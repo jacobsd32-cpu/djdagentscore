@@ -43,6 +43,7 @@ src/
 ├── services/
 │   ├── apiKeyService.ts            # Admin API key lifecycle and reset policy
 │   ├── apiKeyAuthService.ts        # API key auth validation, quota reset, and usage accounting
+│   ├── agentProfileService.ts      # Public agent profile rendering and cache-miss score lookup
 │   ├── certificationService.ts     # Certification rules and workflow orchestration
 │   ├── directoryService.ts         # Public trust-surface APIs for leaderboard, badges, and blacklist status
 │   ├── evidenceService.ts          # Fraud report intake and score-history/forensics timeline APIs

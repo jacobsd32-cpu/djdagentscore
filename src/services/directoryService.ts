@@ -1,4 +1,10 @@
-import { countCachedScores, countRegisteredAgents, getLeaderboard, getScore, listReportsByTarget } from '../db.js'
+import {
+  countCachedScores,
+  countRegisteredAgents,
+  getLeaderboard,
+  getScore,
+  listReportsByTarget,
+} from '../db.js'
 import { ErrorCodes } from '../errors.js'
 import { log } from '../logger.js'
 import type { LeaderboardEntry, LeaderboardResponse, Tier } from '../types.js'
