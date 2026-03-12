@@ -12,10 +12,13 @@ import { jobStats } from '../jobs/jobStats.js'
 import { getHttpCounters, uptimeSeconds } from '../metrics.js'
 import { MODEL_VERSION } from '../scoring/responseBuilders.js'
 
-interface HealthPayload {
+interface PublicHealthPayload {
   status: 'ok'
   version: string
   uptime: number
+}
+
+interface DetailedHealthPayload extends PublicHealthPayload {
   modelVersion: string
   experimentalStatus: true
   database: {
@@ -53,20 +56,28 @@ interface HealthPayload {
   }
 }
 
+type HealthPayload = PublicHealthPayload | DetailedHealthPayload
+
 const CACHE_TTL_MS = 10_000
 
-let cachedHealthPayload: HealthPayload | null = null
+let cachedHealthPayload: PublicHealthPayload | null = null
 let cachedHealthAt = 0
 
-function buildHealthPayload(): HealthPayload {
-  const indexer = getIndexerStatus()
-
+function buildPublicHealthPayload(): PublicHealthPayload {
   return {
     status: 'ok',
     version: MODEL_VERSION,
+    uptime: uptimeSeconds(),
+  }
+}
+
+function buildDetailedHealthPayload(): DetailedHealthPayload {
+  const indexer = getIndexerStatus()
+
+  return {
+    ...buildPublicHealthPayload(),
     modelVersion: MODEL_VERSION,
     experimentalStatus: true,
-    uptime: uptimeSeconds(),
     database: {
       cachedScores: countCachedScores(),
       indexedWallets: countIndexedWallets(),
@@ -103,11 +114,15 @@ function buildHealthPayload(): HealthPayload {
   }
 }
 
-export function getHealthPayload(): HealthPayload {
+export function getHealthPayload(detailed = false): HealthPayload {
+  if (detailed) {
+    return buildDetailedHealthPayload()
+  }
+
   const now = Date.now()
 
   if (!cachedHealthPayload || now - cachedHealthAt > CACHE_TTL_MS) {
-    cachedHealthPayload = buildHealthPayload()
+    cachedHealthPayload = buildPublicHealthPayload()
     cachedHealthAt = now
   } else {
     cachedHealthPayload = {

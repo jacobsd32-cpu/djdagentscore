@@ -24,8 +24,21 @@ vi.mock('../../src/templates/billingSuccess.js', () => ({
   successPageHtml: (props: Record<string, unknown>) => state.successPageHtml(props),
 }))
 
-vi.mock('../../src/services/growthService.js', () => ({
-  trackGrowthEventSafe: vi.fn(),
+vi.mock('../../src/middleware/apiKeyAuth.js', () => ({
+  apiKeyAuthMiddleware: async (
+    c: {
+      req: { header: (name: string) => string | undefined }
+      set: (key: string, value: unknown) => void
+    },
+    next: () => Promise<void>,
+  ) => {
+    if (c.req.header('authorization') === 'Bearer djd_live_valid') {
+      c.set('apiKeyId', 1)
+      c.set('apiKeyWallet', '0x1234567890abcdef1234567890abcdef12345678')
+      c.set('apiKeyTier', 'starter')
+    }
+    await next()
+  },
 }))
 
 vi.mock('../../src/services/growthService.js', () => ({
@@ -136,11 +149,35 @@ describe('billing routes', () => {
     )
   })
 
-  it('redirects to the Stripe billing portal', async () => {
+  it('requires API key auth for the billing portal', async () => {
+    const app = makeApp()
+    const res = await app.request('/billing/portal?customer_id=cus_123')
+    expect(res.status).toBe(401)
+    const body = await res.json()
+    expect(body.error.code).toBe('billing_session_not_found')
+  })
+
+  it('returns the Stripe billing portal url for authenticated dashboard requests', async () => {
     state.createPortalSession.mockResolvedValue('https://billing.stripe.test/portal')
 
     const app = makeApp()
-    const res = await app.request('/billing/portal?customer_id=cus_123')
+    const res = await app.request('/billing/portal?customer_id=cus_123', {
+      headers: {
+        accept: 'application/json',
+        authorization: 'Bearer djd_live_valid',
+      },
+    })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ url: 'https://billing.stripe.test/portal' })
+  })
+
+  it('redirects to the Stripe billing portal for authenticated browser requests', async () => {
+    state.createPortalSession.mockResolvedValue('https://billing.stripe.test/portal')
+
+    const app = makeApp()
+    const res = await app.request('/billing/portal?customer_id=cus_123', {
+      headers: { authorization: 'Bearer djd_live_valid' },
+    })
     expect(res.status).toBe(302)
     expect(res.headers.get('location')).toBe('https://billing.stripe.test/portal')
   })

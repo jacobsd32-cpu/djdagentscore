@@ -56,6 +56,18 @@ describe('GET /metrics', () => {
     state.countFraudReports.mockReturnValue(2)
     state.getHttpCounters.mockReturnValue(['djd_http_requests_total{method="GET",path="/health",status="200"} 4'])
     state.uptimeSeconds.mockReturnValue(321)
+    process.env.ADMIN_KEY = 'test-admin-key-that-is-long-enough-for-validation'
+  })
+
+  it('rejects requests without the admin key', async () => {
+    const { Hono } = await import('hono')
+    const { default: metricsRoute } = await import('../../src/routes/metrics.js')
+
+    const app = new Hono()
+    app.route('/metrics', metricsRoute)
+
+    const res = await app.request('/metrics')
+    expect(res.status).toBe(401)
   })
 
   it('returns Prometheus exposition text for runtime and database metrics', async () => {
@@ -65,7 +77,9 @@ describe('GET /metrics', () => {
     const app = new Hono()
     app.route('/metrics', metricsRoute)
 
-    const res = await app.request('/metrics')
+    const res = await app.request('/metrics', {
+      headers: { 'x-admin-key': process.env.ADMIN_KEY as string },
+    })
     expect(res.status).toBe(200)
     expect(res.headers.get('content-type')).toContain('text/plain')
     expect(res.headers.get('cache-control')).toBe('no-cache')

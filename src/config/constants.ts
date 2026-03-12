@@ -137,15 +137,15 @@ export const BLOCKCHAIN_INDEXER_CONFIG = {
   /** Delay on RPC error before retry */
   RETRY_DELAY_MS: 30_000,
   /** Blocks per getLogs call (reduced for Base's high volume) */
-  LOG_CHUNK_SIZE: 500n,
+  LOG_CHUNK_SIZE: 200n,
   /** Event loop yield between chunks so health checks can be served */
-  EVENT_LOOP_YIELD_MS: 100,
+  EVENT_LOOP_YIELD_MS: 200,
   /** Max gap to index on startup — skip to current if further behind */
   MAX_CATCHUP_BLOCKS: 43_200n,
   /** SQLite micro-batch size for INSERT transactions */
-  MICRO_BATCH_SIZE: 50,
+  MICRO_BATCH_SIZE: 25,
   /** Max blocks to process per poll cycle. Caps event-loop cost of catch-up. */
-  MAX_BLOCKS_PER_CYCLE: 2_000n,
+  MAX_BLOCKS_PER_CYCLE: 500n,
 } as const
 
 // ── USDC Transfer Indexer ───────────────────────────────────────────────

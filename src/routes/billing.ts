@@ -12,15 +12,17 @@
  */
 
 import { Hono } from 'hono'
-import { errorResponse } from '../errors.js'
+import { ErrorCodes, errorResponse } from '../errors.js'
+import { apiKeyAuthMiddleware } from '../middleware/apiKeyAuth.js'
 import {
   createBillingCheckout,
   createBillingPortalLink,
   listBillingPlans,
   renderBillingSuccessPage,
 } from '../services/billingService.js'
+import type { AppEnv } from '../types/hono-env.js'
 
-const billing = new Hono()
+const billing = new Hono<AppEnv>()
 
 // ── GET /billing/plans ───────────────────────────────────────────────
 // Public plan listing (no Stripe required — shows plans even in dev).
@@ -57,11 +59,27 @@ billing.get('/success', (c) => {
 // ── GET /billing/portal ──────────────────────────────────────────────
 // Creates a Stripe Customer Portal session for self-service management
 // (cancel, change plan, update payment method).
+// Requires API key authentication to prevent unauthorized access to
+// billing management (customer_id alone is not a secret).
 
-billing.get('/portal', async (c) => {
+billing.get('/portal', apiKeyAuthMiddleware, async (c) => {
+  if (!c.get('apiKeyId')) {
+    return c.json(
+      errorResponse(
+        ErrorCodes.BILLING_SESSION_NOT_FOUND,
+        'API key authentication required. Include your API key in the Authorization header.',
+      ),
+      401,
+    )
+  }
+
   const outcome = await createBillingPortalLink(c.req.query('customer_id'))
   if (!outcome.ok) {
     return c.json(errorResponse(outcome.code, outcome.message), outcome.status)
+  }
+
+  if (c.req.header('accept')?.includes('application/json')) {
+    return c.json(outcome.data)
   }
 
   return c.redirect(outcome.data.url)

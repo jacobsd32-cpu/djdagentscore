@@ -57,12 +57,13 @@ describe('GET /health', () => {
     state.countTotalQueryLogs.mockReturnValue(0)
     state.countFraudReports.mockReturnValue(0)
     state.uptimeSeconds.mockReturnValue(123)
+    process.env.ADMIN_KEY = 'test-admin-key-that-is-long-enough-for-validation'
 
     const { resetHealthPayloadCache } = await import('../../src/services/opsService.js')
     resetHealthPayloadCache()
   })
 
-  it('returns the canonical MODEL_VERSION', async () => {
+  it('returns minimal public response without admin key', async () => {
     const { Hono } = await import('hono')
     const { default: healthRoute } = await import('../../src/routes/health.js')
 
@@ -71,12 +72,39 @@ describe('GET /health', () => {
 
     const res = await app.request('/health')
     const body = await res.json()
+    expect(body.status).toBe('ok')
+    expect(body.version).toBe(MODEL_VERSION)
+    expect(body.version).toBe('2.5.0')
+    expect(body.uptime).toBeTypeOf('number')
+    expect(body.modelVersion).toBeUndefined()
+    expect(body.database).toBeUndefined()
+    expect(body.indexer).toBeUndefined()
+    expect(body.jobs).toBeUndefined()
+    expect(state.countCachedScores).not.toHaveBeenCalled()
+  })
+
+  it('returns detailed response with admin key', async () => {
+    const { Hono } = await import('hono')
+    const { default: healthRoute } = await import('../../src/routes/health.js')
+
+    const app = new Hono()
+    app.route('/health', healthRoute)
+
+    const res = await app.request('/health', {
+      headers: { 'x-admin-key': process.env.ADMIN_KEY as string },
+    })
+    const body = await res.json()
+    expect(body.status).toBe('ok')
     expect(body.modelVersion).toBe(MODEL_VERSION)
     expect(body.modelVersion).toBe('2.5.0')
     expect(body.uptime).toBe(123)
+    expect(body.database).toBeDefined()
+    expect(body.indexer).toBeDefined()
+    expect(body.jobs).toBeDefined()
+    expect(state.countCachedScores).toHaveBeenCalledTimes(1)
   })
 
-  it('reuses the cached payload while refreshing uptime', async () => {
+  it('reuses the cached public payload while refreshing uptime', async () => {
     const { Hono } = await import('hono')
     const { default: healthRoute } = await import('../../src/routes/health.js')
 
@@ -87,6 +115,7 @@ describe('GET /health', () => {
     expect(firstRes.status).toBe(200)
     const firstBody = await firstRes.json()
     expect(firstBody.uptime).toBe(123)
+    expect(firstBody.database).toBeUndefined()
 
     state.uptimeSeconds.mockReturnValue(456)
 
@@ -94,6 +123,7 @@ describe('GET /health', () => {
     expect(secondRes.status).toBe(200)
     const secondBody = await secondRes.json()
     expect(secondBody.uptime).toBe(456)
-    expect(state.countCachedScores).toHaveBeenCalledTimes(1)
+    expect(secondBody.database).toBeUndefined()
+    expect(state.countCachedScores).not.toHaveBeenCalled()
   })
 })

@@ -133,6 +133,18 @@ function createApp() {
   return app
 }
 
+function createApiKeyAuthenticatedApp(wallet = VALID_WALLET_LOWER) {
+  const app = new Hono()
+  app.use('/v1/certification/*', async (c, next) => {
+    c.set('apiKeyId', 1)
+    c.set('apiKeyWallet', wallet)
+    c.set('apiKeyTier', 'starter')
+    await next()
+  })
+  app.route('/v1/certification', certificationRoute)
+  return app
+}
+
 // ── Seed helpers ────────────────────────────────────────────────────────────
 
 function seedGoodScore(wallet: string) {
@@ -245,6 +257,21 @@ describe('Certification routes', () => {
       expect(res.status).toBe(400)
       const body = (await res.json()) as { error: { code: string } }
       expect(body.error.code).toBe('cert_not_registered')
+    })
+
+    it('rejects API key-only certification requests without x402 payment proof', async () => {
+      seedGoodScore(VALID_WALLET_LOWER)
+      seedRegistration(VALID_WALLET_LOWER)
+
+      const app = createApiKeyAuthenticatedApp()
+      const res = await app.request('/v1/certification/apply', {
+        method: 'POST',
+      })
+
+      expect(res.status).toBe(402)
+      const body = (await res.json()) as { error: { code: string; message: string } }
+      expect(body.error.code).toBe('payment_required')
+      expect(body.error.message).toContain('requires $99 USDC payment via x402')
     })
 
     it('rejects with cert_already_active when wallet already certified', async () => {
