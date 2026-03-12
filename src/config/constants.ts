@@ -15,9 +15,11 @@ export const ENDPOINT_PRICING: Record<string, number> = {
   '/v1/score/full': 0.1,
   '/v1/score/refresh': 0.25,
   '/v1/report': 0.02,
+  '/v1/rate': 0.01,
   '/v1/data/fraud/blacklist': 0.05,
   '/v1/data/decay': 0.15,
   '/v1/data/graph': 0.2,
+  '/v1/data/ratings': 0.1,
   '/v1/score/batch': 0.5,
   '/v1/score/history': 0.15,
   '/v1/forensics/summary': 0.1,
@@ -49,6 +51,13 @@ export const REPORT_CONFIG = {
   MAX_REPORTS_PER_PAIR: 3,
   /** Max characters for report details field */
   MAX_DETAILS_LENGTH: 1000,
+} as const
+
+export const RATING_CONFIG = {
+  /** Max characters for optional rating comments */
+  MAX_COMMENT_LENGTH: 500,
+  /** Minimum indexed USDC settlement required to make a rating eligible */
+  MIN_TRANSACTION_AMOUNT_USDC: 0.1,
 } as const
 
 // ── Rate Limiting ───────────────────────────────────────────────────────────

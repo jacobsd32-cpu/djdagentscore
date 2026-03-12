@@ -45,6 +45,7 @@ import monitoringRoute from './routes/monitoring.js'
 import openapiRoute from './routes/openapi.js'
 import portalRoute from './routes/portal.js'
 import pricingRoute from './routes/pricing.js'
+import ratingsRoute from './routes/ratings.js'
 import registerRoute from './routes/register.js'
 import reportRoute from './routes/report.js'
 import scoreRoute from './routes/score.js'
@@ -213,6 +214,41 @@ const x402Middleware = paymentMiddlewareFromConfig(
         }),
       },
     },
+    '/v1/rate': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/rate'])],
+      description: 'Submit a transaction-backed 1-5 star counterparty rating for a wallet',
+      extensions: {
+        ...declareDiscoveryExtension({
+          bodyType: 'json',
+          input: {
+            rated_wallet: '0x1234...',
+            tx_hash: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            rating: 5,
+            comment: 'Fast payment and clean delivery.',
+          },
+          inputSchema: {
+            properties: {
+              rated_wallet: { type: 'string', description: 'Wallet being rated' },
+              tx_hash: { type: 'string', description: 'Indexed transaction hash between payer and rated wallet' },
+              rating: { type: 'integer', description: 'Star rating from 1 to 5' },
+              comment: { type: 'string', description: 'Optional short note about the transaction' },
+            },
+            required: ['rated_wallet', 'tx_hash', 'rating'],
+          },
+          output: {
+            example: {
+              ratingId: 'rate_abc123',
+              status: 'accepted',
+              ratedWallet: '0x1234...',
+              txHash: '0xaaaa...',
+              rating: 5,
+              averageRating: 4.8,
+              ratingCount: 12,
+            },
+          },
+        }),
+      },
+    },
     '/v1/data/fraud/blacklist': {
       accepts: [payment(ENDPOINT_PRICING['/v1/data/fraud/blacklist'])],
       description: 'Check if a wallet has fraud reports filed against it',
@@ -285,6 +321,31 @@ const x402Middleware = paymentMiddlewareFromConfig(
                 total_tx_count: 42,
                 total_volume: 6900,
               },
+            },
+          },
+        }),
+      },
+    },
+    '/v1/data/ratings': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/data/ratings'])],
+      description: 'Counterparty rating history and aggregate sentiment for a wallet',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { wallet: '0x1234567890abcdef1234567890abcdef12345678', limit: 25 },
+          inputSchema: {
+            properties: {
+              wallet: { type: 'string', description: 'Wallet address to inspect' },
+              limit: { type: 'integer', description: 'Max ratings to return (default 25)' },
+            },
+            required: ['wallet'],
+          },
+          output: {
+            example: {
+              wallet: '0x1234...',
+              average_rating: 4.7,
+              rating_count: 12,
+              unique_raters: 9,
+              breakdown: [{ rating: 5, count: 8 }],
             },
           },
         }),
@@ -556,9 +617,11 @@ const PAID_ROUTES = new Set([
   '/v1/score/full',
   '/v1/score/refresh',
   '/v1/report',
+  '/v1/rate',
   '/v1/data/fraud/blacklist',
   '/v1/data/decay',
   '/v1/data/graph',
+  '/v1/data/ratings',
   '/v1/score/batch',
   '/v1/score/history',
   '/v1/forensics/summary',
@@ -589,15 +652,18 @@ app.use(async (c, next) => {
 
 app.use('/v1/score/*', paidRateLimitMiddleware)
 app.use('/v1/report', paidRateLimitMiddleware)
+app.use('/v1/rate', paidRateLimitMiddleware)
 app.use('/v1/data/fraud/*', paidRateLimitMiddleware)
 app.use('/v1/data/decay', paidRateLimitMiddleware)
 app.use('/v1/data/graph', paidRateLimitMiddleware)
+app.use('/v1/data/ratings', paidRateLimitMiddleware)
 app.use('/v1/forensics/*', paidRateLimitMiddleware)
 
 app.route('/health', healthRoute)
 app.route('/v1/score/history', historyRoute)
 app.route('/v1/score', scoreRoute)
 app.route('/v1/report', reportRoute)
+app.route('/v1/rate', ratingsRoute)
 app.route('/v1/data', dataRoute)
 app.route('/v1/monitor', monitoringRoute)
 app.route('/v1/forensics', forensicsRoute)

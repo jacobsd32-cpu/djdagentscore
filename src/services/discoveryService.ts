@@ -199,6 +199,21 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
         input: { body: { target: { type: 'string' }, reason: { type: 'string' }, details: { type: 'string' } } },
       },
       {
+        path: '/v1/rate',
+        method: 'POST',
+        price: ENDPOINT_PRICING['/v1/rate'],
+        description:
+          'Submit a transaction-backed 1-5 star counterparty rating for a wallet after at least $0.10 USDC of indexed settlement.',
+        input: {
+          body: {
+            rated_wallet: { type: 'string' },
+            tx_hash: { type: 'string' },
+            rating: { type: 'integer', minimum: 1, maximum: 5 },
+            comment: { type: 'string' },
+          },
+        },
+      },
+      {
         path: '/v1/data/fraud/blacklist',
         method: 'GET',
         price: ENDPOINT_PRICING['/v1/data/fraud/blacklist'],
@@ -224,6 +239,18 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
         method: 'GET',
         price: ENDPOINT_PRICING['/v1/data/graph'],
         description: 'Relationship graph data for a wallet with top counterparties and directional volume totals.',
+        input: {
+          query: {
+            wallet: { type: 'string', required: true },
+            limit: { type: 'integer' },
+          },
+        },
+      },
+      {
+        path: '/v1/data/ratings',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/data/ratings'],
+        description: 'Counterparty rating history and aggregate sentiment for a wallet.',
         input: {
           query: {
             wallet: { type: 'string', required: true },
