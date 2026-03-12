@@ -143,6 +143,16 @@ export function createTestDb(): Database.Database {
     );
     CREATE INDEX IF NOT EXISTS idx_reports_target ON fraud_reports(target_wallet);
 
+    CREATE TABLE IF NOT EXISTS fraud_patterns (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      pattern_name TEXT NOT NULL,
+      pattern_signature TEXT NOT NULL,
+      occurrences INTEGER DEFAULT 0,
+      risk_weight REAL DEFAULT 0,
+      first_detected TEXT,
+      last_detected TEXT
+    );
+
     CREATE TABLE IF NOT EXISTS fraud_disputes (
       id               TEXT PRIMARY KEY,
       report_id        TEXT NOT NULL UNIQUE,
@@ -158,6 +168,43 @@ export function createTestDb(): Database.Database {
       resolved_by      TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_fraud_disputes_target ON fraud_disputes(target_wallet, created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS mutual_ratings (
+      id TEXT PRIMARY KEY,
+      rater_wallet TEXT NOT NULL,
+      rated_wallet TEXT NOT NULL,
+      tx_hash TEXT NOT NULL,
+      rating INTEGER NOT NULL,
+      comment TEXT,
+      created_at TEXT NOT NULL
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_mutual_ratings_pair_tx
+      ON mutual_ratings(rater_wallet, rated_wallet, tx_hash);
+    CREATE INDEX IF NOT EXISTS idx_mutual_ratings_rated ON mutual_ratings(rated_wallet, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_mutual_ratings_rater ON mutual_ratings(rater_wallet, created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS creator_stakes (
+      id TEXT PRIMARY KEY,
+      creator_wallet TEXT NOT NULL,
+      agent_wallet TEXT NOT NULL,
+      stake_amount REAL NOT NULL,
+      fee_amount REAL NOT NULL DEFAULT 0,
+      stake_tx_hash TEXT NOT NULL UNIQUE,
+      fee_tx_hash TEXT NOT NULL UNIQUE,
+      status TEXT NOT NULL DEFAULT 'active',
+      score_boost INTEGER NOT NULL DEFAULT 0,
+      staked_at TEXT NOT NULL,
+      return_eligible INTEGER NOT NULL DEFAULT 1,
+      slashed_at TEXT,
+      slash_report_id TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_creator_stakes_agent_status
+      ON creator_stakes(agent_wallet, status, staked_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_creator_stakes_creator_status
+      ON creator_stakes(creator_wallet, status, staked_at DESC);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_creator_stakes_active_pair
+      ON creator_stakes(creator_wallet, agent_wallet)
+      WHERE status = 'active';
 
     CREATE TABLE IF NOT EXISTS usdc_transfers (
       tx_hash TEXT UNIQUE,
@@ -194,6 +241,17 @@ export function createTestDb(): Database.Database {
       recommendations TEXT,
       model_version TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS cluster_assignments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      wallet TEXT NOT NULL UNIQUE,
+      cluster_id TEXT NOT NULL,
+      cluster_name TEXT NOT NULL,
+      confidence REAL NOT NULL DEFAULT 0,
+      assigned_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_cluster_assignments_cluster ON cluster_assignments(cluster_id, confidence DESC);
+    CREATE INDEX IF NOT EXISTS idx_cluster_assignments_wallet ON cluster_assignments(wallet);
 
     CREATE TABLE IF NOT EXISTS api_keys (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

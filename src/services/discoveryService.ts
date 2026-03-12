@@ -171,6 +171,21 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
         input: { query: { wallet: { type: 'string', required: true } } },
       },
       {
+        path: '/v1/score/risk',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/score/risk'],
+        description: 'Risk prediction view combining fraud pressure, sybil/gaming flags, ratings, and intent outcomes.',
+        input: { query: { wallet: { type: 'string', required: true } } },
+      },
+      {
+        path: '/v1/cluster',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/cluster'],
+        description:
+          'Cluster analysis for a wallet using graph structure, risk signals, and persisted cluster assignments.',
+        input: { query: { wallet: { type: 'string', required: true }, limit: { type: 'integer' } } },
+      },
+      {
         path: '/v1/score/refresh',
         method: 'GET',
         price: ENDPOINT_PRICING['/v1/score/refresh'],
@@ -197,6 +212,35 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
         price: ENDPOINT_PRICING['/v1/report'],
         description: 'Submit a fraud report against a wallet.',
         input: { body: { target: { type: 'string' }, reason: { type: 'string' }, details: { type: 'string' } } },
+      },
+      {
+        path: '/v1/rate',
+        method: 'POST',
+        price: ENDPOINT_PRICING['/v1/rate'],
+        description: 'Submit a transaction-backed 1-5 star counterparty rating for a wallet.',
+        input: {
+          body: {
+            rated_wallet: { type: 'string' },
+            tx_hash: { type: 'string' },
+            rating: { type: 'integer', minimum: 1, maximum: 5 },
+            comment: { type: 'string' },
+          },
+        },
+      },
+      {
+        path: '/v1/stake',
+        method: 'POST',
+        price: 0,
+        fee_model: '1% of stake amount, validated from an on-chain USDC transfer to PAY_TO',
+        description:
+          'Register a creator-to-agent USDC stake after validating both the stake transfer and the separate 1% DJD fee transfer on-chain.',
+        input: {
+          body: {
+            agent_wallet: { type: 'string' },
+            stake_tx_hash: { type: 'string' },
+            fee_tx_hash: { type: 'string' },
+          },
+        },
       },
       {
         path: '/v1/data/fraud/blacklist',
@@ -227,6 +271,65 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
         input: {
           query: {
             wallet: { type: 'string', required: true },
+            limit: { type: 'integer' },
+          },
+        },
+      },
+      {
+        path: '/v1/data/intent',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/data/intent'],
+        description: 'Transaction-intent conversion data for a wallet based on paid lookups and follow-up deals.',
+        input: {
+          query: {
+            wallet: { type: 'string', required: true },
+            limit: { type: 'integer' },
+          },
+        },
+      },
+      {
+        path: '/v1/data/ratings',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/data/ratings'],
+        description: 'Counterparty rating history and aggregate sentiment for a wallet.',
+        input: {
+          query: {
+            wallet: { type: 'string', required: true },
+            limit: { type: 'integer' },
+          },
+        },
+      },
+      {
+        path: '/v1/data/economy/survival',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/data/economy/survival'],
+        description: 'Economy survival analytics showing cohort retention, activity survival, and at-risk wallets.',
+        input: {
+          query: {
+            limit: { type: 'integer' },
+          },
+        },
+      },
+      {
+        path: '/v1/data/economy/summary',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/data/economy/summary'],
+        description: 'Economy summary metrics by period from the aggregated ecosystem warehouse.',
+        input: {
+          query: {
+            period: { type: 'string' },
+            limit: { type: 'integer' },
+          },
+        },
+      },
+      {
+        path: '/v1/data/economy/volume',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/data/economy/volume'],
+        description: 'Economy volume time series with transaction counts and total USDC flow by period.',
+        input: {
+          query: {
+            period: { type: 'string' },
             limit: { type: 'integer' },
           },
         },

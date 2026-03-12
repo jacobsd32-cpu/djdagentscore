@@ -1,4 +1,5 @@
 import {
+  adjustScoreByStakeBoost,
   countFraudDisputes,
   countFraudReportsByTarget,
   db,
@@ -9,6 +10,7 @@ import {
   getTopPayers,
   listFraudDisputes,
   resolveFraudDispute,
+  restoreSlashedCreatorStakesForAgent,
   sumFraudPenaltyByTarget,
 } from '../db.js'
 import { ErrorCodes } from '../errors.js'
@@ -25,6 +27,7 @@ const RESETTABLE_TABLES = [
   'score_history',
   'score_decay',
   'economy_metrics',
+  'cluster_assignments',
   'intent_signals',
   'score_outcomes',
   'agent_registrations',
@@ -40,6 +43,7 @@ const RESETTABLE_TABLES = [
   'fraud_disputes',
   'fraud_reports',
   'fraud_patterns',
+  'creator_stakes',
   'growth_events',
 ] as const
 
@@ -353,6 +357,8 @@ export function resolveAdminForensicsDisputeView(
   resolution: DisputeResolution
   reportInvalidated: boolean
   penaltyRestored: number
+  stakesRestored: number
+  stakeBoostRestored: number
   resolvedAt: string
 }> {
   if (!disputeId) {
@@ -404,6 +410,14 @@ export function resolveAdminForensicsDisputeView(
     penaltyApplied: report.penalty_applied,
   })
   const currentState = getForensicsSignalSnapshot(dispute.target_wallet)
+  const restoredStakes =
+    parsedResolution.data.resolution === 'upheld' && currentState.reportCount === 0
+      ? restoreSlashedCreatorStakesForAgent(dispute.target_wallet)
+      : { stake_count: 0, total_stake_amount: 0, total_score_boost: 0 }
+
+  if (restoredStakes.total_score_boost > 0) {
+    adjustScoreByStakeBoost(dispute.target_wallet, restoredStakes.total_score_boost)
+  }
 
   queueWebhookEvent('fraud.dispute.resolved', {
     disputeId: dispute.id,
@@ -413,6 +427,8 @@ export function resolveAdminForensicsDisputeView(
     resolution: parsedResolution.data.resolution,
     reportInvalidated: resolution.reportInvalidated,
     penaltyRestored: resolution.penaltyRestored,
+    stakesRestored: restoredStakes.stake_count,
+    stakeBoostRestored: restoredStakes.total_score_boost,
     resolvedBy,
     currentRiskLevel: currentState.riskLevel,
   })
@@ -436,6 +452,8 @@ export function resolveAdminForensicsDisputeView(
       resolution: parsedResolution.data.resolution,
       reportInvalidated: resolution.reportInvalidated,
       penaltyRestored: resolution.penaltyRestored,
+      stakesRestored: restoredStakes.stake_count,
+      stakeBoostRestored: restoredStakes.total_score_boost,
       resolvedAt: resolution.resolvedAt,
     },
   }

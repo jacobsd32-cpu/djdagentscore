@@ -92,6 +92,8 @@ export const DISPUTE_REASONS: DisputeReason[] = [
 
 export type DisputeStatus = 'open' | 'resolved'
 export type DisputeResolution = 'upheld' | 'rejected'
+export type RatingValue = 1 | 2 | 3 | 4 | 5
+export type StakeStatus = 'active' | 'slashed'
 
 // ---------- Dimension raw data ----------
 
@@ -282,6 +284,32 @@ export interface FraudDisputeRow {
   resolved_by: string | null
 }
 
+export interface MutualRatingRow {
+  id: string
+  rater_wallet: string
+  rated_wallet: string
+  tx_hash: string
+  rating: number
+  comment: string | null
+  created_at: string
+}
+
+export interface CreatorStakeRow {
+  id: string
+  creator_wallet: string
+  agent_wallet: string
+  stake_amount: number
+  fee_amount: number
+  stake_tx_hash: string
+  fee_tx_hash: string
+  status: StakeStatus
+  score_boost: number
+  staked_at: string
+  return_eligible: number
+  slashed_at: string | null
+  slash_report_id: string | null
+}
+
 // ---------- Agent Registration ----------
 
 export interface AgentRegistrationBody {
@@ -345,6 +373,44 @@ export interface FraudDisputeBody {
 export interface FraudDisputeResolutionBody {
   resolution: DisputeResolution
   notes?: string
+}
+
+export interface RatingBody {
+  rated_wallet: string
+  tx_hash: string
+  rating: RatingValue
+  comment?: string
+}
+
+export interface StakeBody {
+  agent_wallet: string
+  stake_tx_hash: string
+  fee_tx_hash: string
+}
+
+export interface RatingResponse {
+  ratingId: string
+  status: 'accepted'
+  ratedWallet: Address
+  txHash: string
+  rating: number
+  averageRating: number
+  ratingCount: number
+}
+
+export interface StakeResponse {
+  stakeId: string
+  status: StakeStatus
+  creatorWallet: Address
+  agentWallet: Address
+  stakeTxHash: string
+  feeTxHash: string
+  stakeAmount: number
+  feeAmount: number
+  scoreBoost: number
+  activeStakeCount: number
+  activeStakedAmount: number
+  activeScoreBoost: number
 }
 
 // ---------- Leaderboard ----------
