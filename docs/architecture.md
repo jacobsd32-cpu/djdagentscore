@@ -46,6 +46,7 @@ src/
 │   ├── certificationService.ts     # Certification rules and workflow orchestration
 │   ├── portalService.ts            # Developer portal usage and analytics lookup
 │   ├── registrationService.ts      # Agent registration and GitHub identity workflow
+│   ├── scoreService.ts             # Score request orchestration for sync, batch, and async job APIs
 │   ├── webhookQueueService.ts      # Worker-side webhook queueing, delivery, and retry policy
 │   └── webhookService.ts           # Webhook validation, lifecycle, and test delivery
 ├── utils/

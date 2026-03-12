@@ -1,59 +1,45 @@
 import { Hono, type Context } from 'hono'
-import { getOrCalculateScore } from '../scoring/engine.js'
-import { submitJob, getJob } from '../jobs/scoreQueue.js'
-import type { Address, BasicScoreResponse } from '../types.js'
 import { errorResponse, ErrorCodes } from '../errors.js'
-import { normalizeWallet } from '../utils/walletUtils.js'
+import {
+  getBasicScore,
+  getBatchScores,
+  getFullScore,
+  getScoreJobStatus,
+  queueScoreComputation,
+  refreshScore,
+} from '../services/scoreService.js'
 
 const score = new Hono()
 
 // GET /v1/score/basic?wallet=0x...
 score.get('/basic', async (c) => {
-  const wallet = normalizeWallet(c.req.query('wallet'))
-  if (!wallet) {
-    return c.json(errorResponse(ErrorCodes.INVALID_WALLET, 'Invalid or missing wallet address'), 400)
+  const outcome = await getBasicScore(c.req.query('wallet'))
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
   }
 
-  const result = await getOrCalculateScore(wallet)
-
-  const response: BasicScoreResponse & { stale?: boolean } = {
-    wallet: result.wallet,
-    score: result.score,
-    tier: result.tier,
-    confidence: result.confidence,
-    recommendation: result.recommendation,
-    modelVersion: result.modelVersion,
-    lastUpdated: result.lastUpdated,
-    computedAt: result.computedAt,
-    scoreFreshness: result.scoreFreshness,
-    ...(result.dataSource ? { dataSource: result.dataSource } : {}),
-    ...(result.stale ? { stale: true } : {}),
-  }
-
-  return c.json(response)
+  return c.json(outcome.data)
 })
 
 // GET /v1/score/full?wallet=0x...
 score.get('/full', async (c) => {
-  const wallet = normalizeWallet(c.req.query('wallet'))
-  if (!wallet) {
-    return c.json(errorResponse(ErrorCodes.INVALID_WALLET, 'Invalid or missing wallet address'), 400)
+  const outcome = await getFullScore(c.req.query('wallet'))
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
   }
 
-  const result = await getOrCalculateScore(wallet)
-  return c.json(result)
+  return c.json(outcome.data)
 })
 
 // POST /v1/score/refresh — forces a live recalculation (mutation → POST is correct)
 // Also accepts GET for backward compatibility (deprecated).
 async function handleRefresh(c: Context) {
-  const wallet = normalizeWallet(c.req.query('wallet'))
-  if (!wallet) {
-    return c.json(errorResponse(ErrorCodes.INVALID_WALLET, 'Invalid or missing wallet address'), 400)
+  const outcome = await refreshScore(c.req.query('wallet'))
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
   }
 
-  const result = await getOrCalculateScore(wallet, true)
-  return c.json(result)
+  return c.json(outcome.data)
 }
 score.post('/refresh', handleRefresh)
 score.get('/refresh', handleRefresh) // deprecated — prefer POST
@@ -63,69 +49,26 @@ score.get('/refresh', handleRefresh) // deprecated — prefer POST
 // Free — useful when the caller can't wait 20-150s for the synchronous endpoints.
 // Accepts wallet from JSON body { wallet: "0x..." } or query param ?wallet=0x... (deprecated).
 score.post('/compute', async (c) => {
-  let raw: string | undefined = c.req.query('wallet')
-
-  // Prefer body over query param for POST requests
-  if (!raw) {
-    try {
-      const body = await c.req.json<{ wallet?: string }>()
-      raw = body?.wallet
-    } catch {
-      // no body — fall through to validation
-    }
-  }
-
-  const wallet = normalizeWallet(raw)
-  if (!wallet) {
-    return c.json(errorResponse(ErrorCodes.INVALID_WALLET, 'Invalid or missing wallet address'), 400)
-  }
-
-  const jobId = submitJob(wallet)
-  return c.json(
-    { jobId, status: 'pending', wallet, pollUrl: `/v1/score/job/${jobId}` },
-    202,
+  const outcome = await queueScoreComputation(
+    c.req.query('wallet'),
+    async () => await c.req.json<{ wallet?: string }>(),
   )
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
+  }
+
+  return c.json(outcome.data, outcome.status ?? 202)
 })
 
 // GET /v1/score/job/:jobId
 // Poll the status of an async scoring job.
 score.get('/job/:jobId', (c) => {
-  const jobId = c.req.param('jobId')
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(jobId)) {
-    return c.json(errorResponse(ErrorCodes.INVALID_JOB_ID, 'Invalid job ID format'), 400)
-  }
-  const job = getJob(jobId)
-
-  if (!job) {
-    return c.json(errorResponse(ErrorCodes.JOB_NOT_FOUND, 'Job not found or expired', { ttl: '10 minutes' }), 404)
+  const outcome = getScoreJobStatus(c.req.param('jobId'))
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
   }
 
-  if (job.status === 'pending') {
-    return c.json({ jobId, status: 'pending', wallet: job.wallet })
-  }
-
-  if (job.status === 'error') {
-    return c.json({ jobId, status: 'error', wallet: job.wallet, error: job.error })
-  }
-
-  // complete — return basic score only (full details require /v1/score/full)
-  const r = job.result!
-  return c.json({
-    jobId,
-    status: 'complete',
-    wallet: job.wallet,
-    result: {
-      wallet: r.wallet,
-      score: r.score,
-      tier: r.tier,
-      confidence: r.confidence,
-      recommendation: r.recommendation,
-      modelVersion: r.modelVersion,
-      lastUpdated: r.lastUpdated,
-      computedAt: r.computedAt,
-      scoreFreshness: r.scoreFreshness,
-    },
-  })
+  return c.json(outcome.data)
 })
 
 // POST /v1/score/batch
@@ -138,59 +81,12 @@ score.post('/batch', async (c) => {
     return c.json(errorResponse(ErrorCodes.INVALID_JSON, 'Invalid JSON body'), 400)
   }
 
-  const { wallets } = body
-  if (!Array.isArray(wallets)) {
-    return c.json(
-      errorResponse(ErrorCodes.BATCH_INVALID, 'wallets must be an array'),
-      400,
-    )
-  }
-  if (wallets.length < 2 || wallets.length > 20) {
-    return c.json(
-      errorResponse(
-        ErrorCodes.BATCH_INVALID,
-        'wallets array must contain 2-20 addresses',
-        { min: 2, max: 20, received: wallets.length },
-      ),
-      400,
-    )
+  const outcome = await getBatchScores(body.wallets)
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
   }
 
-  // Validate and normalize all addresses upfront
-  const normalized = wallets.map((w) => (typeof w === 'string' ? normalizeWallet(w) : null))
-  const invalidCount = normalized.filter((w) => w === null).length
-  if (invalidCount > 0) {
-    return c.json(
-      errorResponse(
-        ErrorCodes.INVALID_WALLET,
-        `${invalidCount} invalid wallet address(es)`,
-        { invalidCount },
-      ),
-      400,
-    )
-  }
-
-  // Score all wallets in parallel
-  const results = await Promise.all(
-    (normalized as Address[]).map(async (wallet) => {
-      const result = await getOrCalculateScore(wallet)
-      const basic: BasicScoreResponse = {
-        wallet: result.wallet,
-        score: result.score,
-        tier: result.tier,
-        confidence: result.confidence,
-        recommendation: result.recommendation,
-        modelVersion: result.modelVersion,
-        lastUpdated: result.lastUpdated,
-        computedAt: result.computedAt,
-        scoreFreshness: result.scoreFreshness,
-        ...(result.dataSource ? { dataSource: result.dataSource } : {}),
-      }
-      return basic
-    }),
-  )
-
-  return c.json({ results, count: results.length })
+  return c.json(outcome.data)
 })
 
 export default score
