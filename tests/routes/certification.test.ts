@@ -333,6 +333,14 @@ describe('Certification routes', () => {
       expect(svg).toContain('#6b7280') // gray color
       expect(svg).toContain('not certified')
     })
+
+    it('returns 400 for an invalid wallet badge request', async () => {
+      const app = createApp()
+      const res = await app.request('/v1/certification/badge/not-a-wallet')
+
+      expect(res.status).toBe(400)
+      expect(await res.text()).toBe('Invalid wallet address')
+    })
   })
 
   // ── Admin routes ──────────────────────────────────────────────────────────
@@ -357,6 +365,22 @@ describe('Certification routes', () => {
       const body = (await res.json()) as { certifications: unknown[]; count: number }
       expect(body.count).toBe(1)
       expect(body.certifications).toHaveLength(1)
+    })
+  })
+
+  describe('GET /v1/certification/admin/revenue', () => {
+    it('returns certification revenue summary with valid admin key', async () => {
+      seedCertification(VALID_WALLET_LOWER)
+
+      const app = createApp()
+      const res = await app.request('/v1/certification/admin/revenue', {
+        headers: { 'x-admin-key': ADMIN_KEY },
+      })
+
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as { total_certifications: number; price_per_cert_usd: number }
+      expect(body.total_certifications).toBe(1)
+      expect(body.price_per_cert_usd).toBe(99)
     })
   })
 
@@ -391,6 +415,18 @@ describe('Certification routes', () => {
       expect(checkRes.status).toBe(404)
       const checkBody = (await checkRes.json()) as { error: { code: string } }
       expect(checkBody.error.code).toBe('cert_not_found')
+    })
+
+    it('returns 400 for an invalid certification id', async () => {
+      const app = createApp()
+      const res = await app.request('/v1/certification/admin/not-a-number/revoke', {
+        method: 'POST',
+        headers: { 'x-admin-key': ADMIN_KEY },
+      })
+
+      expect(res.status).toBe(400)
+      const body = (await res.json()) as { error: { code: string } }
+      expect(body.error.code).toBe('invalid_request')
     })
   })
 })
