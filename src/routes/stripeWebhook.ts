@@ -19,10 +19,7 @@ import { handleIncomingStripeWebhook } from '../services/stripeWebhookService.js
 const stripeWebhook = new Hono()
 
 stripeWebhook.post('/', async (c) => {
-  const outcome = await handleIncomingStripeWebhook(
-    await c.req.text(),
-    c.req.header('stripe-signature'),
-  )
+  const outcome = await handleIncomingStripeWebhook(await c.req.text(), c.req.header('stripe-signature'))
   if (!outcome.ok) {
     return c.json(errorResponse(outcome.code, outcome.message), outcome.status)
   }

@@ -19,10 +19,11 @@ const { testDb } = vi.hoisted(() => {
 })
 
 vi.mock('../../src/db.js', () => ({
-  listScoreHistory: (
-    wallet: string,
-    options: { after?: string; before?: string; limit: number },
-  ) => {
+  getScore: () => null,
+  createFraudDispute: () => undefined,
+  getFraudDisputeByReportId: () => undefined,
+  getFraudReportById: () => undefined,
+  listScoreHistory: (wallet: string, options: { after?: string; before?: string; limit: number }) => {
     let sql = 'SELECT * FROM score_history WHERE wallet = ?'
     const args: Array<string | number> = [wallet]
 
@@ -40,10 +41,7 @@ vi.mock('../../src/db.js', () => ({
 
     return testDb.prepare(sql).all(...args)
   },
-  countScoreHistory: (
-    wallet: string,
-    options: { after?: string; before?: string } = {},
-  ) => {
+  countScoreHistory: (wallet: string, options: { after?: string; before?: string } = {}) => {
     let sql = 'SELECT COUNT(*) as count FROM score_history WHERE wallet = ?'
     const args: string[] = [wallet]
 
@@ -58,6 +56,16 @@ vi.mock('../../src/db.js', () => ({
 
     return (testDb.prepare(sql).get(...args) as { count: number } | undefined)?.count ?? 0
   },
+  countFraudDisputesByTarget: () => 0,
+  countFraudReportsByTarget: () => 0,
+  sumFraudPenaltyByTarget: () => 0,
+  countDistinctReportersByTarget: () => 0,
+  countForensicsFeed: () => 0,
+  countForensicsWatchlistTargets: () => 0,
+  getFraudReasonBreakdown: () => [],
+  listForensicsFeed: () => [],
+  listForensicsWatchlist: () => [],
+  listFraudReportsByTarget: () => [],
 }))
 
 import { Hono } from 'hono'

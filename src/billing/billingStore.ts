@@ -16,6 +16,7 @@ export interface SubscriptionSessionRow {
   plan: string
   api_key_id: number | null
   status: string
+  stripe_customer_id: string
 }
 
 export interface CancelSubscriptionResult {
@@ -107,9 +108,9 @@ export function updateSubscriptionStatus(
 }
 
 export function cancelSubscription(db: Database.Database, subscriptionId: string): CancelSubscriptionResult {
-  const subscription = db.prepare('SELECT api_key_id FROM subscriptions WHERE stripe_subscription_id = ?').get(subscriptionId) as
-    | { api_key_id: number | null }
-    | undefined
+  const subscription = db
+    .prepare('SELECT api_key_id FROM subscriptions WHERE stripe_subscription_id = ?')
+    .get(subscriptionId) as { api_key_id: number | null } | undefined
 
   if (!subscription) {
     return { found: false, apiKeyId: null }
@@ -167,6 +168,8 @@ export function findSubscriptionBySessionId(
   sessionId: string,
 ): SubscriptionSessionRow | undefined {
   return db
-    .prepare('SELECT plan, api_key_id, status FROM subscriptions WHERE stripe_checkout_session_id = ?')
+    .prepare(
+      'SELECT plan, api_key_id, status, stripe_customer_id FROM subscriptions WHERE stripe_checkout_session_id = ?',
+    )
     .get(sessionId) as SubscriptionSessionRow | undefined
 }

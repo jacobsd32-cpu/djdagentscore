@@ -1,16 +1,25 @@
 {
-  "name": "djd-agent-score-client",
-  "version": "0.2.0",
+  "name": "djd-agent-score",
+  "version": "1.0.1",
   "description": "TypeScript client for the DJD Agent Score API — on-chain reputation for AI agents",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "build": "tsup src/index.ts --format esm,cjs --dts --sourcemap --clean",
+    "prepare": "npm run build",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm run build"
   },
   "keywords": [
     "djd",
@@ -21,9 +30,24 @@
     "ai",
     "autonomous"
   ],
+  "author": "Drew Jacobs",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jacobsd32-cpu/djdagentscore.git",
+    "directory": "packages/djd-agent-score-client"
+  },
+  "homepage": "https://djdagentscore.dev",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
   "devDependencies": {
     "@types/node": "^25.3.0",
+    "tsup": "^8.5.0",
     "typescript": "^5.7.2"
   }
 }

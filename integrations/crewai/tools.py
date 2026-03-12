@@ -29,7 +29,7 @@ from crewai.tools import tool
 # Configuration
 # ---------------------------------------------------------------------------
 
-BASE_URL = os.getenv("DJD_BASE_URL", "https://djd-agent-score.fly.dev")
+BASE_URL = os.getenv("DJD_BASE_URL", "https://djdagentscore.dev")
 API_KEY = os.getenv("DJD_API_KEY", "")
 TIMEOUT = 30.0
 

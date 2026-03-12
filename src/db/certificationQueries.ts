@@ -85,11 +85,7 @@ export function getActiveCertification(wallet: string): CertificationRow | undef
   return stmtGetActiveCertification.get(wallet)
 }
 
-export function insertCertification(
-  wallet: string,
-  tier: string,
-  scoreAtCertification: number,
-): CertificationRow {
+export function insertCertification(wallet: string, tier: string, scoreAtCertification: number): CertificationRow {
   const result = stmtInsertCertification.run(wallet, tier, scoreAtCertification)
   return stmtGetCertificationById.get(Number(result.lastInsertRowid))!
 }

@@ -66,7 +66,10 @@ export async function iterateChunks(opts: ChunkIteratorOptions): Promise<number>
       if (chunkSize < initialChunkSize) {
         chunkSize = chunkSize * 2n > initialChunkSize ? initialChunkSize : chunkSize * 2n
       }
-      await new Promise((r) => setTimeout(r, yieldMs))
+      // Yield the event loop between chunks — use at least 100ms to ensure
+      // HTTP handlers (especially health checks) can interleave even under
+      // heavy SQLite write load.
+      await new Promise((r) => setTimeout(r, Math.max(yieldMs, 100)))
     } catch (err) {
       // BlastAPI tells us the max safe range — use it directly
       const suggestedEnd = parseSuggestedEnd(err)

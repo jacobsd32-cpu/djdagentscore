@@ -266,11 +266,12 @@ export interface ApiKeyAnalytics {
 export function getApiKeyAnalytics(wallet: string, days: number): ApiKeyAnalytics {
   const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
 
-  const totalRequests = db
-    .prepare<[string, string], { count: number }>(
-      'SELECT COUNT(*) as count FROM query_log WHERE requester_wallet = ? AND timestamp > ?',
-    )
-    .get(wallet, cutoff)?.count ?? 0
+  const totalRequests =
+    db
+      .prepare<[string, string], { count: number }>(
+        'SELECT COUNT(*) as count FROM query_log WHERE requester_wallet = ? AND timestamp > ?',
+      )
+      .get(wallet, cutoff)?.count ?? 0
 
   const endpointBreakdown = db
     .prepare<[string, string], EndpointStat>(

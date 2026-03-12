@@ -10,7 +10,22 @@ vi.mock('../../src/db.js', () => ({
   insertReport: (...args: unknown[]) => mockInsertReport(...args),
   getScore: (...args: unknown[]) => mockGetScore(...args),
   applyReportPenalty: (...args: unknown[]) => mockApplyReportPenalty(...args),
+  createFraudDispute: vi.fn(),
+  getFraudDisputeByReportId: () => undefined,
+  getFraudReportById: () => undefined,
   countReporterReportsForTarget: (...args: unknown[]) => mockCountReporterReportsForTarget(...args),
+  countFraudDisputesByTarget: () => 0,
+  countScoreHistory: () => 0,
+  countFraudReportsByTarget: () => 0,
+  countDistinctReportersByTarget: () => 0,
+  countForensicsFeed: () => 0,
+  countForensicsWatchlistTargets: () => 0,
+  getFraudReasonBreakdown: () => [],
+  listForensicsFeed: () => [],
+  listForensicsWatchlist: () => [],
+  listFraudReportsByTarget: () => [],
+  listScoreHistory: () => [],
+  sumFraudPenaltyByTarget: () => 0,
 }))
 
 vi.mock('../../src/jobs/webhookDelivery.js', () => ({

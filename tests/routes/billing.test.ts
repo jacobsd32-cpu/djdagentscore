@@ -24,6 +24,14 @@ vi.mock('../../src/templates/billingSuccess.js', () => ({
   successPageHtml: (props: Record<string, unknown>) => state.successPageHtml(props),
 }))
 
+vi.mock('../../src/services/growthService.js', () => ({
+  trackGrowthEventSafe: vi.fn(),
+}))
+
+vi.mock('../../src/services/growthService.js', () => ({
+  trackGrowthEventSafe: vi.fn(),
+}))
+
 import { Hono } from 'hono'
 import billingRoute from '../../src/routes/billing.js'
 

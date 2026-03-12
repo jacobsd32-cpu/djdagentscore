@@ -1,6 +1,6 @@
 # djd-agent-score-mcp
 
-MCP server for [DJD Agent Score](https://djd-agent-score.fly.dev) — on-chain reputation scoring for AI agent wallets on Base L2.
+MCP server for [DJD Agent Score](https://djdagentscore.dev) — on-chain reputation scoring for AI agent wallets on Base L2.
 
 Gives AI assistants (Claude Desktop, Cursor, Windsurf, etc.) native tools to look up wallet trust scores, sybil flags, and network-wide reputation metrics.
 
@@ -42,7 +42,7 @@ Add to `.cursor/mcp.json` in your project:
 }
 ```
 
-> **Free tier**: Leave out `DJD_API_KEY` to use the free tools (10 queries/day). Add a key to unlock paid tools and higher limits. Get one at [djd-agent-score.fly.dev](https://djd-agent-score.fly.dev).
+> **Free tier**: Leave out `DJD_API_KEY` to use the free tools (10 queries/day). Add a key to unlock paid tools and higher limits. Get one at [djdagentscore.dev](https://djdagentscore.dev).
 
 ## Tools
 
@@ -60,7 +60,7 @@ Add to `.cursor/mcp.json` in your project:
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `DJD_API_KEY` | No | — | API key (`djd_live_...`) for paid tools. Free tools work without it. |
-| `DJD_API_URL` | No | `https://djd-agent-score.fly.dev` | API base URL (override for self-hosted instances) |
+| `DJD_API_URL` | No | `https://djdagentscore.dev` | API base URL (override for self-hosted instances) |
 
 ## Example usage
 

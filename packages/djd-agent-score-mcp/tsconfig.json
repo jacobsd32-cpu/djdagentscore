@@ -3,7 +3,11 @@
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "baseUrl": ".",
     "lib": ["ES2022"],
+    "paths": {
+      "djd-agent-score": ["../djd-agent-score-client/dist/index.d.ts"]
+    },
     "types": ["node"],
     "outDir": "dist",
     "declaration": true,

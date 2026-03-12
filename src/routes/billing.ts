@@ -12,13 +12,13 @@
  */
 
 import { Hono } from 'hono'
+import { errorResponse } from '../errors.js'
 import {
   createBillingCheckout,
   createBillingPortalLink,
   listBillingPlans,
   renderBillingSuccessPage,
 } from '../services/billingService.js'
-import { errorResponse } from '../errors.js'
 
 const billing = new Hono()
 

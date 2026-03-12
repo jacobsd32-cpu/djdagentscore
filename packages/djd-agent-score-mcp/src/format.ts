@@ -10,7 +10,7 @@ import type {
   FullScoreResponse,
   LeaderboardResponse,
   EconomyMetrics,
-} from 'djd-agent-score-client'
+} from 'djd-agent-score'
 
 // ── Score formatters ─────────────────────────────────────────────────────────
 

@@ -55,8 +55,8 @@ Python SDK: `djd-agent-score` (v0.1.0, PyPI)
 ### 8. LobeHub MCP Servers
 - **URL**: https://lobehub.com/mcp
 - **Config file**: None required
-- **Submission**: PR to LobeHub's MCP servers repo
-- **Status**: ⏳ Not submitted
+- **Submission**: Web form on lobehub.com (no dedicated GitHub repo for MCP submissions)
+- **Status**: ⏳ Not submitted — requires manual web form at lobehub.com/mcp
 
 ---
 
@@ -70,8 +70,7 @@ Python SDK: `djd-agent-score` (v0.1.0, PyPI)
 ### PyPI
 - **Package**: `djd-agent-score`
 - **URL**: https://pypi.org/project/djd-agent-score/
-- **Status**: ⏳ Ready to publish (v0.1.0)
-- **Manual step**: `cd ~/Desktop/djd-agent-score-python && source .venv/bin/activate && twine upload dist/*`
+- **Status**: ✅ Published (v0.1.0)
 
 ---
 
@@ -80,7 +79,8 @@ Python SDK: `djd-agent-score` (v0.1.0, PyPI)
 ### x402 Ecosystem Page
 - **URL**: https://github.com/coinbase/x402
 - **Config file**: `docs/x402-ecosystem-submission.md` (has PR template)
-- **Status**: ⏳ Template ready — needs PR to coinbase/x402
+- **Original PR**: ✅ [PR #1303](https://github.com/coinbase/x402/pull/1303) — merged 2026-02-22
+- **Update PR**: ✅ [PR #1444](https://github.com/coinbase/x402/pull/1444) — updates URL to djdagentscore.dev + expanded description
 
 ---
 
@@ -88,14 +88,15 @@ Python SDK: `djd-agent-score` (v0.1.0, PyPI)
 
 | Directory | Status |
 |-----------|--------|
-| Official MCP Registry | ✅ PR #1027 |
+| Official MCP Registry | ✅ PR #1027 (open, awaiting review) |
 | Smithery | ⏳ Web submission needed |
 | Glama | ⏳ Web submission needed |
 | PulseMCP | ⏳ Web submission needed |
-| mcp.so | ✅ Issue #665 |
-| Cline Marketplace | ✅ Issue #779 |
-| awesome-mcp-servers | ✅ Issue #2683 |
-| LobeHub | ⏳ Not submitted |
-| npm | ✅ Live |
-| PyPI | ⏳ twine upload needed |
-| x402 Ecosystem | ⏳ PR needed |
+| mcp.so | ✅ Issue #665 (open, awaiting review) |
+| Cline Marketplace | ✅ Issue #779 (open, awaiting review) |
+| awesome-mcp-servers | ✅ Issue #2683 (open, awaiting review) |
+| LobeHub | ⏳ Web form needed (lobehub.com/mcp) |
+| npm (MCP server) | ✅ Live (v0.1.0) |
+| npm (TS client) | ✅ Published (v0.2.0) |
+| PyPI | ✅ Published (v0.1.0) |
+| x402 Ecosystem | ✅ PR #1303 merged + PR #1444 (update) |

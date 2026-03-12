@@ -1,8 +1,9 @@
 import { getAllRegistrationsWithGithub, getRegistration, updateGithubVerification, upsertRegistration } from '../db.js'
 import { queueWebhookEvent } from '../jobs/webhookDelivery.js'
 import { log } from '../logger.js'
-import type { Address, AgentRegistrationBody, AgentRegistrationResponse, AgentRegistrationRow } from '../types.js'
+import type { Address, AgentRegistrationResponse, AgentRegistrationRow } from '../types.js'
 import { withRetry } from '../utils/retry.js'
+import { trackGrowthEventSafe } from './growthService.js'
 
 export interface GithubVerificationResult {
   stars: number
@@ -22,7 +23,10 @@ export function parseGithubUrl(url: string): { owner: string; repo: string } | n
   try {
     const parsed = new URL(url)
     if (parsed.hostname !== 'github.com') return null
-    const parts = parsed.pathname.replace(/\.git$/, '').split('/').filter(Boolean)
+    const parts = parsed.pathname
+      .replace(/\.git$/, '')
+      .split('/')
+      .filter(Boolean)
     if (parts.length < 2) return null
     return { owner: parts[0]!, repo: parts[1]! }
   } catch {
@@ -103,7 +107,10 @@ export async function syncGithubVerification(
   return 'verified'
 }
 
-function buildRegistrationResponse(row: AgentRegistrationRow, status: 'registered' | 'updated'): AgentRegistrationResponse {
+function buildRegistrationResponse(
+  row: AgentRegistrationRow,
+  status: 'registered' | 'updated',
+): AgentRegistrationResponse {
   return {
     wallet: row.wallet as Address,
     status,
@@ -160,6 +167,18 @@ export function registerAgent(body: {
     registeredAt: row.registered_at,
     name: row.name ?? null,
     github_url: row.github_url ?? null,
+  })
+
+  trackGrowthEventSafe({
+    event: isNew ? 'agent_registered' : 'agent_updated',
+    source: 'server',
+    wallet: body.wallet,
+    page: '/v1/agent/register',
+    metadata: {
+      hasGithub: !!row.github_url,
+      hasWebsite: !!row.website_url,
+      githubVerified: row.github_verified === 1,
+    },
   })
 
   return {

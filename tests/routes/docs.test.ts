@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
 import { Hono } from 'hono'
+import { describe, expect, it } from 'vitest'
 import docsRoute from '../../src/routes/docs.js'
 
 describe('GET /docs', () => {

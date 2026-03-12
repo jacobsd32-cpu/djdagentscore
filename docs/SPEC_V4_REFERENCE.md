@@ -35,7 +35,7 @@ A competitor can copy the algorithm in a weekend. They cannot copy the data accu
 
 - **Product name:** DJD Agent Score
 - **Tagline:** Trust infrastructure for the agent economy
-- **Domain candidates:** djdagentscore.com, agentscore.ai, djdscore.com (register via Conway Domains upon funding)
+- **Canonical public domain:** djdagentscore.dev
 - **Trademarks:** File applications for "DJD Agent Score" and "Agent KYA" immediately upon launch.
 
 ### 2.1 Separate Legal Entity (CRITICAL)
@@ -444,7 +444,7 @@ X-DJD-Disclaimer: Scores are informational and experimental. Not financial advic
 | Component | Technology |
 |-----------|-----------|
 | Runtime / Framework | Hono (with @hono/node-server) |
-| Payment middleware | x402-hono |
+| Payment middleware | /hono |
 | Database | SQLite via better-sqlite3 |
 | Blockchain reads | viem (Base RPC: https://mainnet.base.org) |
 | USDC contract (Base) | 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 |

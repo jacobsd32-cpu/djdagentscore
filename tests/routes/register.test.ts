@@ -25,6 +25,7 @@ const { queueWebhookEventMock, testDb } = vi.hoisted(() => {
 })
 
 vi.mock('../../src/db.js', () => ({
+  insertGrowthEvent: () => undefined,
   getRegistration: (wallet: string) =>
     testDb.prepare('SELECT * FROM agent_registrations WHERE wallet = ? LIMIT 1').get(wallet),
   upsertRegistration: (reg: {
@@ -34,8 +35,9 @@ vi.mock('../../src/db.js', () => ({
     github_url: string | null
     website_url: string | null
   }) =>
-    testDb.prepare(
-      `INSERT INTO agent_registrations (wallet, name, description, github_url, website_url, registered_at, updated_at)
+    testDb
+      .prepare(
+        `INSERT INTO agent_registrations (wallet, name, description, github_url, website_url, registered_at, updated_at)
        VALUES (@wallet, @name, @description, @github_url, @website_url, datetime('now'), datetime('now'))
        ON CONFLICT(wallet) DO UPDATE SET
          name = excluded.name,
@@ -43,13 +45,16 @@ vi.mock('../../src/db.js', () => ({
          github_url = excluded.github_url,
          website_url = excluded.website_url,
          updated_at = datetime('now')`,
-    ).run(reg),
+      )
+      .run(reg),
   updateGithubVerification: (wallet: string, verified: boolean, stars: number | null, pushedAt: string | null) =>
-    testDb.prepare(
-      `UPDATE agent_registrations
+    testDb
+      .prepare(
+        `UPDATE agent_registrations
        SET github_verified = ?, github_stars = ?, github_pushed_at = ?, github_verified_at = datetime('now')
        WHERE wallet = ?`,
-    ).run(verified ? 1 : 0, stars, pushedAt, wallet),
+      )
+      .run(verified ? 1 : 0, stars, pushedAt, wallet),
   getAllRegistrationsWithGithub: () =>
     testDb.prepare('SELECT * FROM agent_registrations WHERE github_url IS NOT NULL').all(),
 }))

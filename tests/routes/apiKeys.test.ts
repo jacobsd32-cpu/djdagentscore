@@ -23,6 +23,7 @@ const state = vi.hoisted(() => ({
 }))
 
 vi.mock('../../src/db.js', () => ({
+  insertGrowthEvent: () => undefined,
   insertApiKey: (input: {
     key_hash: string
     key_prefix: string

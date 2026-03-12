@@ -6,9 +6,7 @@ const state = vi.hoisted(() => ({
   countTotalQueryLogs: vi.fn().mockReturnValue(13),
   countRegisteredAgents: vi.fn().mockReturnValue(5),
   countFraudReports: vi.fn().mockReturnValue(2),
-  getHttpCounters: vi.fn().mockReturnValue([
-    'djd_http_requests_total{method="GET",path="/health",status="200"} 4',
-  ]),
+  getHttpCounters: vi.fn().mockReturnValue(['djd_http_requests_total{method="GET",path="/health",status="200"} 4']),
   uptimeSeconds: vi.fn().mockReturnValue(321),
 }))
 
@@ -56,9 +54,7 @@ describe('GET /metrics', () => {
     state.countTotalQueryLogs.mockReturnValue(13)
     state.countRegisteredAgents.mockReturnValue(5)
     state.countFraudReports.mockReturnValue(2)
-    state.getHttpCounters.mockReturnValue([
-      'djd_http_requests_total{method="GET",path="/health",status="200"} 4',
-    ])
+    state.getHttpCounters.mockReturnValue(['djd_http_requests_total{method="GET",path="/health",status="200"} 4'])
     state.uptimeSeconds.mockReturnValue(321)
   })
 

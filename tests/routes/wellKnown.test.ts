@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Hono } from 'hono'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import wellKnownRoute from '../../src/routes/wellKnown.js'
 
 describe('GET /.well-known/x402', () => {

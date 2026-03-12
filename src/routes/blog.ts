@@ -1,6 +1,10 @@
 import { Hono } from 'hono'
+import { buildPublicUrl, getPublicBaseUrl } from '../config/public.js'
 
 const blog = new Hono()
+const SITE = getPublicBaseUrl()
+const BLOG_URL = buildPublicUrl('/blog')
+const BLOG_RSS_URL = buildPublicUrl('/blog/rss.xml')
 
 // ─── Shared head / design tokens (matches index.html gold/navy system) ───
 
@@ -14,12 +18,12 @@ const blogHead = (title: string, description: string, slug = '') => `<!DOCTYPE h
 <meta property="og:type" content="article">
 <meta property="og:title" content="${title} — DJD Agent Score">
 <meta property="og:description" content="${description}">
-<meta property="og:url" content="https://djdagentscore.dev/blog${slug ? `/${slug}` : ''}">
+<meta property="og:url" content="${buildPublicUrl(`/blog${slug ? `/${slug}` : ''}`)}">
 <meta property="og:site_name" content="DJD Agent Score">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${title} — DJD Agent Score">
 <meta name="twitter:description" content="${description}">
-<link rel="alternate" type="application/rss+xml" title="DJD Agent Score Blog" href="https://djdagentscore.dev/blog/rss.xml">
+<link rel="alternate" type="application/rss+xml" title="DJD Agent Score Blog" href="${BLOG_RSS_URL}">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -778,7 +782,7 @@ ${blogNav}
 
     <h2>SDK Update</h2>
 
-    <p>The TypeScript SDK (<code class="mono">djd-agent-score-client</code>) has been updated to v0.2.0 with the new <code class="mono">dataSource</code> field typed in <code class="mono">BasicScoreResponse</code> and <code class="mono">FullScoreResponse</code>. If you are using the SDK, update to get typed access:</p>
+    <p>The TypeScript SDK (<code class="mono">djd-agent-score</code>) has been updated with the new <code class="mono">dataSource</code> field typed in <code class="mono">BasicScoreResponse</code> and <code class="mono">FullScoreResponse</code>. If you are using the SDK, update to get typed access:</p>
 
     <div class="code-block"><code>const result = await client.getBasicScore(wallet)
 
@@ -803,8 +807,6 @@ if (result.dataSource === 'cached') {
 ${blogFooter}`
 
 // ─── RSS Feed ───
-
-const SITE = 'https://djdagentscore.dev'
 
 const blogPosts = [
   {
@@ -853,11 +855,11 @@ const rssXml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 <channel>
   <title>DJD Agent Score Blog</title>
-  <link>${SITE}/blog</link>
+  <link>${BLOG_URL}</link>
   <description>Insights on AI agent reputation, sybil detection, and trust infrastructure for the autonomous agent economy.</description>
   <language>en-us</language>
   <lastBuildDate>${blogPosts[0].date}</lastBuildDate>
-  <atom:link href="${SITE}/blog/rss.xml" rel="self" type="application/rss+xml"/>
+  <atom:link href="${BLOG_RSS_URL}" rel="self" type="application/rss+xml"/>
 ${blogPosts
   .map(
     (p) => `  <item>

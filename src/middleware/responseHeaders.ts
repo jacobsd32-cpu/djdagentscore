@@ -4,8 +4,11 @@
  */
 import type { MiddlewareHandler } from 'hono'
 
+import { getPublicOrigin } from '../config/public.js'
 import { MODEL_VERSION } from '../scoring/responseBuilders.js'
 export { MODEL_VERSION }
+
+const PUBLIC_SITE_ORIGIN = getPublicOrigin()
 
 export const responseHeadersMiddleware: MiddlewareHandler = async (c, next) => {
   await next()
@@ -24,15 +27,20 @@ export const responseHeadersMiddleware: MiddlewareHandler = async (c, next) => {
 
   // CSP: HTML pages need inline styles/scripts + Google Fonts; /docs needs Swagger CDN; API routes locked down
   const path = c.req.path
-  const isDocsRoute = path.startsWith('/docs')
+  const normalizedPath = path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path
+  const isDocsRoute = normalizedPath.startsWith('/docs')
   const isHtmlPage =
-    path === '/' ||
-    path === '/leaderboard' ||
-    path === '/explorer' ||
-    path === '/terms' ||
-    path === '/privacy' ||
-    path.startsWith('/agent/') ||
-    path.startsWith('/blog')
+    normalizedPath === '/' ||
+    normalizedPath === '/leaderboard' ||
+    normalizedPath === '/explorer' ||
+    normalizedPath === '/pricing' ||
+    normalizedPath === '/methodology' ||
+    normalizedPath === '/portal' ||
+    normalizedPath === '/billing/success' ||
+    normalizedPath === '/terms' ||
+    normalizedPath === '/privacy' ||
+    normalizedPath.startsWith('/agent/') ||
+    normalizedPath.startsWith('/blog')
   if (isDocsRoute) {
     c.res.headers.set(
       'Content-Security-Policy',
@@ -41,7 +49,7 @@ export const responseHeadersMiddleware: MiddlewareHandler = async (c, next) => {
   } else if (isHtmlPage) {
     c.res.headers.set(
       'Content-Security-Policy',
-      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://djdagentscore.dev; connect-src 'self'; frame-ancestors 'none'",
+      `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: ${PUBLIC_SITE_ORIGIN}; connect-src 'self'; frame-ancestors 'none'`,
     )
   } else {
     c.res.headers.set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'")

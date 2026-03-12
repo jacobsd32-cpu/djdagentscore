@@ -1,7 +1,7 @@
+import { ErrorCodes } from '../errors.js'
 import { getJob, submitJob } from '../jobs/scoreQueue.js'
 import { getOrCalculateScore } from '../scoring/engine.js'
 import type { Address, BasicScoreResponse, FullScoreResponse } from '../types.js'
-import { ErrorCodes } from '../errors.js'
 import { normalizeWallet } from '../utils/walletUtils.js'
 
 export interface ScoreServiceError {
@@ -58,7 +58,9 @@ function parseWallet(rawWallet: string | undefined): Address | null {
   return normalizeWallet(rawWallet)
 }
 
-export async function getBasicScore(rawWallet: string | undefined): Promise<ScoreServiceResult<BasicScoreResponse & { stale?: true }>> {
+export async function getBasicScore(
+  rawWallet: string | undefined,
+): Promise<ScoreServiceResult<BasicScoreResponse & { stale?: true }>> {
   const wallet = parseWallet(rawWallet)
   if (!wallet) return invalidWalletError()
 
@@ -66,7 +68,9 @@ export async function getBasicScore(rawWallet: string | undefined): Promise<Scor
   return { ok: true, data: buildBasicResponse(result) }
 }
 
-export async function getFullScore(rawWallet: string | undefined): Promise<ScoreServiceResult<FullScoreResponse & { stale?: boolean }>> {
+export async function getFullScore(
+  rawWallet: string | undefined,
+): Promise<ScoreServiceResult<FullScoreResponse & { stale?: boolean }>> {
   const wallet = parseWallet(rawWallet)
   if (!wallet) return invalidWalletError()
 
@@ -74,7 +78,9 @@ export async function getFullScore(rawWallet: string | undefined): Promise<Score
   return { ok: true, data: result }
 }
 
-export async function refreshScore(rawWallet: string | undefined): Promise<ScoreServiceResult<FullScoreResponse & { stale?: boolean }>> {
+export async function refreshScore(
+  rawWallet: string | undefined,
+): Promise<ScoreServiceResult<FullScoreResponse & { stale?: boolean }>> {
   const wallet = parseWallet(rawWallet)
   if (!wallet) return invalidWalletError()
 
@@ -148,7 +154,9 @@ export function getScoreJobStatus(jobId: string): ScoreServiceResult<Record<stri
   }
 }
 
-export async function getBatchScores(wallets: unknown): Promise<ScoreServiceResult<{ results: BasicScoreResponse[]; count: number }>> {
+export async function getBatchScores(
+  wallets: unknown,
+): Promise<ScoreServiceResult<{ results: BasicScoreResponse[]; count: number }>> {
   if (!Array.isArray(wallets)) {
     return {
       ok: false,

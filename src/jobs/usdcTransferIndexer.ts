@@ -34,7 +34,7 @@ const STATE_KEY = 'usdc_last_indexed_block'
 let running = false
 let lastBlockIndexed = 0n
 
-function getUsdcIndexerStatus(): { lastBlockIndexed: number; running: boolean } {
+export function getUsdcIndexerStatus(): { lastBlockIndexed: number; running: boolean } {
   return { lastBlockIndexed: Number(lastBlockIndexed), running }
 }
 

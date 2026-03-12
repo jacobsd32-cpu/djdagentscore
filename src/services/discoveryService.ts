@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ENDPOINT_PRICING } from '../config/constants.js'
+import { getPublicBaseUrl, getSupportEmail } from '../config/public.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const OPENAPI_SPEC_PATH = join(__dirname, '..', '..', 'openapi.json')
@@ -12,7 +13,14 @@ const OPENAPI_DOCUMENT = JSON.parse(OPENAPI_SPEC) as {
   info?: {
     title?: string
     version?: string
+    contact?: {
+      email?: string
+    }
   }
+  servers?: Array<{
+    url?: string
+    description?: string
+  }>
 }
 
 const SERVICE_TITLE = OPENAPI_DOCUMENT.info?.title ?? 'DJD Agent Score API'
@@ -98,7 +106,27 @@ export function getPublicDiscoveryCacheControl(): string {
 }
 
 export function getOpenApiSpecView(): string {
-  return OPENAPI_SPEC
+  const server = OPENAPI_DOCUMENT.servers?.[0]
+  return JSON.stringify(
+    {
+      ...OPENAPI_DOCUMENT,
+      info: {
+        ...OPENAPI_DOCUMENT.info,
+        contact: {
+          ...OPENAPI_DOCUMENT.info?.contact,
+          email: getSupportEmail(),
+        },
+      },
+      servers: [
+        {
+          description: server?.description ?? 'Production',
+          url: getPublicBaseUrl(),
+        },
+      ],
+    },
+    null,
+    2,
+  )
 }
 
 export function getDocsHtmlView(): string {
@@ -176,6 +204,102 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
         price: ENDPOINT_PRICING['/v1/data/fraud/blacklist'],
         description: 'Check if a wallet has fraud reports filed against it.',
         input: { query: { wallet: { type: 'string', required: true } } },
+      },
+      {
+        path: '/v1/forensics/summary',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/forensics/summary'],
+        description: 'DJD Forensics overview: report counts, penalties, and recent incidents for a wallet.',
+        input: { query: { wallet: { type: 'string', required: true } } },
+      },
+      {
+        path: '/v1/forensics/dispute',
+        method: 'POST',
+        price: ENDPOINT_PRICING['/v1/forensics/dispute'],
+        description: 'Open a dispute for a fraud report as the reported wallet.',
+        input: {
+          body: {
+            report_id: { type: 'string' },
+            reason: { type: 'string' },
+            details: { type: 'string' },
+          },
+        },
+      },
+      {
+        path: '/v1/forensics/feed',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/forensics/feed'],
+        description: 'DJD Forensics incident feed with recent fraud reports across the network.',
+        input: {
+          query: {
+            reason: { type: 'string' },
+            limit: { type: 'integer' },
+            after: { type: 'string' },
+            before: { type: 'string' },
+          },
+        },
+      },
+      {
+        path: '/v1/forensics/watchlist',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/forensics/watchlist'],
+        description: 'DJD Forensics watchlist ranking the most-reported wallets across the network.',
+        input: {
+          query: {
+            limit: { type: 'integer' },
+            after: { type: 'string' },
+            before: { type: 'string' },
+          },
+        },
+      },
+      {
+        path: '/v1/forensics/reports',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/forensics/reports'],
+        description: 'DJD Forensics incident feed with raw report details for a wallet.',
+        input: {
+          query: {
+            wallet: { type: 'string', required: true },
+            limit: { type: 'integer' },
+            after: { type: 'string' },
+            before: { type: 'string' },
+          },
+        },
+      },
+      {
+        path: '/v1/forensics/timeline',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/forensics/timeline'],
+        description: 'Merged score-history and fraud-incident timeline for a wallet.',
+        input: {
+          query: {
+            wallet: { type: 'string', required: true },
+            limit: { type: 'integer' },
+            after: { type: 'string' },
+            before: { type: 'string' },
+          },
+        },
+      },
+      {
+        path: '/v1/monitor/presets',
+        method: 'GET',
+        price: 0,
+        description: 'List managed monitoring policy presets for score, anomaly, and DJD Forensics alerts.',
+      },
+      {
+        path: '/v1/monitor',
+        method: 'POST',
+        price: 0,
+        description:
+          'Create a managed monitoring subscription that provisions webhook delivery for score, anomaly, or DJD Forensics policies.',
+        input: {
+          body: {
+            target_wallet: { type: 'string' },
+            policy_type: { type: 'string', required: true },
+            url: { type: 'string', required: true },
+            threshold_score: { type: 'integer' },
+          },
+        },
       },
     ],
     integration: {

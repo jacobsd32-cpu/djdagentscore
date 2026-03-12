@@ -57,16 +57,17 @@ const { testDb } = vi.hoisted(() => {
 
 vi.mock('../../src/db.js', () => ({
   db: testDb,
-  getScore: (wallet: string) =>
-    testDb.prepare('SELECT * FROM scores WHERE wallet = ? LIMIT 1').get(wallet),
+  getScore: (wallet: string) => testDb.prepare('SELECT * FROM scores WHERE wallet = ? LIMIT 1').get(wallet),
   getRegistration: (wallet: string) =>
     testDb.prepare('SELECT * FROM agent_registrations WHERE wallet = ? LIMIT 1').get(wallet),
   getActiveCertification: (wallet: string) =>
-    testDb.prepare(
-      `SELECT * FROM certifications
+    testDb
+      .prepare(
+        `SELECT * FROM certifications
        WHERE wallet = ? AND is_active = 1 AND expires_at > datetime('now')
        LIMIT 1`,
-    ).get(wallet),
+      )
+      .get(wallet),
   insertCertification: (wallet: string, tier: string, scoreAtCertification: number) => {
     const result = testDb
       .prepare(
@@ -76,28 +77,30 @@ vi.mock('../../src/db.js', () => ({
       .run(wallet, tier, scoreAtCertification)
     return testDb.prepare('SELECT * FROM certifications WHERE id = ?').get(Number(result.lastInsertRowid))
   },
-  listCertifications: () =>
-    testDb.prepare('SELECT * FROM certifications ORDER BY granted_at DESC').all(),
+  listCertifications: () => testDb.prepare('SELECT * FROM certifications ORDER BY granted_at DESC').all(),
   revokeCertification: (id: number, reason: string) =>
-    testDb.prepare(
-      `UPDATE certifications
+    testDb
+      .prepare(
+        `UPDATE certifications
        SET is_active = 0, revoked_at = datetime('now'), revocation_reason = ?
        WHERE id = ? AND is_active = 1`,
-    ).run(reason, id).changes > 0,
+      )
+      .run(reason, id).changes > 0,
   getCertificationRevenueSummary: () => {
     const total = (testDb.prepare('SELECT COUNT(*) as count FROM certifications').get() as { count: number }).count
     const active = (
-      testDb.prepare(
-        `SELECT COUNT(*) as count FROM certifications WHERE is_active = 1 AND expires_at > datetime('now')`,
-      ).get() as { count: number }
+      testDb
+        .prepare(`SELECT COUNT(*) as count FROM certifications WHERE is_active = 1 AND expires_at > datetime('now')`)
+        .get() as { count: number }
     ).count
     const revoked = (
-      testDb.prepare(
-        'SELECT COUNT(*) as count FROM certifications WHERE revoked_at IS NOT NULL',
-      ).get() as { count: number }
+      testDb.prepare('SELECT COUNT(*) as count FROM certifications WHERE revoked_at IS NOT NULL').get() as {
+        count: number
+      }
     ).count
-    const byMonth = testDb.prepare(
-      `SELECT
+    const byMonth = testDb
+      .prepare(
+        `SELECT
          strftime('%Y-%m', granted_at) as month,
          COUNT(*) as count,
          SUM(CASE WHEN revoked_at IS NOT NULL THEN 1 ELSE 0 END) as revoked_count,
@@ -106,7 +109,8 @@ vi.mock('../../src/db.js', () => ({
        FROM certifications
        GROUP BY strftime('%Y-%m', granted_at)
        ORDER BY month DESC`,
-    ).all()
+      )
+      .all()
 
     return {
       total_certifications: total,

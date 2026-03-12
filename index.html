@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DJD Agent Score — Reputation API for the Agent Economy</title>
-<meta name="description" content="Reputation API for the agent economy. One API call returns a 0-100 trust score for any Base wallet. Know whether a wallet is safe before your agent sends a dollar.">
+<meta name="description" content="Screen Base wallets before your agent sends funds or fulfills a paid x402 request. One API call returns a 0-100 trust score in under 200ms.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="DJD Agent Score — Reputation API for the Agent Economy">
-<meta property="og:description" content="Reputation API for the agent economy. One API call returns a 0-100 trust score for any Base wallet. Under 200ms.">
+<meta property="og:description" content="Screen Base wallets before your agent sends funds or fulfills a paid x402 request. One API call returns a 0-100 trust score in under 200ms.">
 <meta property="og:url" content="https://djdagentscore.dev/">
 <meta property="og:site_name" content="DJD Agent Score">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="DJD Agent Score — Reputation API for the Agent Economy">
-<meta name="twitter:description" content="Reputation API for the agent economy. One API call returns a 0-100 trust score for any Base wallet. Under 200ms.">
+<meta name="twitter:description" content="Screen Base wallets before your agent sends funds or fulfills a paid x402 request. One API call returns a 0-100 trust score in under 200ms.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -65,6 +65,8 @@ nav{max-width:1080px;margin:0 auto;padding:0 32px;height:64px;display:flex;align
 .hero h1 em{font-style:italic;color:var(--accent)}
 .hero-sub{font-size:18px;color:var(--text-dim);max-width:560px;margin:0 auto 36px;line-height:1.75}
 .hero-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.hero-proof{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+.hero-proof span{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);padding:8px 12px;border-radius:999px;background:rgba(255,255,255,0.02);border:1px solid var(--border)}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:13px 28px;border-radius:10px;font-size:14px;font-weight:600;transition:all .2s;text-decoration:none;cursor:pointer;border:none}
 .btn:hover{text-decoration:none;transform:translateY(-1px)}
 .btn-primary{background:var(--accent);color:var(--bg)}
@@ -126,8 +128,18 @@ nav{max-width:1080px;margin:0 auto;padding:0 32px;height:64px;display:flex;align
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:40px}
 .step{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:36px 28px;position:relative}
 .step-num{font-family:'JetBrains Mono',monospace;font-size:48px;font-weight:700;color:var(--accent);opacity:.15;position:absolute;top:16px;right:20px;line-height:1}
+.step-tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px}
 .step h3{font-size:17px;font-weight:700;margin-bottom:10px}
 .step p{font-size:14px;color:var(--text-dim);line-height:1.7}
+.step-code{font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin:18px 0 16px;overflow:auto}
+.step-link{display:inline-flex;align-items:center;gap:8px;color:var(--accent);font-size:13px;font-weight:600;text-decoration:none}
+.step-link:hover{text-decoration:none;color:var(--text)}
+
+/* ── CTA Band ── */
+.cta-band{background:linear-gradient(135deg,rgba(99,102,241,0.12),rgba(52,211,153,0.06));border:1px solid var(--border-hi);border-radius:var(--radius);padding:36px;display:flex;align-items:center;justify-content:space-between;gap:24px;margin-top:32px}
+.cta-band-copy h3{font-family:'Instrument Serif',serif;font-size:clamp(28px,3vw,36px);font-weight:400;letter-spacing:-.4px;margin-bottom:10px}
+.cta-band-copy p{font-size:15px;color:var(--text-dim);line-height:1.75;max-width:560px}
+.cta-band-actions{display:flex;gap:12px;flex-wrap:wrap}
 
 /* ── Score Lookup ── */
 .lookup{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:40px;margin-top:32px}
@@ -258,7 +270,9 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
   .ft-bot{flex-direction:column;gap:12px;text-align:center}
   .tiers{flex-direction:column}
   .hero-actions{flex-direction:column;align-items:center}
+  .hero-proof{justify-content:flex-start}
   .nav-links{gap:14px}
+  .cta-band{flex-direction:column;align-items:flex-start}
 }
 </style>
 </head>
@@ -269,13 +283,13 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 <nav>
   <a class="logo" href="/"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAIAAAAiOjnJAAAE4UlEQVR42u3dzXEbORAGUBx9cwbKYC+OxDm4yvlvBLsJ2NL8oIHuxlN9R5GaAV59PZwSyfHt23eR6RmWQMASsAQsEbAELAFLBKxt+fX7X4sA1j0xc2NJB0ZrAhZMkIFVytNRwgZPhIHVzVNjYYMnwsA6glQPXgMpvMDaTOrHj594NYQVjWZW8CoDKzOjLdTAykVqsadoYWDtVDWRxcfHP9mQgbWa1AM0s7JeGFgrVK2XNMVZM1ujDalUmN4g68FrNFCV39MDYdVtjdKqynm6K6yerdGPVAlPt4RV5DXKqepHKo7XobAmqmpA6gqvQrZGFVWHkIrgdRCsKaoak/qSV35bQ1GprvKwFNU51TUKqTqW1Oe8ctoaCVUpqujqagKLqgNt5YKF1LKxWB4WVWfaGlSxVQzWY1WsvOe13dagiq0ysKhiaycsqvLYKgCLKrbmw6KKrfmwqGJrGyyqkttKB4sqtubDMgQNxG2wqDqqtAZVbEXYGlSxFWELLLDywaKKrT2wqKpuawOsu3VlUxPaiiutoa6UViJYVLEFlhSBRRVb+2HZwh5X8eGw1JXS2g/L5h1bWkNdgRVha6grtrLDUlftSysElrpSWtdtgSW5YVF1iK3JsNQVWLdsDZftEnEJP8xBiZiGwxyUiGk4zEGJmIbDHJSIaTjMQYmYhmBJSlhUmYZgSRpY5iBYz2yNTjca/rv5M/eZo4+h1k2H0WkOgpVnGoIFFlhggQUWWGCBBRZYYIEFFlhggQUWWGCBBRZYYFV/M8XcRxV6MwVYYIEFFlhggQWWgCVggQXWNlhsUfUQltICy4eCCFgCFlhg+QxSmaxqGyyl5SWhz3mXdXMQLMkKiy1zECzJBMs0BMs3rMr+Gw2+E1qi5qBvsZeQORgCiy1zcBospWUOPoRlGoJ1XdVMWGypK7AkEyyX8C7br1OZCUtpqasVsNhqVleBsJSWukoBi60z6+oJLKWlrlLAYuvAunoIiy2qwJJSsNiiahssV/ENrtk3wFJa6mobLLZKq9oGiy2qwAKrFCy2qIqCxRZVO2GxVUVVIlhKS11FwWKLqp2w2Go/BOfDYouqKFhsURUFiy2qNsNiK4mqMrDYOlxVICy2TlYVC+uNLbwek8qgKhwWW2eqWgGLrQNVpYP1R1t4XSF1S1UTWGydpmodrLu2jMWI8bdM1VJYU2ydzOt9US1TtRrWLFun8frbIqRVtQGW6updVJthqa6uRbUf1gNb5/CaRWqXqs2w5trqweuTsyukaj+sZ7Za8ppLaq+qFLCCeFUR9vkpVCSVC9ZjW1/yyinsy2N+vBpJdjMRrDe2rvDKIOzKQb5ZhDxbmQvWe14Xha1EdvF4Xp51tk3MCOu9reu8Ipzd/dPvTzbhDuYFNYvXA2Gf45v4bFPOLu3epYY1y1YEso2Y8qsqACuC17ph048//5bVgBXEK4ha6HFW2axKsBbw+hLfxr9ea5vqwdrOC6nOsA7hVXdrasNqzKv6pnSA1UlYm71oBauusH5b0BNWFWGNV745rJzCTljwU2BtR3baIp8IawE1SwrWPX8WASwBS8ASAUvAErBEwJI9+R8Q1gw8vPId5wAAAABJRU5ErkJggg==" alt="DJD" />DJD<span> Agent Score</span></a>
   <div class="nav-links">
-    <a href="/explorer">Explorer</a>
-    <a href="/methodology">Methodology</a>
-    <a href="/blog">Blog</a>
-    <a href="/pricing">Pricing</a>
-    <a href="#api-ref">API</a>
-    <a href="/docs">Docs</a>
-    <a class="nav-cta" href="/pricing">Get Started</a>
+    <a href="/explorer" data-track="cta_explorer">Explorer</a>
+    <a href="/methodology" data-track="cta_methodology">Methodology</a>
+    <a href="/blog" data-track="cta_blog">Blog</a>
+    <a href="/pricing" data-track="cta_pricing">Pricing</a>
+    <a href="#api-ref" data-track="cta_api">API</a>
+    <a href="/docs" data-track="cta_docs">Docs</a>
+    <a class="nav-cta" href="#x402-path" data-track="cta_x402_nav">Try x402 Gate</a>
   </div>
 </nav>
 </div>
@@ -292,10 +306,16 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 <div class="hero">
   <div class="hero-chip"><span class="dot"></span> Live on Base &middot; Free tier available</div>
   <h1>Stop your agent from <em>paying the wrong wallet.</em></h1>
-  <p class="hero-sub">One API call. Under 200ms. Know whether any Base wallet is safe to transact with before your agent sends a single dollar.</p>
+  <p class="hero-sub">Use the free score to screen counterparties before your agent sends funds. When you are ready, drop in <span class="mono">x402-agent-score</span> to block low-trust payers before your paid route runs.</p>
   <div class="hero-actions">
-    <a href="#api-ref" class="btn btn-primary">Get Your API Key (Free)</a>
-    <a href="#explainer" class="btn btn-ghost">Watch the Demo</a>
+    <a href="#lookup" class="btn btn-primary" data-track="cta_try_api">Try the API</a>
+    <a href="#x402-path" class="btn btn-ghost" data-track="path_x402">See the x402 path</a>
+  </div>
+  <div class="hero-proof">
+    <span>No signup for basic lookups</span>
+    <span>Hono middleware for x402 routes</span>
+    <span>SDK, Python, and MCP options</span>
+    <span>Live chain data on Base</span>
   </div>
 </div>
 
@@ -412,24 +432,33 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 
 <!-- HOW IT WORKS -->
 <div class="sec">
-  <div class="sec-label">How It Works</div>
-  <div class="sec-title">Three steps to trust</div>
-  <div class="sec-desc">You integrate once. Your agent checks every counterparty at runtime. One API call, under 200ms.</div>
+  <div class="sec-label">Start Here</div>
+  <div class="sec-title">Pick the first win that matches your stack</div>
+  <div class="sec-desc">Most teams should start with one of these three paths. They all get you to a production decision quickly.</div>
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
-      <h3>Integrate</h3>
-      <p>Drop in our SDK (npm or pip) or hit the REST API directly. Free tier included. No API key required for basic lookups.</p>
+      <div class="step-tag">Fastest Test</div>
+      <h3>Score a wallet before payout</h3>
+      <p>Use the free basic score endpoint to decide whether a counterparty gets the job, the funds, or another verification step.</p>
+      <div class="step-code">curl "https://djdagentscore.dev/v1/score/basic?wallet=0x..."</div>
+      <a class="step-link" href="#lookup" data-track="path_lookup">Run a free lookup</a>
     </div>
     <div class="step">
       <div class="step-num">2</div>
-      <h3>Query</h3>
-      <p>Pass any Base wallet address. We analyze every on-chain transaction across five scoring dimensions plus two integrity detection systems. Response in under 200ms.</p>
+      <div class="step-tag">Best Wedge</div>
+      <h3>Gate your x402 route</h3>
+      <p>Screen payer wallets before your Hono handler runs. Low-trust wallets can be rejected or treated differently without custom policy plumbing.</p>
+      <div class="step-code">npm i x402-agent-score</div>
+      <a class="step-link" href="#x402-path" data-track="path_x402">Open the x402 example</a>
     </div>
     <div class="step">
       <div class="step-num">3</div>
-      <h3>Gate</h3>
-      <p>You get back a score (0-100), a tier, a confidence level, and a recommendation: <strong>proceed</strong>, <strong>use caution</strong>, or <strong>block</strong>. Write your business logic around it.</p>
+      <div class="step-tag">Trust Boost</div>
+      <h3>Register your agent</h3>
+      <p>Publish basic identity and project metadata so your wallet has more context attached to its score and profile page.</p>
+      <div class="step-code">POST /v1/agent/register</div>
+      <a class="step-link" href="#register-path" data-track="cta_register">See the registration payload</a>
     </div>
   </div>
 </div>
@@ -480,7 +509,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 <div class="sec" id="dimensions">
   <div class="sec-label">Scoring Model</div>
   <div class="sec-title">Five dimensions of trust</div>
-  <div class="sec-desc">Each dimension evaluates a different facet of on-chain behavior. Combined into one composite score. Model v2.1.0.</div>
+  <div class="sec-desc">Each dimension evaluates a different facet of on-chain behavior. Combined into one composite score. Model v2.5.0.</div>
   <div class="dims">
     <div class="dim">
       <h3>Reliability</h3>
@@ -524,28 +553,46 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 <div class="divider"></div>
 
 <!-- INTEGRATION -->
-<div class="sec" id="api-ref">
+<div class="sec" id="x402-path">
   <div class="sec-label">Integration</div>
-  <div class="sec-title">Add trust in one API call</div>
-  <div class="sec-desc">Add a reputation check before every outbound transaction. Gate payments on the recommendation field.</div>
-  <div class="code"><div class="code-l">JavaScript</div><pre><span class="c">// Before sending USDC, check the recipient's reputation</span>
-<span class="k">const</span> wallet = <span class="s">"0xRecipientAddress"</span>;
-<span class="k">const</span> { score, confidence, recommendation } = <span class="k">await</span> (
-  <span class="k">await</span> <span class="f">fetch</span>(<span class="s">`https://djdagentscore.dev/v1/score/basic?wallet=</span><span class="k">${</span>wallet<span class="k">}</span><span class="s">`</span>)
-).<span class="f">json</span>();
+  <div class="sec-title">Start with the x402 gate</div>
+  <div class="sec-desc">This is the narrowest, highest-value integration path: check the payer wallet before your paid Hono route does any work.</div>
+  <div class="code"><div class="code-l">Hono + x402</div><pre><span class="k">import</span> { <span class="f">agentScoreGate</span> } <span class="k">from</span> <span class="s">'x402-agent-score'</span>
 
-<span class="c">// Gate the transaction on the recommendation</span>
-<span class="k">if</span> (recommendation === <span class="s">"proceed"</span>) {
-  <span class="f">sendUSDC</span>(wallet, amount);
-} <span class="k">else if</span> (recommendation === <span class="s">"proceed_with_caution"</span>) {
-  <span class="f">sendUSDC</span>(wallet, amount * <span class="s">0.5</span>);  <span class="c">// Reduce exposure</span>
-} <span class="k">else</span> {
-  <span class="f">log</span>(<span class="s">`Blocked: ${recommendation}`</span>);
-}</pre></div>
+app.<span class="f">use</span>(
+  <span class="s">'/premium/*'</span>,
+  <span class="f">agentScoreGate</span>({
+    minScore: <span class="s">60</span>,
+    onUnknown: <span class="s">'reject'</span>,
+  }),
+)
+
+app.<span class="f">post</span>(<span class="s">'/premium/search'</span>, <span class="k">async</span> (c) =&gt; {
+  <span class="k">return</span> c.<span class="f">json</span>({ ok: <span class="k">true</span> })
+})</pre></div>
+  <div class="hero-actions" style="justify-content:flex-start;margin-top:22px">
+    <a href="https://www.npmjs.com/package/x402-agent-score" class="btn btn-primary" data-track="cta_x402_npm">Install x402-agent-score</a>
+    <a href="/docs" class="btn btn-ghost" data-track="cta_docs">Open docs</a>
+    <a href="https://github.com/jacobsd32-cpu/djdagentscore/blob/main/examples/x402-hono.ts" class="btn btn-ghost" data-track="cta_x402_example">See reference example</a>
+  </div>
+</div>
+
+<div class="sec" id="register-path" style="padding-top:0">
+  <div class="sec-label">Identity</div>
+  <div class="sec-title">Register your agent in one request</div>
+  <div class="sec-desc">If you are running a real service, publish the wallet metadata so people evaluating you can see a profile instead of a bare address.</div>
+  <div class="code"><div class="code-l">curl</div><pre>curl -X POST https://djdagentscore.dev/v1/agent/register \
+  -H <span class="s">'Content-Type: application/json'</span> \
+  -d '{
+    "wallet": "0xYourAgentWallet",
+    "name": "My Agent",
+    "github_url": "https://github.com/you/your-agent",
+    "website_url": "https://your-agent.com"
+  }'</pre></div>
 </div>
 
 <!-- API ENDPOINTS -->
-<div class="sec">
+<div class="sec" id="api-ref">
   <div class="sec-label">Endpoints</div>
   <div class="sec-title">API reference</div>
   <div class="sec-desc">Basic lookups are free. Upgrade when you're ready: <a href="/pricing" style="color:var(--accent);text-decoration:underline">monthly plans</a> (credit card) for predictable costs, or x402 micropayments (USDC on Base) for agents that pay per query from their own wallet.</div>
@@ -570,9 +617,10 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
   <div class="sec-desc">Use Agent Score from any language or AI framework.</div>
   <div class="api">
     <div class="api-r hdr"><div>Package</div><div style="text-align:right">Install</div><div style="text-align:right">Type</div></div>
-    <div class="api-r"><div><div class="api-ep"><a href="https://www.npmjs.com/package/djd-agent-score" style="color:inherit;text-decoration:underline">djd-agent-score</a></div><div class="api-d">TypeScript/JavaScript SDK with full type safety</div></div><div class="api-p api-f" style="font-family:monospace;font-size:0.72rem">npm i djd-agent-score</div><div class="api-m">SDK</div></div>
-    <div class="api-r"><div><div class="api-ep"><a href="https://pypi.org/project/djd-agent-score/" style="color:inherit;text-decoration:underline">djd-agent-score</a></div><div class="api-d">Python SDK with LangChain and CrewAI integrations</div></div><div class="api-p api-f" style="font-family:monospace;font-size:0.72rem">pip install djd-agent-score</div><div class="api-m">SDK</div></div>
-    <div class="api-r"><div><div class="api-ep"><a href="https://www.npmjs.com/package/djd-agent-score-mcp" style="color:inherit;text-decoration:underline">djd-agent-score-mcp</a></div><div class="api-d">MCP server for Claude, GPT, or any MCP-compatible AI</div></div><div class="api-p api-f" style="font-family:monospace;font-size:0.72rem">npx djd-agent-score-mcp</div><div class="api-m">MCP</div></div>
+    <div class="api-r"><div><div class="api-ep"><a href="https://www.npmjs.com/package/x402-agent-score" style="color:inherit;text-decoration:underline" data-track="path_x402_pkg">x402-agent-score</a></div><div class="api-d">Hono middleware to gate paid x402 routes by payer reputation</div></div><div class="api-p api-f" style="font-family:monospace;font-size:0.72rem">npm i x402-agent-score</div><div class="api-m">x402</div></div>
+    <div class="api-r"><div><div class="api-ep"><a href="https://www.npmjs.com/package/djd-agent-score" style="color:inherit;text-decoration:underline" data-track="path_sdk_pkg">djd-agent-score</a></div><div class="api-d">TypeScript/JavaScript SDK with full type safety</div></div><div class="api-p api-f" style="font-family:monospace;font-size:0.72rem">npm i djd-agent-score</div><div class="api-m">SDK</div></div>
+    <div class="api-r"><div><div class="api-ep"><a href="https://pypi.org/project/djd-agent-score/" style="color:inherit;text-decoration:underline" data-track="path_python_pkg">djd-agent-score</a></div><div class="api-d">Python SDK with LangChain and CrewAI integrations</div></div><div class="api-p api-f" style="font-family:monospace;font-size:0.72rem">pip install djd-agent-score</div><div class="api-m">SDK</div></div>
+    <div class="api-r"><div><div class="api-ep"><a href="https://www.npmjs.com/package/djd-agent-score-mcp" style="color:inherit;text-decoration:underline" data-track="path_mcp_pkg">djd-agent-score-mcp</a></div><div class="api-d">MCP server for Claude, GPT, or any MCP-compatible AI</div></div><div class="api-p api-f" style="font-family:monospace;font-size:0.72rem">npx djd-agent-score-mcp</div><div class="api-m">MCP</div></div>
   </div>
 </div>
 
@@ -621,7 +669,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
       <input type="text" id="fbContact" placeholder="Email, wallet, or X handle for follow-up">
     </div>
     <button class="fb-submit" onclick="submitFeedback()">Open Email to Submit</button>
-    <div style="color:var(--text-muted);font-size:11px;text-align:center;margin-top:6px">Opens your email client to send feedback to jacobsd32@gmail.com</div>
+    <div style="color:var(--text-muted);font-size:11px;text-align:center;margin-top:6px">Opens your email client to send feedback to feedback@djdagentscore.dev</div>
     <div class="fb-msg" id="fbMsg"></div>
   </div>
 </div>
@@ -647,6 +695,19 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
   </div>
 </div>
 
+<div class="sec" style="padding-top:48px">
+  <div class="cta-band">
+    <div class="cta-band-copy">
+      <h3>Need a design-partner setup path?</h3>
+      <p>We can help you set a starting threshold, wire the x402 middleware, and define what counts as a false positive before you put it in front of users.</p>
+    </div>
+    <div class="cta-band-actions">
+      <a href="mailto:feedback@djdagentscore.dev?subject=DJD%20Agent%20Score%20pilot" class="btn btn-primary" data-track="cta_contact">Email for a pilot</a>
+      <a href="/pricing" class="btn btn-ghost" data-track="cta_pricing">See pricing</a>
+    </div>
+  </div>
+</div>
+
 <!-- FOOTER -->
 <footer>
   <div class="ft-disc">
@@ -662,7 +723,61 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 
 <script>
 const A=window.location.origin;
+const ANALYTICS=A+'/v1/analytics/event';
+const ANON_KEY='djd_anon_id';
+const SESSION_KEY='djd_session_id';
 const fmt=n=>n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':String(n);
+
+function mkId(prefix){return prefix+'_'+Math.random().toString(36).slice(2,10)+Date.now().toString(36)}
+function getStoredId(store,key,prefix){
+  try{
+    var current=store.getItem(key);
+    if(current)return current;
+    current=mkId(prefix);
+    store.setItem(key,current);
+    return current;
+  }catch(_){return mkId(prefix)}
+}
+const anonId=getStoredId(window.localStorage,ANON_KEY,'anon');
+const sessionId=getStoredId(window.sessionStorage,SESSION_KEY,'sess');
+
+function getUtmParams(){
+  var p=new URLSearchParams(window.location.search);
+  return {
+    utmSource:p.get('utm_source'),
+    utmMedium:p.get('utm_medium'),
+    utmCampaign:p.get('utm_campaign')
+  };
+}
+const utm=getUtmParams();
+
+function track(eventName,extra){
+  var payload={
+    event:eventName,
+    source:'web',
+    anonymousId:anonId,
+    sessionId:sessionId,
+    page:window.location.pathname,
+    referrer:document.referrer||null,
+    utmSource:utm.utmSource,
+    utmMedium:utm.utmMedium,
+    utmCampaign:utm.utmCampaign
+  };
+  if(extra){for(var k in extra)payload[k]=extra[k]}
+  var body=JSON.stringify(payload);
+  try{
+    if(navigator.sendBeacon){
+      var ok=navigator.sendBeacon(ANALYTICS,new Blob([body],{type:'application/json'}));
+      if(ok)return;
+    }
+  }catch(_){}
+  fetch(ANALYTICS,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:body,
+    keepalive:true
+  }).catch(function(){});
+}
 
 function mkEl(tag, cls, text) {
   var el = document.createElement(tag);
@@ -716,9 +831,10 @@ async function doScore(pushState){
   if(pushState===undefined)pushState=true;
   var i=document.getElementById('wI'),b=document.getElementById('sB'),r=document.getElementById('res'),e=document.getElementById('eM');
   var w=i.value.trim();e.classList.remove('vis');r.classList.remove('vis');
-  if(!w||!w.startsWith('0x')||w.length!==42){e.textContent='Enter a valid 42-character wallet address starting with 0x';e.classList.add('vis');return}
+  if(!w||!w.startsWith('0x')||w.length!==42){e.textContent='Enter a valid 42-character wallet address starting with 0x';e.classList.add('vis');track('lookup_error',{wallet:w||null,metadata:{reason:'invalid_wallet'}});return}
   b.disabled=true;b.textContent='Scoring...';
   if(pushState)history.pushState({},'',location.pathname+'?wallet='+w+'#lookup');
+  track('lookup_submit',{wallet:w});
   try{var resp=await fetch(A+'/v1/score/basic?wallet='+w);
   if(!resp.ok)throw new Error('API returned '+resp.status);
   var d=await resp.json();
@@ -734,13 +850,15 @@ async function doScore(pushState){
   document.getElementById('rBadgeImg').src=badgeUrl;
   document.getElementById('rBadgeCode').value=mdEmbed;
   document.getElementById('rBadge').style.display='block';
-  }catch(x){e.textContent='Error: '+x.message;e.classList.add('vis')}
+  track('lookup_success',{wallet:w,metadata:{score:s,tier:t,confidence:c,recommendation:rec}});
+  }catch(x){e.textContent='Error: '+x.message;e.classList.add('vis');track('lookup_error',{wallet:w,metadata:{message:x.message}})}
   b.disabled=false;b.textContent='Score'}
 
 function copyBadge(){
   var inp=document.getElementById('rBadgeCode');
   navigator.clipboard.writeText(inp.value).then(function(){
     var btn=document.getElementById('copyBtn');btn.textContent='copied!';
+    track('badge_copy',{wallet:document.getElementById('rW').textContent||null});
     setTimeout(function(){btn.textContent='copy'},1800);
   }).catch(function(){inp.select();document.execCommand('copy')});
 }
@@ -757,8 +875,9 @@ function submitFeedback(){
   var entry={type:type,wallet:wallet,details:details,contact:contact,ts:new Date().toISOString()};
   var subject=encodeURIComponent('[DJD Feedback] '+type);
   var body=encodeURIComponent('Type: '+type+'\nWallet: '+(wallet||'N/A')+'\nContact: '+(contact||'N/A')+'\nTimestamp: '+entry.ts+'\n\nDetails:\n'+details);
-  window.open('mailto:jacobsd32@gmail.com?subject='+subject+'&body='+body,'_blank');
-  msg.textContent='Feedback recorded. A compose window should open. If not, email jacobsd32@gmail.com directly.';
+  window.open('mailto:feedback@djdagentscore.dev?subject='+subject+'&body='+body,'_blank');
+  track('feedback_submit',{wallet:wallet||null,metadata:{type:type,hasContact:!!contact}});
+  msg.textContent='Feedback recorded. A compose window should open. If not, email feedback@djdagentscore.dev directly.';
   msg.className='fb-msg vis ok';
   document.getElementById('fbType').value='';document.getElementById('fbWallet').value='';
   document.getElementById('fbDetails').value='';document.getElementById('fbContact').value='';
@@ -796,10 +915,21 @@ function switchScenario(idx){
 document.querySelectorAll('.exp-tab').forEach(function(tab){tab.addEventListener('click',function(){switchScenario(parseInt(this.dataset.exp))})});
 document.querySelectorAll('.exp-dot').forEach(function(dot){dot.addEventListener('click',function(){switchScenario(parseInt(this.dataset.expDot))})});
 document.getElementById('expReplay').addEventListener('click',function(){switchScenario(expIdx)});
+document.querySelectorAll('[data-track]').forEach(function(el){
+  el.addEventListener('click',function(){
+    track(el.getAttribute('data-track'),{
+      metadata:{
+        href:el.getAttribute('href'),
+        text:(el.textContent||'').trim().slice(0,120)
+      }
+    });
+  });
+});
 
 /* ── Init ── */
 document.getElementById('wI').addEventListener('keydown',function(e){if(e.key==='Enter')doScore()});
 switchScenario(0);
+track('landing_view');
 /* Defer API calls so first paint isn't blocked */
 requestAnimationFrame(function(){setTimeout(function(){loadStats();loadLB()},100)});
 setInterval(loadStats,30000);
@@ -809,7 +939,7 @@ if(qw){document.getElementById('wI').value=qw;doScore(false);}
 
 if(window.location.hostname==='localhost'){
   document.querySelectorAll('pre .s').forEach(function(el){
-    el.textContent=el.textContent.replace(/https:\/\/djd-agent-score\.fly\.dev/g,A);
+    el.textContent=el.textContent.replace(/https:\/\/djdagentscore\.dev/g,A);
   });
 }
 </script>

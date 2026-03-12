@@ -8,6 +8,7 @@ vi.mock('../../src/billing/stripeClient.js', () => ({
 
 vi.mock('../../src/db.js', () => ({
   db: {},
+  insertGrowthEvent: vi.fn(),
   insertApiKey: vi.fn(),
   listApiKeys: vi.fn(),
   revokeApiKey: vi.fn(),
@@ -70,6 +71,7 @@ describe('subscriptionManager', () => {
       plan: 'growth',
       apiKeyId: result.apiKeyId,
       status: 'active',
+      stripe_customer_id: 'cus_123',
     })
   })
 
@@ -81,7 +83,9 @@ describe('subscriptionManager', () => {
     expect(second.rawKey).toBe('')
 
     const counts = db
-      .prepare('SELECT (SELECT COUNT(*) FROM api_keys) as api_keys, (SELECT COUNT(*) FROM subscriptions) as subscriptions')
+      .prepare(
+        'SELECT (SELECT COUNT(*) FROM api_keys) as api_keys, (SELECT COUNT(*) FROM subscriptions) as subscriptions',
+      )
       .get() as { api_keys: number; subscriptions: number }
 
     expect(counts.api_keys).toBe(1)
@@ -93,9 +97,10 @@ describe('subscriptionManager', () => {
 
     handleSubscriptionCanceled('sub_123', db)
 
-    const apiKey = db
-      .prepare('SELECT is_active, revoked_at FROM api_keys WHERE id = ?')
-      .get(provisioned.apiKeyId) as { is_active: number; revoked_at: string | null }
+    const apiKey = db.prepare('SELECT is_active, revoked_at FROM api_keys WHERE id = ?').get(provisioned.apiKeyId) as {
+      is_active: number
+      revoked_at: string | null
+    }
     expect(apiKey.is_active).toBe(0)
     expect(apiKey.revoked_at).toBeTruthy()
 
@@ -124,7 +129,9 @@ describe('subscriptionManager', () => {
     const deleted = pruneExpiredPendingKeys(db)
     expect(deleted).toBe(1)
 
-    const rows = db.prepare('SELECT session_id FROM pending_keys ORDER BY session_id').all() as Array<{ session_id: string }>
+    const rows = db.prepare('SELECT session_id FROM pending_keys ORDER BY session_id').all() as Array<{
+      session_id: string
+    }>
     expect(rows).toEqual([{ session_id: 'fresh' }])
   })
 })

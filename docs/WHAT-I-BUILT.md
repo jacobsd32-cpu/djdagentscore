@@ -17,7 +17,7 @@
 > Codebase: ~7,250 lines of TypeScript across 30+ source files
 > Tests: 9 test files, ~420 lines, 20 passing assertions
 > Database: SQLite with 26 tables
-> Stack: Hono + viem + better-sqlite3 + x402-hono
+> Stack: Hono + viem + better-sqlite3 + /hono
 
 ---
 

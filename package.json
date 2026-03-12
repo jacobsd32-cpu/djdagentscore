@@ -1,7 +1,8 @@
 {
-  "name": "djd-agent-score",
+  "name": "djd-agent-score-service",
   "version": "1.0.0",
   "description": "Reputation scoring service for autonomous AI agents, paid via x402 micropayments",
+  "private": true,
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
@@ -19,13 +20,13 @@
     "lint:fix": "biome check --write src/ tests/"
   },
   "dependencies": {
-    "@hono/node-server": "^1.13.7",
+    "@hono/node-server": "^1.19.11",
     "@x402/core": "^2.5.0",
     "@x402/evm": "^2.5.0",
     "@x402/extensions": "^2.5.0",
     "@x402/hono": "^2.5.0",
     "better-sqlite3": "^9.6.0",
-    "hono": "^4.6.17",
+    "hono": "^4.12.7",
     "insumer-verify": "^1.1.0",
     "pino": "^10.3.1",
     "stripe": "^20.4.0",

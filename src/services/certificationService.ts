@@ -1,3 +1,4 @@
+import type { CertificationRevenueSummary, CertificationRow } from '../db.js'
 import {
   db,
   getActiveCertification,
@@ -8,7 +9,6 @@ import {
   listCertifications,
   revokeCertification,
 } from '../db.js'
-import type { CertificationRevenueSummary, CertificationRow } from '../db.js'
 import { makeBadge } from '../utils/badgeGenerator.js'
 import { normalizeWallet } from '../utils/walletUtils.js'
 
@@ -159,7 +159,9 @@ export function getCertificationStatus(wallet: string): CertificationRow | null 
   return getActiveCertification(wallet) ?? null
 }
 
-export function getCertificationStatusView(rawWallet: string | null | undefined): CertificationResult<CertificationStatusView> {
+export function getCertificationStatusView(
+  rawWallet: string | null | undefined,
+): CertificationResult<CertificationStatusView> {
   const wallet = normalizeWallet(rawWallet)
   if (!wallet) {
     return invalidWalletError('Valid Ethereum wallet address required')

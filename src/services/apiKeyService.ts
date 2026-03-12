@@ -1,6 +1,7 @@
-import { insertApiKey, listApiKeys, resetApiKeyUsage, revokeApiKey } from '../db.js'
 import type { ApiKeyRow } from '../db.js'
+import { insertApiKey, listApiKeys, resetApiKeyUsage, revokeApiKey } from '../db.js'
 import { createApiKeyMaterial, getNextUsageResetAt } from '../utils/apiKeyUtils.js'
+import { trackGrowthEventSafe } from './growthService.js'
 
 export interface ApiKeyServiceError {
   ok: false
@@ -105,6 +106,18 @@ export function createAdminApiKey(body: unknown): ApiKeyCreateResult {
     monthlyLimit: normalizeMonthlyLimit(body.monthly_limit),
   })
   const created = insertApiKey(provisioned.insertInput)
+
+  trackGrowthEventSafe({
+    event: 'api_key_created',
+    source: 'server',
+    wallet: created.wallet,
+    page: '/admin/api-keys',
+    metadata: {
+      tier: created.tier,
+      monthlyLimit: created.monthly_limit,
+      source: 'admin',
+    },
+  })
 
   return {
     ok: true,

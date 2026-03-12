@@ -22,10 +22,7 @@ interface AgentProfileServiceSuccess {
 
 export type AgentProfileServiceResult = AgentProfileServiceError | AgentProfileServiceSuccess
 
-export async function getAgentProfilePage(
-  rawWallet: string,
-  origin: string,
-): Promise<AgentProfileServiceResult> {
+export async function getAgentProfilePage(rawWallet: string, origin: string): Promise<AgentProfileServiceResult> {
   const wallet = normalizeWallet(rawWallet)
   if (!wallet) {
     return {

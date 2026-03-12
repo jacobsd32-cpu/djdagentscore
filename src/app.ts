@@ -1,12 +1,12 @@
+import { HTTPFacilitatorClient } from '@x402/core/server'
+import type { Network } from '@x402/core/types'
+import { ExactEvmScheme } from '@x402/evm/exact/server'
+import { declareDiscoveryExtension } from '@x402/extensions/bazaar'
+import { paymentMiddlewareFromConfig } from '@x402/hono'
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
-import { HTTPFacilitatorClient } from '@x402/core/server'
-import type { Network } from '@x402/core/types'
-import { declareDiscoveryExtension } from '@x402/extensions/bazaar'
-import { ExactEvmScheme } from '@x402/evm/exact/server'
-import { paymentMiddlewareFromConfig } from '@x402/hono'
 
 import { initStripe } from './billing/stripeClient.js'
 import { API_CONFIG, ENDPOINT_PRICING } from './config/constants.js'
@@ -22,8 +22,9 @@ import { queryLoggerMiddleware } from './middleware/queryLogger.js'
 import { requestIdMiddleware } from './middleware/requestId.js'
 import { responseHeadersMiddleware } from './middleware/responseHeaders.js'
 import admin from './routes/admin.js'
-import apiKeysRoute from './routes/apiKeys.js'
 import agentRoute from './routes/agent.js'
+import analyticsRoute from './routes/analytics.js'
+import apiKeysRoute from './routes/apiKeys.js'
 import badgeRoute from './routes/badge.js'
 import billingRoute from './routes/billing.js'
 import blacklistRoute from './routes/blacklist.js'
@@ -32,12 +33,14 @@ import certificationRoute from './routes/certification.js'
 import docsRoute from './routes/docs.js'
 import economyRoute from './routes/economy.js'
 import explorerRoute from './routes/explorer.js'
+import forensicsRoute from './routes/forensics.js'
 import healthRoute from './routes/health.js'
 import historyRoute from './routes/history.js'
-import legal from './routes/legal.js'
 import leaderboardRoute from './routes/leaderboard.js'
+import legal from './routes/legal.js'
 import methodologyRoute from './routes/methodology.js'
 import metricsRoute from './routes/metrics.js'
+import monitoringRoute from './routes/monitoring.js'
 import openapiRoute from './routes/openapi.js'
 import portalRoute from './routes/portal.js'
 import pricingRoute from './routes/pricing.js'
@@ -45,8 +48,8 @@ import registerRoute from './routes/register.js'
 import reportRoute from './routes/report.js'
 import scoreRoute from './routes/score.js'
 import stripeWebhookRoute from './routes/stripeWebhook.js'
-import wellKnownRoute from './routes/wellKnown.js'
 import { adminWebhooks, publicWebhooks } from './routes/webhooks.js'
+import wellKnownRoute from './routes/wellKnown.js'
 import type { AppEnv } from './types/hono-env.js'
 
 export const PORT = Number(process.env.PORT ?? API_CONFIG.DEFAULT_PORT)
@@ -75,23 +78,29 @@ const app = new Hono<AppEnv>()
 
 app.use('*', requestIdMiddleware)
 app.use('*', logger())
-app.use('*', cors({
-  origin: process.env.CORS_ORIGINS
-    ? process.env.CORS_ORIGINS.split(',')
-    : process.env.NODE_ENV === 'production'
-      ? []
-      : ['*'],
-  allowMethods: ['GET', 'POST', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
-}))
+app.use(
+  '*',
+  cors({
+    origin: process.env.CORS_ORIGINS
+      ? process.env.CORS_ORIGINS.split(',')
+      : process.env.NODE_ENV === 'production'
+        ? []
+        : ['*'],
+    allowMethods: ['GET', 'POST', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-payment', 'x-djd-client'],
+  }),
+)
 
 // Stripe signature verification requires access to the raw request body.
 app.route('/stripe/webhook', stripeWebhookRoute)
 
-app.use('*', bodyLimit({
-  maxSize: API_CONFIG.MAX_BODY_SIZE,
-  onError: (c) => c.json(errorResponse('body_too_large', 'Request body too large'), 413),
-}))
+app.use(
+  '*',
+  bodyLimit({
+    maxSize: API_CONFIG.MAX_BODY_SIZE,
+    onError: (c) => c.json(errorResponse('body_too_large', 'Request body too large'), 413),
+  }),
+)
 app.use('*', responseHeadersMiddleware)
 app.use('*', queryLoggerMiddleware)
 
@@ -99,6 +108,7 @@ app.use('/v1/*', apiKeyAuthMiddleware)
 app.use('/v1/score/basic', freeTierMiddleware)
 
 app.route('/', legal)
+app.route('/v1/analytics', analyticsRoute)
 app.route('/v1/agent/register', registerRoute)
 app.route('/v1/badge', badgeRoute)
 app.route('/explorer', explorerRoute)
@@ -135,7 +145,8 @@ const x402Middleware = paymentMiddlewareFromConfig(
   {
     '/v1/score/full': {
       accepts: [payment(ENDPOINT_PRICING['/v1/score/full'])],
-      description: 'Full agent reputation score with dimension breakdown — behavioral scoring for autonomous AI agents on Base',
+      description:
+        'Full agent reputation score with dimension breakdown — behavioral scoring for autonomous AI agents on Base',
       extensions: {
         ...declareDiscoveryExtension({
           input: { wallet: '0x1234567890abcdef1234567890abcdef12345678' },
@@ -189,7 +200,10 @@ const x402Middleware = paymentMiddlewareFromConfig(
           inputSchema: {
             properties: {
               target: { type: 'string', description: 'Wallet address to report' },
-              reason: { type: 'string', description: 'Report reason: wash_trading | sybil_attack | rug_pull | spam | other' },
+              reason: {
+                type: 'string',
+                description: 'Report reason: wash_trading | sybil_attack | rug_pull | spam | other',
+              },
               details: { type: 'string', description: 'Description of suspicious behavior' },
             },
             required: ['target', 'reason', 'details'],
@@ -262,6 +276,193 @@ const x402Middleware = paymentMiddlewareFromConfig(
         }),
       },
     },
+    '/v1/forensics/summary': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/forensics/summary'])],
+      description: 'DJD Forensics overview for a wallet: report counts, penalty totals, and recent incidents',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { wallet: '0x1234567890abcdef1234567890abcdef12345678' },
+          inputSchema: {
+            properties: { wallet: { type: 'string', description: 'Wallet address to inspect' } },
+            required: ['wallet'],
+          },
+          output: {
+            example: {
+              wallet: '0x1234...',
+              risk_level: 'watch',
+              report_count: 1,
+              total_penalty_applied: 5,
+              most_recent_report_at: '2026-02-25T12:00:00Z',
+            },
+          },
+        }),
+      },
+    },
+    '/v1/forensics/dispute': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/forensics/dispute'])],
+      description: 'Open a dispute for a fraud report as the reported wallet',
+      extensions: {
+        ...declareDiscoveryExtension({
+          bodyType: 'json',
+          input: {
+            report_id: 'fraud_abc123',
+            reason: 'fulfilled_service',
+            details: 'The paid task was delivered and logs were shared with the buyer.',
+          },
+          inputSchema: {
+            properties: {
+              report_id: { type: 'string', description: 'Fraud report ID from the DJD Forensics reports feed' },
+              reason: {
+                type: 'string',
+                description:
+                  'Dispute reason: fulfilled_service | mistaken_identity | resolved_offchain | inaccurate_report | other',
+              },
+              details: { type: 'string', description: 'Evidence or explanation supporting the dispute' },
+            },
+            required: ['report_id', 'reason', 'details'],
+          },
+          output: {
+            example: {
+              disputeId: 'disp_abc123',
+              status: 'open',
+              reportId: 'fraud_abc123',
+              targetWallet: '0x1234...',
+            },
+          },
+        }),
+      },
+    },
+    '/v1/forensics/feed': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/forensics/feed'])],
+      description: 'DJD Forensics incident feed of recent fraud reports across the network',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { reason: 'payment_fraud', limit: 25 },
+          inputSchema: {
+            properties: {
+              reason: { type: 'string', description: 'Optional report reason filter' },
+              limit: { type: 'integer', description: 'Max incidents to return (default 50)' },
+              after: { type: 'string', description: 'ISO date filter start' },
+              before: { type: 'string', description: 'ISO date filter end' },
+            },
+          },
+          output: {
+            example: {
+              incidents: [
+                {
+                  report_id: 'fraud_abc123',
+                  wallet: '0x1234...',
+                  reason: 'payment_fraud',
+                  risk_level: 'elevated',
+                  report_count: 3,
+                },
+              ],
+              count: 42,
+              returned: 1,
+            },
+          },
+        }),
+      },
+    },
+    '/v1/forensics/watchlist': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/forensics/watchlist'])],
+      description: 'DJD Forensics watchlist of the most-reported wallets across the network',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { limit: 25 },
+          inputSchema: {
+            properties: {
+              limit: { type: 'integer', description: 'Max wallets to return (default 50)' },
+              after: { type: 'string', description: 'ISO date filter start' },
+              before: { type: 'string', description: 'ISO date filter end' },
+            },
+          },
+          output: {
+            example: {
+              wallets: [
+                {
+                  rank: 1,
+                  wallet: '0x1234...',
+                  risk_level: 'critical',
+                  report_count: 5,
+                  unique_reporters: 4,
+                  total_penalty_applied: 25,
+                },
+              ],
+              count: 12,
+              returned: 1,
+            },
+          },
+        }),
+      },
+    },
+    '/v1/forensics/reports': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/forensics/reports'])],
+      description: 'DJD Forensics incident feed with raw fraud-report details for a wallet',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { wallet: '0x1234567890abcdef1234567890abcdef12345678', limit: 25 },
+          inputSchema: {
+            properties: {
+              wallet: { type: 'string', description: 'Wallet address to inspect' },
+              limit: { type: 'integer', description: 'Max reports to return (default 50)' },
+              after: { type: 'string', description: 'ISO date filter start' },
+              before: { type: 'string', description: 'ISO date filter end' },
+            },
+            required: ['wallet'],
+          },
+          output: {
+            example: {
+              wallet: '0x1234...',
+              reports: [
+                {
+                  report_id: 'fraud_abc123',
+                  reason: 'payment_fraud',
+                  details: 'Counterparty collected payment and never delivered.',
+                  created_at: '2026-02-25T12:00:00Z',
+                  penalty_applied: 5,
+                },
+              ],
+              count: 3,
+              returned: 1,
+            },
+          },
+        }),
+      },
+    },
+    '/v1/forensics/timeline': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/forensics/timeline'])],
+      description: 'Merged score-history and fraud-incident timeline for a wallet',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { wallet: '0x1234567890abcdef1234567890abcdef12345678', limit: 25 },
+          inputSchema: {
+            properties: {
+              wallet: { type: 'string', description: 'Wallet address to inspect' },
+              limit: { type: 'integer', description: 'Max combined events to return (default 50)' },
+              after: { type: 'string', description: 'ISO date filter start' },
+              before: { type: 'string', description: 'ISO date filter end' },
+            },
+            required: ['wallet'],
+          },
+          output: {
+            example: {
+              wallet: '0x1234...',
+              events: [
+                {
+                  type: 'fraud_report',
+                  timestamp: '2026-02-25T12:00:00Z',
+                  reason: 'payment_fraud',
+                  penalty_applied: 5,
+                },
+                { type: 'score_snapshot', timestamp: '2026-02-24T12:00:00Z', score: 72, confidence: 0.84 },
+              ],
+              breakdown: { score_snapshots: 8, fraud_reports: 1 },
+            },
+          },
+        }),
+      },
+    },
     '/v1/certification/apply': {
       accepts: [payment(ENDPOINT_PRICING['/v1/certification/apply'])],
       description: 'Apply for annual DJD Certified Agent badge — verified on-chain reputation',
@@ -274,7 +475,12 @@ const x402Middleware = paymentMiddlewareFromConfig(
             required: ['wallet'],
           },
           output: {
-            example: { certificationId: 'cert_abc123', tier: 'gold', expiresAt: '2027-02-25', badgeUrl: '/v1/badge/0x1234...' },
+            example: {
+              certificationId: 'cert_abc123',
+              tier: 'gold',
+              expiresAt: '2027-02-25',
+              badgeUrl: '/v1/badge/0x1234...',
+            },
           },
         }),
       },
@@ -291,6 +497,12 @@ const PAID_ROUTES = new Set([
   '/v1/data/fraud/blacklist',
   '/v1/score/batch',
   '/v1/score/history',
+  '/v1/forensics/summary',
+  '/v1/forensics/dispute',
+  '/v1/forensics/feed',
+  '/v1/forensics/watchlist',
+  '/v1/forensics/reports',
+  '/v1/forensics/timeline',
   '/v1/certification/apply',
 ])
 
@@ -314,11 +526,14 @@ app.use(async (c, next) => {
 app.use('/v1/score/*', paidRateLimitMiddleware)
 app.use('/v1/report', paidRateLimitMiddleware)
 app.use('/v1/data/fraud/*', paidRateLimitMiddleware)
+app.use('/v1/forensics/*', paidRateLimitMiddleware)
 
 app.route('/health', healthRoute)
 app.route('/v1/score/history', historyRoute)
 app.route('/v1/score', scoreRoute)
 app.route('/v1/report', reportRoute)
+app.route('/v1/monitor', monitoringRoute)
+app.route('/v1/forensics', forensicsRoute)
 app.route('/v1/leaderboard', leaderboardRoute)
 app.route('/v1/data/fraud/blacklist', blacklistRoute)
 app.route('/v1/webhooks', publicWebhooks)

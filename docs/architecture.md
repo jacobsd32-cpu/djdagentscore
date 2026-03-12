@@ -21,11 +21,12 @@ src/
 │   └── env.ts                      # Environment helpers and runtime toggles
 ├── db/
 │   ├── connection.ts               # SQLite connection (DELETE journal mode)
-│   ├── schema.ts                   # 31-table schema, migrations, indexes
+│   ├── schema.ts                   # 32-table schema, migrations, indexes
 │   ├── certificationQueries.ts     # DJD Certify persistence and certification revenue rollups
 │   ├── directoryQueries.ts         # Public leaderboard and trust-directory read models
-│   ├── forensicsQueries.ts         # Fraud report persistence and penalty application for evidence workflows
+│   ├── forensicsQueries.ts         # Fraud report/dispute persistence, active-report filtering, and forensics read models
 │   ├── identityQueries.ts          # Agent registration and GitHub identity persistence
+│   ├── monitoringQueries.ts        # Managed monitoring-subscription persistence over webhook delivery
 │   ├── reputationQueries.ts        # Scores, tier thresholds, and score-write persistence
 │   ├── evidenceQueries.ts          # Query logs, indexer state, transfer evidence, webhook persistence
 │   ├── platformQueries.ts          # API key persistence and developer platform records
@@ -48,20 +49,21 @@ src/
 │   ├── apiKeyService.ts            # Admin API key lifecycle and reset policy
 │   ├── apiKeyAuthService.ts        # API key auth validation, quota reset, and usage accounting
 │   ├── agentProfileService.ts      # Public agent profile rendering and cache-miss score lookup
-│   ├── adminService.ts             # Admin calibration, reset, score-flush, and revenue control-plane workflows
+│   ├── adminService.ts             # Admin calibration, reset, revenue, and Forensics dispute review workflows
 │   ├── analyticsService.ts         # Public observatory-lite APIs for economy metrics and explorer data
 │   ├── billingService.ts           # Billing checkout, success-page, and customer-portal workflows
 │   ├── certificationService.ts     # Certification rules and workflow orchestration
 │   ├── discoveryService.ts         # Public docs, OpenAPI, and x402 manifest assembly
-│   ├── directoryService.ts         # Public trust-surface APIs for leaderboard, badges, and blacklist status
-│   ├── evidenceService.ts          # Fraud report intake and score-history/forensics timeline APIs
+│   ├── directoryService.ts         # Public trust-surface APIs for leaderboard and score badges
+│   ├── evidenceService.ts          # Fraud report/dispute intake plus DJD Forensics wallet/corpus views and score-history APIs
+│   ├── monitoringService.ts        # Managed score/anomaly/Forensics monitoring subscriptions built on wallet-scoped webhooks
 │   ├── opsService.ts               # Health and Prometheus metrics payload assembly with runtime-safe caching
 │   ├── portalService.ts            # Developer portal usage and analytics lookup
 │   ├── registrationService.ts      # Agent registration and GitHub identity workflow
 │   ├── scoreService.ts             # Score request orchestration for sync, batch, and async job APIs
 │   ├── stripeWebhookService.ts     # Stripe signature verification and webhook event handling
-│   ├── webhookQueueService.ts      # Worker-side webhook queueing, delivery, and retry policy
-│   └── webhookService.ts           # Webhook validation, lifecycle, and test delivery
+│   ├── webhookQueueService.ts      # Worker-side webhook queueing, wallet-scoped delivery, retry policy, and live Forensics/anomaly events
+│   └── webhookService.ts           # Webhook validation, preset-based monitoring subscriptions, anomaly bundles, thresholds, and test delivery
 ├── utils/
 │   ├── walletUtils.ts              # Wallet address normalisation and validation
 │   ├── paymentUtils.ts             # x402 payment amount/pricing helpers
@@ -75,17 +77,19 @@ src/
 │   ├── score.ts                    # GET /v1/score/*
 │   ├── history.ts                  # GET /v1/score/history (paid)
 │   ├── report.ts                   # POST /v1/report
+│   ├── monitoring.ts               # /v1/monitor/* managed monitoring subscriptions and presets
+│   ├── forensics.ts                # /v1/forensics/* (summary, dispute intake, feed, watchlist, reports, merged timeline)
 │   ├── leaderboard.ts              # GET /v1/leaderboard
 │   ├── badge.ts                    # GET /v1/badge/*.svg
 │   ├── agent.ts                    # GET /agent/{wallet} (HTML)
 │   ├── blacklist.ts                # GET /v1/data/fraud/blacklist
 │   ├── certification.ts            # /v1/certification/* (apply, status, badge)
-│   ├── webhooks.ts                 # /v1/webhooks + /admin/webhooks
+│   ├── webhooks.ts                 # /v1/webhooks (presets/create/list/delete) + /admin/webhooks
 │   ├── apiKeys.ts                  # /admin/api-keys management
 │   ├── health.ts                   # GET /health
 │   ├── metrics.ts                  # GET /metrics (Prometheus)
 │   ├── economy.ts                  # Economy data endpoints
-│   ├── admin.ts                    # Admin/debug endpoints
+│   ├── admin.ts                    # Admin/debug endpoints, including Forensics dispute triage
 │   ├── legal.ts                    # Terms & privacy
 │   ├── docs.ts                     # Swagger UI at /docs
 │   └── openapi.ts                  # GET /openapi.json
@@ -113,7 +117,7 @@ src/
     ├── usdcTransferHelpers.ts      # Transfer parsing utilities
     ├── scoreRefresh.ts             # Hourly background score refresh
     ├── scoreQueue.ts               # Score computation queue
-    ├── anomalyDetector.ts          # Anomaly and Sybil monitoring
+    ├── anomalyDetector.ts          # Anomaly detection, Sybil monitoring, and managed alert emission
     ├── intentMatcher.ts            # Pre/post payment intent matching
     ├── outcomeMatcher.ts           # Payment outcome reconciliation
     ├── dailyAggregator.ts          # Daily wallet metrics aggregation
@@ -179,7 +183,7 @@ Separate indexer for standard USDC `Transfer` events. Feeds the Reliability and 
 
 ### Database (`src/db/`)
 
-SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached volume compatibility). 31 tables:
+SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached volume compatibility). 32 tables:
 
 - `scores` — cached composite + dimension scores
 - `score_history` — historical score snapshots
@@ -191,7 +195,8 @@ SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached vol
 - `wallet_index` — first-seen timestamps for wallet age calculation
 - `free_tier_usage` — daily free tier quota tracking
 - `api_keys` — API key hashes, quotas, and usage tracking
-- `webhooks` — webhook subscription configuration
+- `webhooks` — wallet-scoped webhook subscription configuration, thresholds, anomaly bundles, and Forensics filters
+- `monitoring_subscriptions` — managed score, anomaly, and Forensics alert policies tied to subscriber wallets and target wallets
 - `webhook_deliveries` — delivery attempts and retry state
 - `certifications` — certified agent badge records
 - `job_stats` — background job execution metrics
@@ -207,7 +212,7 @@ SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached vol
 | Webhook delivery | Every 30s | Deliver queued webhook events with retries |
 | Intent matcher | Every 6 hours | Match pre/post payment intents |
 | Outcome matcher | Every 6 hours | Reconcile payment outcomes |
-| Anomaly detector | Every 15 min | Flag anomalous wallet behavior |
+| Anomaly detector | Every 15 min | Flag anomalous wallet behavior and emit managed anomaly alerts |
 | Sybil monitor | Every 5 min | Enhanced sybil detection |
 | Auto-recalibration | Every 6 hours | Adjust tier thresholds, update population stats, learn adaptive weights |
 | Daily aggregator | Daily | Aggregate wallet metrics |

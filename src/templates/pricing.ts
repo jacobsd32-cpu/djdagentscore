@@ -11,6 +11,8 @@
  * JetBrains Mono, indigo-on-navy).
  */
 
+import { buildPublicUrl } from '../config/public.js'
+
 interface PricingPlan {
   id: string
   name: string
@@ -22,6 +24,7 @@ export function pricingPageHtml(plans: PricingPlan[]): string {
   const starter = plans.find((p) => p.id === 'starter')
   const growth = plans.find((p) => p.id === 'growth')
   const scale = plans.find((p) => p.id === 'scale')
+  const pricingUrl = buildPublicUrl('/pricing')
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -33,7 +36,7 @@ export function pricingPageHtml(plans: PricingPlan[]): string {
 <meta property="og:type" content="website">
 <meta property="og:title" content="Pricing — DJD Agent Score">
 <meta property="og:description" content="Simple, flat-rate pricing for AI agent trust scores. Free tier included.">
-<meta property="og:url" content="https://djdagentscore.dev/pricing">
+<meta property="og:url" content="${pricingUrl}">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -239,7 +242,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
       <li>All paid endpoints</li>
       <li>Full dimension breakdown</li>
       <li>Score history &amp; trends</li>
-      <li>Fraud &amp; blacklist checks</li>
+      <li>DJD Forensics summaries, feeds, watchlists, reports, &amp; disputes</li>
       <li>Standard API key</li>
     </ul>
     <button onclick="startCheckout('starter')" class="plan-cta plan-cta-ghost">Get Started</button>
@@ -269,7 +272,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
     <ul class="plan-features">
       <li>Everything in Growth</li>
       <li>25,000 requests/month</li>
-      <li>Webhook subscriptions</li>
+      <li>Managed score, anomaly, and Forensics monitoring subscriptions with alert filters</li>
       <li>Best per-query cost</li>
       <li>Priority support</li>
     </ul>
@@ -321,7 +324,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
       <span>What endpoints are included?</span>
       <span class="faq-toggle">+</span>
     </div>
-    <div class="faq-a">All paid plans include access to every endpoint: full scores, score history, batch scoring, fraud/blacklist checks, certification, and force-refresh. The free tier is limited to the basic score endpoint.</div>
+    <div class="faq-a">All paid plans include access to every endpoint: full scores, score history, DJD Forensics summaries, dispute intake, network feeds, watchlists, incident feeds, merged timelines, batch scoring, certification, force-refresh, and the legacy blacklist check. Growth and Scale also support wallet-scoped webhook monitoring, including preset score, anomaly, and Forensics alert bundles. The free tier is limited to the basic score endpoint.</div>
   </div>
   <div class="faq-item">
     <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">

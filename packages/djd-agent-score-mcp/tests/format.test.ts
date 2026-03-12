@@ -7,7 +7,7 @@ import {
   formatEconomyMetrics,
   formatBatchScore,
 } from '../src/format.js'
-import type { BasicScoreResponse, FullScoreResponse, LeaderboardResponse, EconomyMetrics } from 'djd-agent-score-client'
+import type { BasicScoreResponse, FullScoreResponse, LeaderboardResponse, EconomyMetrics } from 'djd-agent-score'
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 

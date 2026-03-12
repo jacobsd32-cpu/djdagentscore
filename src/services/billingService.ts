@@ -9,6 +9,7 @@ import { BILLING_PLANS } from '../config/plans.js'
 import { ErrorCodes } from '../errors.js'
 import { log } from '../logger.js'
 import { successPageHtml } from '../templates/billingSuccess.js'
+import { trackGrowthEventSafe } from './growthService.js'
 
 interface BillingServiceError {
   ok: false
@@ -49,7 +50,9 @@ function ensureBillingEnabled(message?: string): BillingServiceError | null {
   return null
 }
 
-export function listBillingPlans(): { plans: Array<{ id: string; name: string; monthlyPrice: number; monthlyLimit: number }> } {
+export function listBillingPlans(): {
+  plans: Array<{ id: string; name: string; monthlyPrice: number; monthlyLimit: number }>
+} {
   return {
     plans: Object.values(BILLING_PLANS).map((plan) => ({
       id: plan.id,
@@ -90,6 +93,15 @@ export async function createBillingCheckout(
 
   try {
     const result = await createCheckoutSession(planId, body.email)
+    trackGrowthEventSafe({
+      event: 'billing_checkout_started',
+      source: 'server',
+      page: '/billing/checkout',
+      metadata: {
+        plan: planId,
+        email: body.email ?? null,
+      },
+    })
     return { ok: true, data: result }
   } catch (err) {
     log.error('billing', 'Failed to create checkout session', { planId, error: err })
@@ -125,6 +137,17 @@ export function renderBillingSuccessPage(sessionId: string | undefined): Billing
   const plan = BILLING_PLANS[subscription.plan]
 
   if (rawKey) {
+    trackGrowthEventSafe({
+      event: 'billing_success_viewed',
+      source: 'server',
+      page: '/billing/success',
+      metadata: {
+        sessionId,
+        plan: subscription.plan,
+        customerId: subscription.stripe_customer_id,
+        state: 'fresh_key',
+      },
+    })
     return {
       ok: true,
       data: {
@@ -137,6 +160,18 @@ export function renderBillingSuccessPage(sessionId: string | undefined): Billing
     }
   }
 
+  trackGrowthEventSafe({
+    event: 'billing_success_viewed',
+    source: 'server',
+    page: '/billing/success',
+    metadata: {
+      sessionId,
+      plan: subscription.plan,
+      customerId: subscription.stripe_customer_id,
+      state: 'already_consumed',
+    },
+  })
+
   return {
     ok: true,
     data: {
@@ -148,7 +183,9 @@ export function renderBillingSuccessPage(sessionId: string | undefined): Billing
   }
 }
 
-export async function createBillingPortalLink(customerId: string | undefined): Promise<BillingServiceResult<{ url: string }>> {
+export async function createBillingPortalLink(
+  customerId: string | undefined,
+): Promise<BillingServiceResult<{ url: string }>> {
   const guard = ensureBillingEnabled()
   if (guard) return guard
 

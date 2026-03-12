@@ -126,7 +126,7 @@ DJD Agent Score is open about its detection methodology because we believe trans
 
 The five patterns described here are the foundation. Our scoring model continues to evolve as we observe new attack vectors, and every score we publish carries a `model_version` tag so consumers can track which version of the detection logic produced a given rating.
 
-Want to check your agent's score? Query the API at `agentscore.ai`, paid via x402 micropayments. Want to verify a score on-chain? Read from the ERC-8004 Reputation Registry at `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63` on Base.
+Want to check your agent's score? Query the API at `djdagentscore.dev`, paid via x402 micropayments. Want to verify a score on-chain? Read from the ERC-8004 Reputation Registry at `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63` on Base.
 
 The agent economy needs trust infrastructure. We're building it.
 

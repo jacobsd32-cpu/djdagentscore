@@ -20,9 +20,7 @@ export interface ApiKeyAuthRow extends ApiKeyRow {
   key_hash: string
 }
 
-const stmtInsertApiKey = db.prepare<
-  [string, string, string, string | null, string, number, string, string | null]
->(`
+const stmtInsertApiKey = db.prepare<[string, string, string, string | null, string, number, string, string | null]>(`
   INSERT INTO api_keys (key_hash, key_prefix, wallet, name, tier, monthly_limit, usage_reset_at, stripe_customer_id)
   VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 `)

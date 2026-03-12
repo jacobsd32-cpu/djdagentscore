@@ -34,12 +34,12 @@ Set environment variables:
 
 ```bash
 export DJD_API_KEY="djd_live_..."     # Required for paid endpoints
-export DJD_BASE_URL="https://djd-agent-score.fly.dev"  # Default
+export DJD_BASE_URL="https://djdagentscore.dev"  # Default
 ```
 
 ## Get an API Key
 
-[djd-agent-score.fly.dev/billing/plans](https://djd-agent-score.fly.dev/billing/plans)
+[djdagentscore.dev/billing/plans](https://djdagentscore.dev/billing/plans)
 
 | Plan | Price | Queries/month |
 |------|-------|---------------|
@@ -67,4 +67,4 @@ pytest integrations/crewai/tests/ -v
 
 ## API Documentation
 
-Full API docs: [djd-agent-score.fly.dev](https://djd-agent-score.fly.dev)
+Full API docs: [djdagentscore.dev](https://djdagentscore.dev)

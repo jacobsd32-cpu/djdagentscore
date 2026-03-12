@@ -42,7 +42,7 @@ agent.run("Check the reputation of 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045")
 ```python
 toolkit = AgentScoreToolkit(
     api_key="djd_live_...",                       # For paid endpoints
-    base_url="https://djd-agent-score.fly.dev",   # Default
+    base_url="https://djdagentscore.dev",   # Default
     request_timeout=30.0,                         # Seconds
     include_paid=True,                            # Set False to exclude paid tools
 )
@@ -50,7 +50,7 @@ toolkit = AgentScoreToolkit(
 
 ## Get an API Key
 
-API keys are available at [djd-agent-score.fly.dev/billing/plans](https://djd-agent-score.fly.dev/billing/plans):
+API keys are available at [djdagentscore.dev/billing/plans](https://djdagentscore.dev/billing/plans):
 
 | Plan | Price | Queries/month |
 |------|-------|---------------|
@@ -79,4 +79,4 @@ pytest integrations/langchain/tests/ -v
 
 ## API Documentation
 
-Full API docs: [djd-agent-score.fly.dev](https://djd-agent-score.fly.dev)
+Full API docs: [djdagentscore.dev](https://djdagentscore.dev)

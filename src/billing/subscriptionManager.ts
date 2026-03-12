@@ -23,9 +23,11 @@ import {
   updateSubscriptionStatus,
 } from './billingStore.js'
 import { BILLING_PLANS, type BillingPlan } from '../config/plans.js'
+import { getPublicBaseUrl } from '../config/public.js'
 import { db as defaultDb } from '../db.js'
 import { log } from '../logger.js'
 import { prepareApiKeyProvisioning } from '../services/apiKeyService.js'
+import { trackGrowthEventSafe } from '../services/growthService.js'
 import { getStripe } from './stripeClient.js'
 
 // ── Checkout Session ──────────────────────────────────────────────
@@ -41,7 +43,7 @@ export async function createCheckoutSession(planId: string, email?: string): Pro
 
   const stripe = getStripe()
 
-  const baseUrl = process.env.BILLING_BASE_URL ?? 'https://djd-agent-score.fly.dev'
+  const baseUrl = getPublicBaseUrl()
 
   const params: Stripe.Checkout.SessionCreateParams = {
     mode: 'subscription',
@@ -121,6 +123,18 @@ export function provisionApiKey(
     `API key provisioned: session=${sessionId} customer=${customerId} plan=${plan.id} keyId=${apiKeyId}`,
   )
 
+  trackGrowthEventSafe({
+    event: 'api_key_created',
+    source: 'server',
+    page: '/billing/success',
+    metadata: {
+      tier: plan.id,
+      monthlyLimit: plan.monthlyLimit,
+      source: 'stripe',
+      customerId,
+    },
+  })
+
   return { apiKeyId, rawKey: provisioned.rawKey, plan: plan.id }
 }
 
@@ -160,7 +174,7 @@ export function handleSubscriptionCanceled(subscriptionId: string, db: Database.
  */
 export async function createPortalSession(customerId: string): Promise<string> {
   const stripe = getStripe()
-  const baseUrl = process.env.BILLING_BASE_URL ?? 'https://djd-agent-score.fly.dev'
+  const baseUrl = getPublicBaseUrl()
 
   const session = await stripe.billingPortal.sessions.create({
     customer: customerId,
@@ -245,7 +259,14 @@ export function pruneExpiredPendingKeys(db: Database.Database = defaultDb): numb
 export function getSubscriptionBySessionId(
   sessionId: string,
   db: Database.Database = defaultDb,
-): { plan: string; apiKeyId: number | null; status: string } | null {
+): { plan: string; apiKeyId: number | null; status: string; stripe_customer_id: string } | null {
   const row = findSubscriptionBySessionId(db, sessionId)
-  return row ? { plan: row.plan, apiKeyId: row.api_key_id, status: row.status } : null
+  return row
+    ? {
+        plan: row.plan,
+        apiKeyId: row.api_key_id,
+        status: row.status,
+        stripe_customer_id: row.stripe_customer_id,
+      }
+    : null
 }

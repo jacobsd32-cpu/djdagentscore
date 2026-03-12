@@ -13,6 +13,13 @@ const httpCounts = new Map<string, number>()
  * /v1/badge/0xABC.svg → /v1/badge/:wallet.svg
  * /agent/0xABC → /agent/:wallet
  */
+function normalizePath(path: string): string {
+  return path
+    .replace(/0x[0-9a-fA-F]{40}/g, ':wallet')
+    .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/:id')
+    .replace(/\/[a-zA-Z0-9_-]{20,}(?=\/|$)/g, '/:id')
+}
+
 /**
  * Increment the HTTP request counter for a given method/path/status combo.
  */

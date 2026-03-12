@@ -61,4 +61,3 @@ export function initBillingPlans(): void {
     BILLING_PLANS[planId]!.stripePriceId = priceId
   }
 }
-

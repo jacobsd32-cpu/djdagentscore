@@ -4,7 +4,7 @@
     "title": "DJD Agent Score API",
     "description": "Reputation scoring for autonomous AI agent wallets on Base. Scores are derived from on-chain USDC behavioral data and optional self-registration. Paid endpoints require an x402 USDC micropayment on Base; free endpoints require no authentication. Interactive docs available at /docs.",
     "version": "2.0.0",
-    "contact": { "email": "feedback@djdagentscore.xyz" },
+    "contact": { "email": "feedback@djdagentscore.dev" },
     "license": { "name": "MIT", "url": "https://github.com/jacobsd32-cpu/djdagentscore/blob/main/LICENSE" }
   },
   "servers": [
@@ -18,7 +18,9 @@
     { "name": "system",        "description": "Health and metadata" },
     { "name": "api-keys",      "description": "API key management (admin)" },
     { "name": "webhooks",      "description": "Webhook subscriptions (admin and public)" },
+    { "name": "monitoring",    "description": "Managed score and DJD Forensics monitoring subscriptions" },
     { "name": "history",       "description": "Historical score data (paid)" },
+    { "name": "forensics",     "description": "DJD Forensics wallet overview and incident timelines (paid)" },
     { "name": "certification", "description": "Certified Agent Badge (paid, admin, and public)" }
   ],
   "paths": {
@@ -248,7 +250,7 @@
                 "name": "DJD Score API",
                 "description": "Reputation scoring for AI agents",
                 "github_url": "https://github.com/owner/repo",
-                "website_url": "https://djdagentscore.xyz"
+                "website_url": "https://djdagentscore.dev"
               }
             }
           }
@@ -641,7 +643,7 @@
       "post": {
         "tags": ["webhooks"],
         "summary": "Create webhook (admin)",
-        "description": "Registers a new webhook subscription for a wallet. The webhook secret is returned only once — store it securely to verify signatures. **Requires admin authentication (X-ADMIN-KEY header).**",
+        "description": "Registers a new wallet-scoped webhook subscription. Provide either `events`, `preset`, or `presets`. If `score.threshold` is selected without an explicit `threshold_score`, the service defaults to 60. Use `forensics_filter` to restrict DJD Forensics alerts by minimum resulting risk level and/or report reasons. Managed presets also include anomaly-driven monitoring for score drops, balance freefalls, and new Sybil flags. The webhook secret is returned only once, so store it securely to verify signatures. **Requires admin authentication (X-ADMIN-KEY header).**",
         "operationId": "createAdminWebhook",
         "security": [{ "adminKey": [] }],
         "requestBody": {
@@ -650,15 +652,31 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["wallet", "url", "events"],
+                "required": ["wallet", "url"],
                 "properties": {
                   "wallet": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$", "description": "Wallet to monitor" },
                   "url":    { "type": "string", "format": "uri", "description": "HTTPS endpoint to receive webhook payloads" },
                   "events": {
                     "type": "array",
-                    "items": { "type": "string", "enum": ["score.updated", "score.expired", "fraud.reported", "agent.registered", "score.threshold"] },
+                    "items": { "type": "string", "enum": ["score.updated", "score.expired", "fraud.reported", "fraud.disputed", "fraud.dispute.resolved", "forensics.risk.changed", "forensics.watchlist.entered", "forensics.watchlist.cleared", "anomaly.score_drop", "anomaly.score_spike", "anomaly.balance_freefall", "anomaly.sybil_flagged", "agent.registered", "score.threshold"] },
                     "minItems": 1,
-                    "description": "Events to subscribe to"
+                    "description": "Explicit events to subscribe to. May be combined with presets."
+                  },
+                  "preset": { "type": "string", "enum": ["score_monitoring", "forensics_monitoring", "forensics_disputes", "forensics_watchlist", "anomaly_monitoring"], "description": "Optional preset that expands to a managed event set" },
+                  "presets": {
+                    "type": "array",
+                    "items": { "type": "string", "enum": ["score_monitoring", "forensics_monitoring", "forensics_disputes", "forensics_watchlist", "anomaly_monitoring"] },
+                    "minItems": 1,
+                    "description": "Optional preset bundle list. May be combined with explicit events."
+                  },
+                  "threshold_score": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Optional threshold for `score.threshold` alerts. Defaults to 60 when omitted."
+                  },
+                  "forensics_filter": {
+                    "$ref": "#/components/schemas/WebhookForensicsFilter"
                   },
                   "tier":   { "type": "string", "enum": ["basic", "premium"], "default": "basic", "description": "Webhook tier" }
                 }
@@ -666,7 +684,11 @@
               "example": {
                 "wallet": "0x3e4ef1f774857c69e33dddc471e110c7ac7bb528",
                 "url": "https://example.com/webhooks/djd",
-                "events": ["score.updated", "fraud.reported"],
+                "preset": "forensics_monitoring",
+                "forensics_filter": {
+                  "minimum_risk_level": "elevated",
+                  "reasons": ["payment_fraud"]
+                },
                 "tier": "basic"
               }
             }
@@ -714,6 +736,37 @@
       }
     },
     "/admin/webhooks/{id}": {
+      "get": {
+        "tags": ["webhooks"],
+        "summary": "Get webhook detail (admin)",
+        "description": "Returns one webhook plus recent delivery attempts. **Requires admin authentication (X-ADMIN-KEY header).**",
+        "operationId": "getAdminWebhook",
+        "security": [{ "adminKey": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Webhook ID",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook detail",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WebhookDetailResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": {
+            "description": "Webhook not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      },
       "delete": {
         "tags": ["webhooks"],
         "summary": "Delete webhook (admin)",
@@ -794,12 +847,39 @@
       }
     },
 
-    "/v1/webhooks/subscribe": {
+    "/v1/webhooks/presets": {
+      "get": {
+        "tags": ["webhooks"],
+        "summary": "List webhook presets",
+        "description": "Returns the preset catalog for managed score and DJD Forensics monitoring bundles.",
+        "operationId": "listWebhookPresets",
+        "responses": {
+          "200": {
+            "description": "Available webhook presets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "presets": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/WebhookPreset" }
+                    },
+                    "count": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/webhooks": {
       "post": {
         "tags": ["webhooks"],
-        "summary": "Public webhook subscription",
-        "description": "Self-service webhook registration for API key holders. Subscribe to events for your wallet. Limited to 10 active webhooks per wallet. **Requires Bearer API key authentication.**",
-        "operationId": "publicWebhookSubscribe",
+        "summary": "Create public webhook",
+        "description": "Self-service wallet-scoped webhook registration for API key holders. Provide either `events`, `preset`, or `presets`. If `score.threshold` is selected without an explicit `threshold_score`, the service defaults to 60. Use `forensics_filter` to restrict DJD Forensics alerts by minimum resulting risk level and/or report reasons. Managed presets also include anomaly-driven monitoring for score drops, balance freefalls, and new Sybil flags. Limited to 10 active webhooks per wallet. **Requires Bearer API key authentication.**",
+        "operationId": "createPublicWebhook",
         "security": [{ "bearerApiKey": [] }],
         "requestBody": {
           "required": true,
@@ -807,39 +887,50 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["url", "events"],
+                "required": ["url"],
                 "properties": {
                   "url": { "type": "string", "format": "uri", "description": "HTTPS endpoint to receive webhook payloads" },
                   "events": {
                     "type": "array",
-                    "items": { "type": "string", "enum": ["score.updated", "score.expired", "fraud.reported", "agent.registered", "score.threshold"] },
+                    "items": { "type": "string", "enum": ["score.updated", "score.expired", "fraud.reported", "fraud.disputed", "fraud.dispute.resolved", "forensics.risk.changed", "forensics.watchlist.entered", "forensics.watchlist.cleared", "anomaly.score_drop", "anomaly.score_spike", "anomaly.balance_freefall", "anomaly.sybil_flagged", "agent.registered", "score.threshold"] },
                     "minItems": 1,
-                    "description": "Events to subscribe to"
+                    "description": "Explicit events to subscribe to. May be combined with presets."
+                  },
+                  "preset": { "type": "string", "enum": ["score_monitoring", "forensics_monitoring", "forensics_disputes", "forensics_watchlist", "anomaly_monitoring"], "description": "Optional preset that expands to a managed event set" },
+                  "presets": {
+                    "type": "array",
+                    "items": { "type": "string", "enum": ["score_monitoring", "forensics_monitoring", "forensics_disputes", "forensics_watchlist", "anomaly_monitoring"] },
+                    "minItems": 1,
+                    "description": "Optional preset bundle list. May be combined with explicit events."
+                  },
+                  "threshold_score": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Optional threshold for `score.threshold` alerts. Defaults to 60 when omitted."
+                  },
+                  "forensics_filter": {
+                    "$ref": "#/components/schemas/WebhookForensicsFilter"
                   }
                 }
               },
               "example": {
                 "url": "https://example.com/webhooks/djd",
-                "events": ["score.updated"]
+                "preset": "forensics_monitoring",
+                "forensics_filter": {
+                  "minimum_risk_level": "watch",
+                  "reasons": ["payment_fraud", "impersonation"]
+                }
               }
             }
           }
         },
         "responses": {
           "201": {
-            "description": "Webhook subscription created",
+            "description": "Webhook created",
             "content": {
               "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id":      { "type": "integer" },
-                    "url":     { "type": "string" },
-                    "secret":  { "type": "string", "description": "HMAC secret for verifying signatures — store securely" },
-                    "events":  { "type": "array", "items": { "type": "string" } },
-                    "message": { "type": "string" }
-                  }
-                }
+                "schema": { "$ref": "#/components/schemas/PublicWebhookCreatedResponse" }
               }
             }
           },
@@ -850,14 +941,12 @@
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
           }
         }
-      }
-    },
-    "/v1/webhooks/status": {
+      },
       "get": {
         "tags": ["webhooks"],
-        "summary": "Check webhook status",
+        "summary": "List public webhooks",
         "description": "Lists all webhooks belonging to the authenticated wallet. **Requires Bearer API key authentication.**",
-        "operationId": "publicWebhookStatus",
+        "operationId": "listPublicWebhooks",
         "security": [{ "bearerApiKey": [] }],
         "responses": {
           "200": {
@@ -869,19 +958,7 @@
                   "properties": {
                     "webhooks": {
                       "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id":               { "type": "integer" },
-                          "url":              { "type": "string" },
-                          "events":           { "type": "array", "items": { "type": "string" } },
-                          "tier":             { "type": "string" },
-                          "is_active":        { "type": "integer", "enum": [0, 1] },
-                          "created_at":       { "type": "string", "format": "date-time" },
-                          "failure_count":    { "type": "integer" },
-                          "last_delivery_at": { "type": "string", "format": "date-time", "nullable": true }
-                        }
-                      }
+                      "items": { "$ref": "#/components/schemas/PublicWebhookListItem" }
                     },
                     "count": { "type": "integer" }
                   }
@@ -890,6 +967,207 @@
             }
           },
           "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/v1/webhooks/{id}": {
+      "delete": {
+        "tags": ["webhooks"],
+        "summary": "Delete public webhook",
+        "description": "Deactivates one webhook belonging to the authenticated wallet. **Requires Bearer API key authentication.**",
+        "operationId": "deletePublicWebhook",
+        "security": [{ "bearerApiKey": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Webhook ID",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook deactivated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": {
+            "description": "Webhook not found or already disabled",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+    "/v1/monitor/presets": {
+      "get": {
+        "tags": ["monitoring"],
+        "summary": "List monitoring policy presets",
+        "description": "Returns the managed score and DJD Forensics monitoring policies available for `/v1/monitor` subscriptions.",
+        "operationId": "listMonitoringPresets",
+        "responses": {
+          "200": {
+            "description": "Available monitoring policy presets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "presets": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/MonitoringPreset" }
+                    },
+                    "count": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/monitor": {
+      "post": {
+        "tags": ["monitoring"],
+        "summary": "Create monitoring subscription",
+        "description": "Creates a managed monitoring subscription for a target wallet and provisions the underlying webhook delivery automatically. Policies can target any wallet; delivery is sent to your HTTPS endpoint. `score_monitoring` supports `threshold_score`. Forensics policies support `forensics_filter`. `anomaly_monitoring` delivers score-drop, score-spike, balance-freefall, and sybil-flag alerts. **Requires Bearer API key authentication.**",
+        "operationId": "createMonitoringSubscription",
+        "security": [{ "bearerApiKey": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["url", "policy_type"],
+                "properties": {
+                  "target_wallet": {
+                    "type": "string",
+                    "pattern": "^0x[0-9a-fA-F]{40}$",
+                    "description": "Wallet to monitor. Defaults to the authenticated wallet when omitted."
+                  },
+                  "policy_type": {
+                    "type": "string",
+                    "enum": ["score_monitoring", "forensics_monitoring", "forensics_disputes", "forensics_watchlist", "anomaly_monitoring"],
+                    "description": "Managed monitoring policy to provision."
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "HTTPS endpoint to receive monitoring webhook deliveries."
+                  },
+                  "threshold_score": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Optional score threshold for `score_monitoring`. Defaults to 60 when omitted."
+                  },
+                  "forensics_filter": {
+                    "$ref": "#/components/schemas/WebhookForensicsFilter"
+                  }
+                }
+              },
+              "example": {
+                "target_wallet": "0x3e4ef1f774857c69e33dddc471e110c7ac7bb528",
+                "policy_type": "forensics_monitoring",
+                "url": "https://example.com/monitoring/djd",
+                "forensics_filter": {
+                  "minimum_risk_level": "elevated",
+                  "reasons": ["payment_fraud"]
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Monitoring subscription created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MonitoringSubscriptionCreatedResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": {
+            "description": "Maximum monitoring subscriptions per subscriber exceeded",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      },
+      "get": {
+        "tags": ["monitoring"],
+        "summary": "List monitoring subscriptions",
+        "description": "Lists all managed monitoring subscriptions owned by the authenticated API-key subscriber. **Requires Bearer API key authentication.**",
+        "operationId": "listMonitoringSubscriptions",
+        "security": [{ "bearerApiKey": [] }],
+        "responses": {
+          "200": {
+            "description": "Monitoring subscription list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "subscriptions": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/MonitoringSubscription" }
+                    },
+                    "count": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/v1/monitor/{id}": {
+      "delete": {
+        "tags": ["monitoring"],
+        "summary": "Delete monitoring subscription",
+        "description": "Deactivates a managed monitoring subscription and its underlying webhook delivery configuration. **Requires Bearer API key authentication.**",
+        "operationId": "deleteMonitoringSubscription",
+        "security": [{ "bearerApiKey": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Monitoring subscription ID",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Monitoring subscription deactivated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": {
+            "description": "Monitoring subscription not found or already disabled",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
         }
       }
     },
@@ -939,6 +1217,273 @@
           "402": { "$ref": "#/components/responses/PaymentRequired" },
           "404": {
             "description": "No score history found for this wallet",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+
+    "/v1/forensics/summary": {
+      "get": {
+        "tags": ["forensics"],
+        "summary": "DJD Forensics overview",
+        "description": "Returns a wallet-level forensics summary: active fraud report counts, total penalties, reporter breadth, dispute status, and the most recent incidents. **Requires x402 payment of $0.10 USDC on Base or Bearer API key.**",
+        "operationId": "getForensicsOverview",
+        "security": [{ "x402": [] }, { "bearerApiKey": [] }],
+        "x-x402": { "price": "$0.10", "network": "base" },
+        "parameters": [
+          { "$ref": "#/components/parameters/wallet" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Forensics overview returned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ForensicsOverviewResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+
+    "/v1/forensics/dispute": {
+      "post": {
+        "tags": ["forensics"],
+        "summary": "Open a fraud-report dispute",
+        "description": "Allows the reported wallet to open a dispute against a specific fraud report. The disputing wallet is derived from the x402 payment or API key identity and must match the report target wallet. **Requires x402 payment of $0.05 USDC on Base or Bearer API key.**",
+        "operationId": "createForensicsDispute",
+        "security": [{ "x402": [] }, { "bearerApiKey": [] }],
+        "x-x402": { "price": "$0.05", "network": "base" },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/FraudDisputeRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Fraud dispute opened",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FraudDisputeResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "404": {
+            "description": "Fraud report not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "409": {
+            "description": "Dispute already exists or wallet is not authorized to dispute this report",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+
+    "/v1/forensics/feed": {
+      "get": {
+        "tags": ["forensics"],
+        "summary": "DJD Forensics incident feed",
+        "description": "Returns recent fraud-report incidents across the corpus. Supports reason and date-range filtering plus configurable result limits. **Requires x402 payment of $0.30 USDC on Base or Bearer API key.**",
+        "operationId": "getForensicsFeed",
+        "security": [{ "x402": [] }, { "bearerApiKey": [] }],
+        "x-x402": { "price": "$0.30", "network": "base" },
+        "parameters": [
+          {
+            "name": "reason",
+            "in": "query",
+            "required": false,
+            "description": "Optional report reason filter",
+            "schema": { "type": "string", "enum": ["failed_delivery", "payment_fraud", "impersonation", "malicious_behavior", "other"] }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Number of incidents to return (1-100, default 50)",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 50 }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "description": "Return incidents after this ISO 8601 date (YYYY-MM-DD)",
+            "schema": { "type": "string", "format": "date" }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "description": "Return incidents before this ISO 8601 date (YYYY-MM-DD)",
+            "schema": { "type": "string", "format": "date" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Forensics incident feed returned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ForensicsFeedResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+
+    "/v1/forensics/watchlist": {
+      "get": {
+        "tags": ["forensics"],
+        "summary": "DJD Forensics watchlist",
+        "description": "Returns a ranked watchlist of the most-reported wallets across the corpus. Supports date-range filtering and configurable result limits. **Requires x402 payment of $0.25 USDC on Base or Bearer API key.**",
+        "operationId": "getForensicsWatchlist",
+        "security": [{ "x402": [] }, { "bearerApiKey": [] }],
+        "x-x402": { "price": "$0.25", "network": "base" },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Number of wallets to return (1-100, default 50)",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 50 }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "description": "Return incidents after this ISO 8601 date (YYYY-MM-DD)",
+            "schema": { "type": "string", "format": "date" }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "description": "Return incidents before this ISO 8601 date (YYYY-MM-DD)",
+            "schema": { "type": "string", "format": "date" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Forensics watchlist returned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ForensicsWatchlistResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+
+    "/v1/forensics/reports": {
+      "get": {
+        "tags": ["forensics"],
+        "summary": "DJD Forensics incident feed",
+        "description": "Returns fraud-report incidents for a wallet with full report details. Supports date-range filtering and configurable result limits. **Requires x402 payment of $0.15 USDC on Base or Bearer API key.**",
+        "operationId": "getForensicsReports",
+        "security": [{ "x402": [] }, { "bearerApiKey": [] }],
+        "x-x402": { "price": "$0.15", "network": "base" },
+        "parameters": [
+          { "$ref": "#/components/parameters/wallet" },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Number of reports to return (1-100, default 50)",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 50 }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "description": "Return reports after this ISO 8601 date (YYYY-MM-DD)",
+            "schema": { "type": "string", "format": "date" }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "description": "Return reports before this ISO 8601 date (YYYY-MM-DD)",
+            "schema": { "type": "string", "format": "date" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Forensics report feed returned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ForensicsReportsResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+
+    "/v1/forensics/timeline": {
+      "get": {
+        "tags": ["forensics"],
+        "summary": "DJD Forensics merged timeline",
+        "description": "Returns a merged timeline of score snapshots and fraud incidents for a wallet. Supports date-range filtering and configurable result limits. **Requires x402 payment of $0.20 USDC on Base or Bearer API key.**",
+        "operationId": "getForensicsTimeline",
+        "security": [{ "x402": [] }, { "bearerApiKey": [] }],
+        "x-x402": { "price": "$0.20", "network": "base" },
+        "parameters": [
+          { "$ref": "#/components/parameters/wallet" },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Number of combined events to return (1-100, default 50)",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 50 }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "description": "Return events after this ISO 8601 date (YYYY-MM-DD)",
+            "schema": { "type": "string", "format": "date" }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "description": "Return events before this ISO 8601 date (YYYY-MM-DD)",
+            "schema": { "type": "string", "format": "date" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Merged forensics timeline returned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ForensicsTimelineResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "404": {
+            "description": "No forensics data found for this wallet",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
           }
         }
@@ -1297,7 +1842,28 @@
           "reportCount":     { "type": "integer" },
           "mostRecentDate":  { "type": "string", "format": "date-time", "nullable": true },
           "reasons":         { "type": "array", "items": { "type": "string" }, "description": "Unique report reason categories" },
-          "disputeStatus":   { "type": "string", "enum": ["none"], "description": "Currently always 'none' (dispute system not yet implemented)" }
+          "disputeStatus":   { "type": "string", "enum": ["none", "open", "resolved"], "description": "Aggregate dispute state for reports filed against this wallet" }
+        }
+      },
+      "FraudDisputeRequest": {
+        "type": "object",
+        "required": ["report_id", "reason", "details"],
+        "properties": {
+          "report_id": { "type": "string", "description": "Fraud report ID from the reports or feed endpoints" },
+          "reason": {
+            "type": "string",
+            "enum": ["fulfilled_service", "mistaken_identity", "resolved_offchain", "inaccurate_report", "other"]
+          },
+          "details": { "type": "string", "description": "Supporting explanation or evidence for the dispute" }
+        }
+      },
+      "FraudDisputeResponse": {
+        "type": "object",
+        "properties": {
+          "disputeId": { "type": "string", "format": "uuid" },
+          "status": { "type": "string", "enum": ["open"] },
+          "reportId": { "type": "string" },
+          "targetWallet": { "type": "string" }
         }
       },
 
@@ -1341,7 +1907,23 @@
           "url":     { "type": "string" },
           "secret":  { "type": "string", "description": "HMAC secret for verifying webhook signatures — returned ONLY on creation" },
           "events":  { "type": "array", "items": { "type": "string" } },
+          "threshold_score": { "type": "integer", "minimum": 0, "maximum": 100, "nullable": true },
+          "forensics_filter": { "$ref": "#/components/schemas/WebhookForensicsFilter" },
+          "presets_applied": { "type": "array", "items": { "type": "string" } },
           "tier":    { "type": "string" },
+          "message": { "type": "string" }
+        }
+      },
+      "PublicWebhookCreatedResponse": {
+        "type": "object",
+        "properties": {
+          "id":      { "type": "integer" },
+          "url":     { "type": "string" },
+          "secret":  { "type": "string", "description": "HMAC secret for verifying webhook signatures — returned ONLY on creation" },
+          "events":  { "type": "array", "items": { "type": "string" } },
+          "threshold_score": { "type": "integer", "minimum": 0, "maximum": 100, "nullable": true },
+          "forensics_filter": { "$ref": "#/components/schemas/WebhookForensicsFilter" },
+          "presets_applied": { "type": "array", "items": { "type": "string" } },
           "message": { "type": "string" }
         }
       },
@@ -1353,12 +1935,136 @@
           "url":              { "type": "string" },
           "events":           { "type": "array", "items": { "type": "string" } },
           "tier":             { "type": "string" },
+          "threshold_score":  { "type": "integer", "minimum": 0, "maximum": 100, "nullable": true },
+          "forensics_filter": { "$ref": "#/components/schemas/WebhookForensicsFilter" },
           "is_active":        { "type": "integer", "enum": [0, 1] },
           "created_at":       { "type": "string", "format": "date-time" },
           "failure_count":    { "type": "integer" },
           "last_delivery_at": { "type": "string", "format": "date-time", "nullable": true },
           "disabled_at":      { "type": "string", "format": "date-time", "nullable": true }
         }
+      },
+      "PublicWebhookListItem": {
+        "type": "object",
+        "properties": {
+          "id":               { "type": "integer" },
+          "url":              { "type": "string" },
+          "events":           { "type": "array", "items": { "type": "string" } },
+          "tier":             { "type": "string" },
+          "threshold_score":  { "type": "integer", "minimum": 0, "maximum": 100, "nullable": true },
+          "forensics_filter": { "$ref": "#/components/schemas/WebhookForensicsFilter" },
+          "is_active":        { "type": "integer", "enum": [0, 1] },
+          "created_at":       { "type": "string", "format": "date-time" },
+          "failure_count":    { "type": "integer" },
+          "last_delivery_at": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "WebhookDetailResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/WebhookCreatedResponse" },
+          {
+            "type": "object",
+            "properties": {
+              "is_active":        { "type": "integer", "enum": [0, 1] },
+              "created_at":       { "type": "string", "format": "date-time" },
+              "failure_count":    { "type": "integer" },
+              "last_delivery_at": { "type": "string", "format": "date-time", "nullable": true },
+              "disabled_at":      { "type": "string", "format": "date-time", "nullable": true },
+              "recent_deliveries": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id":           { "type": "integer" },
+                    "event_type":   { "type": "string" },
+                    "status_code":  { "type": "integer", "nullable": true },
+                    "attempt":      { "type": "integer" },
+                    "delivered_at": { "type": "string", "format": "date-time", "nullable": true },
+                    "created_at":   { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "WebhookPreset": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "enum": ["score_monitoring", "forensics_monitoring", "forensics_disputes", "forensics_watchlist", "anomaly_monitoring"] },
+          "description": { "type": "string" },
+          "events": { "type": "array", "items": { "type": "string" } },
+          "threshold_score_default": { "type": "integer", "minimum": 0, "maximum": 100, "nullable": true }
+        }
+      },
+      "WebhookForensicsFilter": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "minimum_risk_level": {
+            "type": "string",
+            "enum": ["clear", "watch", "elevated", "critical"],
+            "description": "Only emit Forensics events whose resulting risk level meets or exceeds this threshold."
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["failed_delivery", "payment_fraud", "impersonation", "malicious_behavior", "other"]
+            },
+            "description": "Only emit Forensics events tied to these report reasons."
+          }
+        }
+      },
+      "MonitoringPreset": {
+        "type": "object",
+        "properties": {
+          "policy_type": {
+            "type": "string",
+            "enum": ["score_monitoring", "forensics_monitoring", "forensics_disputes", "forensics_watchlist", "anomaly_monitoring"]
+          },
+          "description": { "type": "string" },
+          "events": { "type": "array", "items": { "type": "string" } },
+          "threshold_score_default": { "type": "integer", "minimum": 0, "maximum": 100, "nullable": true },
+          "supports_threshold_score": { "type": "boolean" },
+          "supports_forensics_filter": { "type": "boolean" }
+        }
+      },
+      "MonitoringSubscription": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "target_wallet": { "type": "string" },
+          "policy_type": {
+            "type": "string",
+            "enum": ["score_monitoring", "forensics_monitoring", "forensics_disputes", "forensics_watchlist", "anomaly_monitoring"]
+          },
+          "url": { "type": "string" },
+          "events": { "type": "array", "items": { "type": "string" } },
+          "threshold_score": { "type": "integer", "minimum": 0, "maximum": 100, "nullable": true },
+          "forensics_filter": { "$ref": "#/components/schemas/WebhookForensicsFilter" },
+          "is_active": { "type": "boolean" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "disabled_at": { "type": "string", "format": "date-time", "nullable": true },
+          "failure_count": { "type": "integer" },
+          "last_delivery_at": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "MonitoringSubscriptionCreatedResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/MonitoringSubscription" },
+          {
+            "type": "object",
+            "properties": {
+              "secret": {
+                "type": "string",
+                "description": "HMAC secret for verifying webhook signatures — returned ONLY on creation"
+              },
+              "presets_applied": { "type": "array", "items": { "type": "string" } },
+              "message": { "type": "string" }
+            }
+          }
+        ]
       },
 
       "ScoreHistoryResponse": {
@@ -1396,6 +2102,227 @@
               "avg_score":  { "type": "number" },
               "min_score":  { "type": "integer" },
               "max_score":  { "type": "integer" }
+            }
+          }
+        }
+      },
+
+      "ForensicsOverviewResponse": {
+        "type": "object",
+        "properties": {
+          "wallet": { "type": "string" },
+          "risk_level": { "type": "string", "enum": ["clear", "watch", "elevated", "critical"] },
+          "current_score": { "type": "integer", "minimum": 0, "maximum": 100, "nullable": true },
+          "current_tier": { "type": "string", "nullable": true },
+          "report_count": { "type": "integer" },
+          "total_penalty_applied": { "type": "integer" },
+          "unique_reporters": { "type": "integer" },
+          "most_recent_report_at": { "type": "string", "format": "date-time", "nullable": true },
+          "dispute_status": { "type": "string", "enum": ["none", "open", "resolved"] },
+          "open_disputes": { "type": "integer" },
+          "resolved_disputes": { "type": "integer" },
+          "score_history_entries": { "type": "integer" },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "reason": { "type": "string" },
+                "count": { "type": "integer" }
+              }
+            }
+          },
+          "recent_reports": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "report_id": { "type": "string" },
+                "reason": { "type": "string" },
+                "created_at": { "type": "string", "format": "date-time" },
+                "penalty_applied": { "type": "integer" }
+              }
+            }
+          }
+        }
+      },
+
+      "ForensicsTimelineResponse": {
+        "type": "object",
+        "properties": {
+          "wallet": { "type": "string" },
+          "risk_level": { "type": "string", "enum": ["clear", "watch", "elevated", "critical"] },
+          "events": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": { "type": "string", "enum": ["score_snapshot"] },
+                    "timestamp": { "type": "string", "format": "date-time" },
+                    "score": { "type": "integer", "minimum": 0, "maximum": 100 },
+                    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+                    "model_version": { "type": "string" }
+                  }
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": { "type": "string", "enum": ["fraud_report"] },
+                    "timestamp": { "type": "string", "format": "date-time" },
+                    "report_id": { "type": "string" },
+                    "reason": { "type": "string" },
+                    "penalty_applied": { "type": "integer" }
+                  }
+                }
+              ]
+            }
+          },
+          "count": { "type": "integer", "description": "Total combined events matching the query" },
+          "returned": { "type": "integer", "description": "Number of events in this response" },
+          "breakdown": {
+            "type": "object",
+            "properties": {
+              "score_snapshots": { "type": "integer" },
+              "fraud_reports": { "type": "integer" }
+            }
+          },
+          "report_summary": {
+            "type": "object",
+            "properties": {
+              "report_count": { "type": "integer" },
+              "total_penalty_applied": { "type": "integer" }
+            }
+          },
+          "period": {
+            "type": "object",
+            "properties": {
+              "from": { "type": "string", "format": "date-time", "nullable": true },
+              "to": { "type": "string", "format": "date-time", "nullable": true }
+            }
+          },
+          "trend": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "direction": { "type": "string", "enum": ["improving", "declining", "stable"] },
+              "change_pct": { "type": "number" },
+              "avg_score": { "type": "number" },
+              "min_score": { "type": "integer" },
+              "max_score": { "type": "integer" }
+            }
+          },
+          "trajectory": {
+            "type": "object",
+            "properties": {
+              "velocity": { "type": "number", "nullable": true },
+              "momentum": { "type": "number", "nullable": true },
+              "direction": { "type": "string", "enum": ["improving", "declining", "stable", "volatile", "new"] },
+              "volatility": { "type": "number" },
+              "modifier": { "type": "integer" },
+              "dataPoints": { "type": "integer" },
+              "spanDays": { "type": "number" }
+            }
+          }
+        }
+      },
+
+      "ForensicsReportsResponse": {
+        "type": "object",
+        "properties": {
+          "wallet": { "type": "string" },
+          "risk_level": { "type": "string", "enum": ["clear", "watch", "elevated", "critical"] },
+          "reports": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "report_id": { "type": "string" },
+                "reason": { "type": "string" },
+                "details": { "type": "string" },
+                "created_at": { "type": "string", "format": "date-time" },
+                "penalty_applied": { "type": "integer" }
+              }
+            }
+          },
+          "count": { "type": "integer", "description": "Total reports matching the query" },
+          "returned": { "type": "integer", "description": "Number of reports in this response" },
+          "unique_reporters": { "type": "integer" },
+          "total_penalty_applied": { "type": "integer" },
+          "period": {
+            "type": "object",
+            "properties": {
+              "from": { "type": "string", "format": "date-time", "nullable": true },
+              "to": { "type": "string", "format": "date-time", "nullable": true }
+            }
+          }
+        }
+      },
+
+      "ForensicsWatchlistResponse": {
+        "type": "object",
+        "properties": {
+          "wallets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "rank": { "type": "integer" },
+                "wallet": { "type": "string" },
+                "risk_level": { "type": "string", "enum": ["clear", "watch", "elevated", "critical"] },
+                "current_score": { "type": "integer", "minimum": 0, "maximum": 100, "nullable": true },
+                "current_tier": { "type": "string", "nullable": true },
+                "report_count": { "type": "integer" },
+                "unique_reporters": { "type": "integer" },
+                "total_penalty_applied": { "type": "integer" },
+                "most_recent_report_at": { "type": "string", "format": "date-time" }
+              }
+            }
+          },
+          "count": { "type": "integer", "description": "Total wallets matching the query" },
+          "returned": { "type": "integer", "description": "Number of wallets in this response" },
+          "period": {
+            "type": "object",
+            "properties": {
+              "from": { "type": "string", "format": "date-time", "nullable": true },
+              "to": { "type": "string", "format": "date-time", "nullable": true }
+            }
+          }
+        }
+      },
+
+      "ForensicsFeedResponse": {
+        "type": "object",
+        "properties": {
+          "incidents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "report_id": { "type": "string" },
+                "wallet": { "type": "string" },
+                "reason": { "type": "string" },
+                "details": { "type": "string" },
+                "created_at": { "type": "string", "format": "date-time" },
+                "penalty_applied": { "type": "integer" },
+                "current_score": { "type": "integer", "minimum": 0, "maximum": 100, "nullable": true },
+                "current_tier": { "type": "string", "nullable": true },
+                "risk_level": { "type": "string", "enum": ["clear", "watch", "elevated", "critical"] },
+                "report_count": { "type": "integer" },
+                "unique_reporters": { "type": "integer" },
+                "total_penalty_applied": { "type": "integer" }
+              }
+            }
+          },
+          "count": { "type": "integer", "description": "Total incidents matching the query" },
+          "returned": { "type": "integer", "description": "Number of incidents in this response" },
+          "reason_filter": { "type": "string", "nullable": true },
+          "period": {
+            "type": "object",
+            "properties": {
+              "from": { "type": "string", "format": "date-time", "nullable": true },
+              "to": { "type": "string", "format": "date-time", "nullable": true }
             }
           }
         }

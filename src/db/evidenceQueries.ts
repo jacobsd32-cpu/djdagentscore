@@ -285,6 +285,8 @@ export interface WebhookRow {
   last_delivery_at: string | null
   disabled_at: string | null
   threshold_score?: number | null
+  forensics_min_risk_level?: string | null
+  forensics_report_reasons?: string | null
 }
 
 export interface WebhookDeliveryRow {
@@ -298,11 +300,14 @@ export interface WebhookDeliveryRow {
 
 export interface ActiveWebhookRow {
   id: number
+  wallet: string
   url: string
   secret: string
   events: string
   tier: string
   failure_count: number
+  forensics_min_risk_level?: string | null
+  forensics_report_reasons?: string | null
 }
 
 export interface ThresholdWebhookRow extends ActiveWebhookRow {
@@ -319,9 +324,20 @@ export interface PendingWebhookDeliveryRow {
   secret: string
 }
 
-const stmtInsertWebhook = db.prepare<[string, string, string, string, string]>(`
-  INSERT INTO webhooks (wallet, url, secret, events, tier)
-  VALUES (?, ?, ?, ?, ?)
+const stmtInsertWebhook = db.prepare<
+  [string, string, string, string, string, number | null, string | null, string | null]
+>(`
+  INSERT INTO webhooks (
+    wallet,
+    url,
+    secret,
+    events,
+    tier,
+    threshold_score,
+    forensics_min_risk_level,
+    forensics_report_reasons
+  )
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 `)
 
 const stmtGetWebhookById = db.prepare<[number], WebhookRow>('SELECT * FROM webhooks WHERE id = ?')
@@ -353,12 +369,14 @@ const stmtDeactivateWebhookForWallet = db.prepare(`
 `)
 
 const stmtListActiveWebhooks = db.prepare<[], ActiveWebhookRow>(`
-  SELECT id, url, secret, events, tier, failure_count FROM webhooks
+  SELECT id, wallet, url, secret, events, tier, failure_count, forensics_min_risk_level, forensics_report_reasons
+  FROM webhooks
   WHERE is_active = 1
 `)
 
 const stmtListThresholdWebhooks = db.prepare<[], ThresholdWebhookRow>(`
-  SELECT id, url, secret, events, tier, failure_count, threshold_score FROM webhooks
+  SELECT id, wallet, url, secret, events, tier, failure_count, threshold_score, forensics_min_risk_level, forensics_report_reasons
+  FROM webhooks
   WHERE is_active = 1 AND threshold_score IS NOT NULL
 `)
 
@@ -367,11 +385,13 @@ const stmtInsertWebhookDelivery = db.prepare<[number, string, string]>(`
   VALUES (?, ?, ?)
 `)
 
-const insertWebhookDeliveriesTxn = db.transaction((webhooks: Array<{ id: number }>, eventType: string, payload: string) => {
-  for (const webhook of webhooks) {
-    stmtInsertWebhookDelivery.run(webhook.id, eventType, payload)
-  }
-})
+const insertWebhookDeliveriesTxn = db.transaction(
+  (webhooks: Array<{ id: number }>, eventType: string, payload: string) => {
+    for (const webhook of webhooks) {
+      stmtInsertWebhookDelivery.run(webhook.id, eventType, payload)
+    }
+  },
+)
 
 const stmtListPendingWebhookDeliveries = db.prepare<[number], PendingWebhookDeliveryRow>(`
   SELECT wd.id, wd.webhook_id, wd.event_type, wd.payload, wd.attempt,
@@ -415,6 +435,11 @@ export function insertWebhook(input: {
   secret: string
   events: string[]
   tier: string
+  thresholdScore?: number | null
+  forensicsFilter?: {
+    minimum_risk_level?: string
+    reasons?: string[]
+  } | null
 }): WebhookRow {
   const result = stmtInsertWebhook.run(
     input.wallet,
@@ -422,6 +447,9 @@ export function insertWebhook(input: {
     input.secret,
     JSON.stringify(input.events),
     input.tier,
+    input.thresholdScore ?? null,
+    input.forensicsFilter?.minimum_risk_level ?? null,
+    input.forensicsFilter?.reasons ? JSON.stringify(input.forensicsFilter.reasons) : null,
   )
 
   return stmtGetWebhookById.get(Number(result.lastInsertRowid))!

@@ -74,7 +74,9 @@ export function getExplorerStatsSnapshot() {
   return getEcosystemStats()
 }
 
-export function getExplorerActivityFeed(rawLimit: string | undefined): { activity: ReturnType<typeof getRecentActivity> } {
+export function getExplorerActivityFeed(rawLimit: string | undefined): {
+  activity: ReturnType<typeof getRecentActivity>
+} {
   const limit = parseClampedLimit(rawLimit, DEFAULT_ACTIVITY_LIMIT, MAX_ACTIVITY_LIMIT)
   return {
     activity: getRecentActivity(limit),

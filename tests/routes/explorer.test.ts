@@ -33,7 +33,12 @@ describe('explorer routes', () => {
       scoreHistogram: [{ bucket: '70-79', count: 8 }],
     })
     state.getRecentActivity.mockReturnValue([
-      { type: 'registration', wallet: '0x1111111111111111111111111111111111111111', timestamp: '2026-03-12T00:00:00Z', detail: 'New agent registered' },
+      {
+        type: 'registration',
+        wallet: '0x1111111111111111111111111111111111111111',
+        timestamp: '2026-03-12T00:00:00Z',
+        detail: 'New agent registered',
+      },
     ])
     state.explorerDashboardHtml.mockReturnValue('<html><body>Explorer dashboard</body></html>')
   })
@@ -48,9 +53,7 @@ describe('explorer routes', () => {
     const res = await app.request('/explorer')
     expect(res.status).toBe(200)
     expect(res.headers.get('content-type')).toContain('text/html')
-    expect(state.explorerDashboardHtml).toHaveBeenCalledWith(
-      expect.objectContaining({ totalWalletsScored: 42 }),
-    )
+    expect(state.explorerDashboardHtml).toHaveBeenCalledWith(expect.objectContaining({ totalWalletsScored: 42 }))
     expect(await res.text()).toContain('Explorer dashboard')
   })
 

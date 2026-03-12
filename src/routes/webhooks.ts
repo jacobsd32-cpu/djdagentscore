@@ -11,6 +11,7 @@ import {
   getWebhookDetail,
   listAdminWebhooks,
   listWalletWebhookRecords,
+  listWebhookPresets,
   sendTestWebhook,
 } from '../services/webhookService.js'
 import type { AppEnv } from '../types/hono-env.js'
@@ -18,6 +19,15 @@ import type { AppEnv } from '../types/hono-env.js'
 /** Helper to read API key wallet from the context (set by apiKeyAuth middleware on the parent app). */
 function getApiKeyWallet(c: Context): string | null {
   return (c as Context<AppEnv>).get('apiKeyWallet') ?? null
+}
+
+function webhookResponseFields(webhook: { threshold_score?: number | null; forensics_filter?: unknown }) {
+  return {
+    ...(webhook.threshold_score !== null && webhook.threshold_score !== undefined
+      ? { threshold_score: webhook.threshold_score }
+      : {}),
+    ...(webhook.forensics_filter ? { forensics_filter: webhook.forensics_filter } : {}),
+  }
 }
 
 // ---------- Admin routes ----------
@@ -41,6 +51,8 @@ adminWebhooks.post('/', async (c) => {
       secret: webhook.secret,
       events: webhook.events,
       tier: webhook.tier,
+      ...webhookResponseFields(webhook),
+      ...(outcome.presetsApplied.length > 0 ? { presets_applied: outcome.presetsApplied } : {}),
       message,
     },
     201,
@@ -63,6 +75,7 @@ adminWebhooks.get('/', (c) => {
       failure_count: webhook.failure_count,
       last_delivery_at: webhook.last_delivery_at,
       disabled_at: webhook.disabled_at,
+      ...webhookResponseFields(webhook),
     })),
     count: webhooks.length,
   })
@@ -102,6 +115,11 @@ adminWebhooks.post('/:id/test', async (c) => {
 // ---------- Public self-service routes ----------
 const publicWebhooks = new Hono()
 
+publicWebhooks.get('/presets', (c) => {
+  const presets = listWebhookPresets()
+  return c.json({ presets, count: presets.length })
+})
+
 // POST / — Register webhook (authenticated by API key)
 publicWebhooks.post('/', async (c) => {
   const wallet = getApiKeyWallet(c)
@@ -121,6 +139,8 @@ publicWebhooks.post('/', async (c) => {
       url: webhook.url,
       secret: webhook.secret,
       events: webhook.events,
+      ...webhookResponseFields(webhook),
+      ...(outcome.presetsApplied.length > 0 ? { presets_applied: outcome.presetsApplied } : {}),
       message,
     },
     201,
@@ -144,6 +164,7 @@ publicWebhooks.get('/', (c) => {
       created_at: webhook.created_at,
       failure_count: webhook.failure_count,
       last_delivery_at: webhook.last_delivery_at,
+      ...webhookResponseFields(webhook),
     })),
     count: webhooks.length,
   })

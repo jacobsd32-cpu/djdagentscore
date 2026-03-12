@@ -48,6 +48,8 @@ const PAID_ENDPOINT_PRICES: Record<string, string> = {
   '/v1/data/fraud/blacklist': '$0.05',
 }
 
+const CLIENT_HEADER = 'djd-agent-score/1.0.1'
+
 export class DJDAgentScore {
   private readonly baseUrl: string
   private readonly timeoutMs: number
@@ -153,6 +155,7 @@ export class DJDAgentScore {
     const url = `${this.baseUrl}${path}`
     const headers: Record<string, string> = {
       'Accept': 'application/json',
+      'X-DJD-Client': CLIENT_HEADER,
     }
 
     if (body !== undefined) {

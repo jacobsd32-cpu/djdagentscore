@@ -12,6 +12,9 @@ const { testDb } = vi.hoisted(() => {
       secret      TEXT NOT NULL,
       events      TEXT NOT NULL,
       tier        TEXT NOT NULL DEFAULT 'basic',
+      threshold_score INTEGER,
+      forensics_min_risk_level TEXT,
+      forensics_report_reasons TEXT,
       is_active   INTEGER NOT NULL DEFAULT 1,
       created_at  TEXT NOT NULL DEFAULT (datetime('now')),
       failure_count INTEGER NOT NULL DEFAULT 0,
@@ -49,13 +52,36 @@ vi.mock('../../src/db.js', () => ({
     secret: string
     events: string[]
     tier: string
+    thresholdScore?: number | null
+    forensicsFilter?: {
+      minimum_risk_level?: string
+      reasons?: string[]
+    } | null
   }) => {
     const result = testDb
       .prepare(`
-        INSERT INTO webhooks (wallet, url, secret, events, tier)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO webhooks (
+          wallet,
+          url,
+          secret,
+          events,
+          tier,
+          threshold_score,
+          forensics_min_risk_level,
+          forensics_report_reasons
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `)
-      .run(input.wallet, input.url, input.secret, JSON.stringify(input.events), input.tier)
+      .run(
+        input.wallet,
+        input.url,
+        input.secret,
+        JSON.stringify(input.events),
+        input.tier,
+        input.thresholdScore ?? null,
+        input.forensicsFilter?.minimum_risk_level ?? null,
+        input.forensicsFilter?.reasons ? JSON.stringify(input.forensicsFilter.reasons) : null,
+      )
 
     return testDb.prepare('SELECT * FROM webhooks WHERE id = ?').get(Number(result.lastInsertRowid))
   },
@@ -76,14 +102,18 @@ vi.mock('../../src/db.js', () => ({
       .prepare(`UPDATE webhooks SET is_active = 0, disabled_at = datetime('now') WHERE id = ? AND is_active = 1`)
       .run(id).changes > 0,
   countActiveWebhooksForWallet: (wallet: string) =>
-    (testDb.prepare('SELECT COUNT(*) as count FROM webhooks WHERE wallet = ? AND is_active = 1').get(wallet) as {
-      count: number
-    }).count,
+    (
+      testDb.prepare('SELECT COUNT(*) as count FROM webhooks WHERE wallet = ? AND is_active = 1').get(wallet) as {
+        count: number
+      }
+    ).count,
   listWebhooksForWallet: (wallet: string) =>
     testDb.prepare('SELECT * FROM webhooks WHERE wallet = ? ORDER BY created_at DESC').all(wallet),
   deactivateWebhookForWallet: (id: number, wallet: string) =>
     testDb
-      .prepare(`UPDATE webhooks SET is_active = 0, disabled_at = datetime('now') WHERE id = ? AND wallet = ? AND is_active = 1`)
+      .prepare(
+        `UPDATE webhooks SET is_active = 0, disabled_at = datetime('now') WHERE id = ? AND wallet = ? AND is_active = 1`,
+      )
       .run(id, wallet).changes > 0,
 }))
 
@@ -202,6 +232,95 @@ describe('Admin webhook routes', () => {
     expect(res.status).toBe(201)
     const body = await res.json()
     expect(body.tier).toBe('premium')
+  })
+
+  it('stores an explicit threshold score for threshold monitoring', async () => {
+    const app = makeAdminApp()
+    const res = await app.request('/webhooks', {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({
+        wallet: '0xABC123',
+        url: 'https://example.com/hook',
+        events: ['score.threshold'],
+        threshold_score: 75,
+      }),
+    })
+
+    expect(res.status).toBe(201)
+    const body = await res.json()
+    expect(body.threshold_score).toBe(75)
+    expect(body.events).toEqual(['score.threshold'])
+  })
+
+  it('accepts the new forensics monitoring events', async () => {
+    const app = makeAdminApp()
+    const res = await app.request('/webhooks', {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({
+        wallet: '0xABC123',
+        url: 'https://example.com/hook',
+        events: ['fraud.disputed', 'fraud.dispute.resolved', 'forensics.risk.changed'],
+      }),
+    })
+
+    expect(res.status).toBe(201)
+    const body = await res.json()
+    expect(body.events).toEqual(['fraud.disputed', 'fraud.dispute.resolved', 'forensics.risk.changed'])
+  })
+
+  it('creates a webhook from a monitoring preset', async () => {
+    const app = makeAdminApp()
+    const res = await app.request('/webhooks', {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({
+        wallet: '0xABC123',
+        url: 'https://example.com/hook',
+        preset: 'forensics_monitoring',
+      }),
+    })
+
+    expect(res.status).toBe(201)
+    const body = await res.json()
+    expect(body.presets_applied).toEqual(['forensics_monitoring'])
+    expect(body.events).toContain('fraud.reported')
+    expect(body.events).toContain('forensics.risk.changed')
+    expect(body.events).toContain('forensics.watchlist.cleared')
+  })
+
+  it('stores and returns a forensics monitoring filter', async () => {
+    const app = makeAdminApp()
+    const createRes = await app.request('/webhooks', {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({
+        wallet: '0xABC123',
+        url: 'https://example.com/hook',
+        preset: 'forensics_monitoring',
+        forensics_filter: {
+          minimum_risk_level: 'elevated',
+          reasons: ['payment_fraud', 'impersonation'],
+        },
+      }),
+    })
+
+    expect(createRes.status).toBe(201)
+    const created = await createRes.json()
+    expect(created.forensics_filter).toEqual({
+      minimum_risk_level: 'elevated',
+      reasons: ['payment_fraud', 'impersonation'],
+    })
+
+    const listRes = await app.request('/webhooks', {
+      headers: adminHeaders(),
+    })
+    const listBody = await listRes.json()
+    expect(listBody.webhooks[0].forensics_filter).toEqual({
+      minimum_risk_level: 'elevated',
+      reasons: ['payment_fraud', 'impersonation'],
+    })
   })
 
   it('lists webhooks with parsed events array', async () => {
@@ -387,6 +506,46 @@ describe('Admin webhook routes', () => {
     expect(body.error.message).toContain('Invalid events')
   })
 
+  it('returns 400 for an invalid threshold score', async () => {
+    const app = makeAdminApp()
+    const res = await app.request('/webhooks', {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({
+        wallet: '0xABC123',
+        url: 'https://example.com/hook',
+        events: ['score.threshold'],
+        threshold_score: 101,
+      }),
+    })
+
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error.code).toBe('webhook_invalid')
+    expect(body.error.message).toContain('threshold_score')
+  })
+
+  it('returns 400 for an invalid forensics filter', async () => {
+    const app = makeAdminApp()
+    const res = await app.request('/webhooks', {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({
+        wallet: '0xABC123',
+        url: 'https://example.com/hook',
+        preset: 'forensics_monitoring',
+        forensics_filter: {
+          minimum_risk_level: 'severe',
+        },
+      }),
+    })
+
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error.code).toBe('webhook_invalid')
+    expect(body.error.message).toContain('minimum_risk_level')
+  })
+
   it('returns 400 for empty events array', async () => {
     const app = makeAdminApp()
     const res = await app.request('/webhooks', {
@@ -455,6 +614,29 @@ describe('Public webhook routes', () => {
     vi.unstubAllGlobals()
   })
 
+  it('lists available webhook presets without requiring an API key', async () => {
+    const app = makePublicApp(null)
+    const res = await app.request('/v1/webhooks/presets')
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.count).toBeGreaterThanOrEqual(1)
+    expect(body.presets).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'anomaly_monitoring',
+        }),
+        expect.objectContaining({
+          name: 'forensics_monitoring',
+        }),
+        expect.objectContaining({
+          name: 'score_monitoring',
+          threshold_score_default: 60,
+        }),
+      ]),
+    )
+  })
+
   it('requires an API key wallet to create a webhook', async () => {
     const app = makePublicApp(null)
     const res = await app.request('/v1/webhooks', {
@@ -479,7 +661,7 @@ describe('Public webhook routes', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         url: 'https://example.com/public-hook',
-        events: ['score.updated', 'score.expired'],
+        preset: 'score_monitoring',
       }),
     })
 
@@ -487,14 +669,17 @@ describe('Public webhook routes', () => {
     const created = await createRes.json()
     expect(created.url).toBe('https://example.com/public-hook')
     expect(created.secret).toHaveLength(64)
-    expect(created.events).toEqual(['score.updated', 'score.expired'])
+    expect(created.presets_applied).toEqual(['score_monitoring'])
+    expect(created.events).toEqual(['score.updated', 'score.expired', 'score.threshold'])
+    expect(created.threshold_score).toBe(60)
 
     const listRes = await app.request('/v1/webhooks')
     expect(listRes.status).toBe(200)
     const listBody = await listRes.json()
     expect(listBody.count).toBe(1)
     expect(listBody.webhooks[0].url).toBe('https://example.com/public-hook')
-    expect(listBody.webhooks[0].events).toEqual(['score.updated', 'score.expired'])
+    expect(listBody.webhooks[0].events).toEqual(['score.updated', 'score.expired', 'score.threshold'])
+    expect(listBody.webhooks[0].threshold_score).toBe(60)
     expect(listBody.webhooks[0].wallet).toBeUndefined()
     expect(listBody.webhooks[0].secret).toBeUndefined()
 
@@ -503,6 +688,60 @@ describe('Public webhook routes', () => {
     })
     expect(deleteRes.status).toBe(200)
     expect(await deleteRes.json()).toEqual({ success: true })
+  })
+
+  it('creates a public forensics-monitoring webhook with a filter', async () => {
+    const app = makePublicApp()
+
+    const createRes = await app.request('/v1/webhooks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        preset: 'forensics_monitoring',
+        url: 'https://example.com/public-forensics-hook',
+        forensics_filter: {
+          minimum_risk_level: 'watch',
+          reasons: ['payment_fraud'],
+        },
+      }),
+    })
+
+    expect(createRes.status).toBe(201)
+    const created = await createRes.json()
+    expect(created.forensics_filter).toEqual({
+      minimum_risk_level: 'watch',
+      reasons: ['payment_fraud'],
+    })
+
+    const listRes = await app.request('/v1/webhooks')
+    const listBody = await listRes.json()
+    expect(listBody.webhooks[0].forensics_filter).toEqual({
+      minimum_risk_level: 'watch',
+      reasons: ['payment_fraud'],
+    })
+  })
+
+  it('creates a public anomaly-monitoring webhook from the managed preset', async () => {
+    const app = makePublicApp()
+
+    const createRes = await app.request('/v1/webhooks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        preset: 'anomaly_monitoring',
+        url: 'https://example.com/public-anomaly-hook',
+      }),
+    })
+
+    expect(createRes.status).toBe(201)
+    const created = await createRes.json()
+    expect(created.presets_applied).toEqual(['anomaly_monitoring'])
+    expect(created.events).toEqual([
+      'anomaly.score_drop',
+      'anomaly.score_spike',
+      'anomaly.balance_freefall',
+      'anomaly.sybil_flagged',
+    ])
   })
 
   it('enforces the active webhook limit per wallet', async () => {

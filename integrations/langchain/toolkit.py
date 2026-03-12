@@ -35,7 +35,7 @@ class AgentScoreToolkit(BaseToolkit):
     ----------
     api_key : str, optional
         API key for paid endpoints (``/v1/score/full``).  Free endpoints
-        work without a key.  Get one at https://djd-agent-score.fly.dev/billing/plans.
+        work without a key.  Get one at https://djdagentscore.dev/billing/plans.
     base_url : str
         Override the API base URL (useful for local dev or self-hosted instances).
     request_timeout : float

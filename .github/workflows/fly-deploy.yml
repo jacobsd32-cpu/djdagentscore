@@ -19,14 +19,56 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            packages/djd-agent-score-client/package-lock.json
+            packages/djd-agent-score-mcp/package-lock.json
+            packages/x402-agent-score/package-lock.json
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
 
+  package-test:
+    name: Verify package surfaces
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - path: packages/djd-agent-score-client
+            install: npm ci
+            verify: npm run typecheck && npm run build && npm pack --dry-run
+          - path: packages/djd-agent-score-mcp
+            install: npm ci
+            verify: npm run typecheck && npm test && npm run build && npm pack --dry-run
+          - path: packages/x402-agent-score
+            install: npm ci
+            verify: npm run typecheck && npm test && npm run build && npm pack --dry-run
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.GH_PAT }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            packages/djd-agent-score-client/package-lock.json
+            packages/djd-agent-score-mcp/package-lock.json
+            packages/x402-agent-score/package-lock.json
+      - run: ${{ matrix.install }}
+        working-directory: ${{ matrix.path }}
+      - run: ${{ matrix.verify }}
+        working-directory: ${{ matrix.path }}
+
   deploy:
     name: Deploy app
-    needs: test
+    needs:
+      - test
+      - package-test
     runs-on: ubuntu-latest
     concurrency: deploy-group
     steps:

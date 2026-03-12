@@ -44,7 +44,7 @@ export function getPublicClient(): Client {
       ),
     })
   }
-  // @ts-expect-error — dual viem type copies (direct + x402-hono transitive) create nominal mismatch
+  // @ts-expect-error — dual viem type copies (direct + @x402/hono transitive) create nominal mismatch
   return _publicClient
 }
 

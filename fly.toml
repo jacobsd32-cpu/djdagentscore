@@ -11,6 +11,9 @@ primary_region = 'ewr'
   FACILITATOR_URL = "https://facilitator.openx402.ai"
   BASE_RPC_URL = "https://base-mainnet.public.blastapi.io"
   FACILITATOR_ADDRESS = "0x97316FA4730BC7d3B295234F8e4D04a0a4C093e8"
+  PUBLIC_BASE_URL = "https://djdagentscore.dev"
+  PUBLIC_SUPPORT_EMAIL = "feedback@djdagentscore.dev"
+  ENABLE_USDC_INDEXER = "false"
 
 [mounts]
   source = "djd_agent_score_data"
@@ -25,12 +28,12 @@ primary_region = 'ewr'
   processes = ["app"]
 
   [[http_service.checks]]
-    interval = "30s"
-    timeout = "10s"
-    grace_period = "60s"
+    interval = "60s"
+    timeout = "25s"
+    grace_period = "120s"
     method = "GET"
     path = "/health"
-    threshold = 3
+    threshold = 5
 
 [[vm]]
   memory = "2gb"

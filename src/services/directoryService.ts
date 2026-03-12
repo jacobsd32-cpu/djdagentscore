@@ -1,15 +1,8 @@
-import {
-  countCachedScores,
-  countRegisteredAgents,
-  getLeaderboard,
-  getScore,
-  listReportsByTarget,
-} from '../db.js'
+import { countCachedScores, countRegisteredAgents, getLeaderboard, getScore } from '../db.js'
 import { ErrorCodes } from '../errors.js'
 import { log } from '../logger.js'
 import type { LeaderboardEntry, LeaderboardResponse, Tier } from '../types.js'
 import { makeBadge, TIER_COLORS } from '../utils/badgeGenerator.js'
-import { normalizeWallet } from '../utils/walletUtils.js'
 
 interface DirectoryServiceError {
   ok: false
@@ -59,45 +52,7 @@ export function getLeaderboardSnapshot(): LeaderboardResponse {
   }
 }
 
-export function getFraudBlacklistStatus(
-  rawWallet: string | undefined,
-): DirectoryServiceResult<{
-  wallet: `0x${string}`
-  reported: boolean
-  reportCount: number
-  mostRecentDate: string | null
-  reasons: string[]
-  disputeStatus: 'none'
-}> {
-  const wallet = normalizeWallet(rawWallet)
-  if (!wallet) {
-    return {
-      ok: false,
-      code: ErrorCodes.INVALID_WALLET,
-      message: 'Invalid or missing wallet address',
-      status: 400,
-    }
-  }
-
-  const reports = listReportsByTarget(wallet)
-  const reasons = [...new Set(reports.map((report) => report.reason))]
-
-  return {
-    ok: true,
-    data: {
-      wallet,
-      reported: reports.length > 0,
-      reportCount: reports.length,
-      mostRecentDate: reports[0]?.created_at ?? null,
-      reasons,
-      disputeStatus: 'none',
-    },
-  }
-}
-
-export function getScoreBadge(
-  filename: string,
-): DirectoryServiceResult<{
+export function getScoreBadge(filename: string): DirectoryServiceResult<{
   svg: string
   color: string
   score: number | null
