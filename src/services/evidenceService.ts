@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid'
 import { REPORT_CONFIG } from '../config/constants.js'
 import {
+  adjustScoreByStakeBoost,
   applyReportPenalty,
   countDistinctReportersByTarget,
   countForensicsFeed,
@@ -19,6 +20,7 @@ import {
   listForensicsWatchlist,
   listFraudReportsByTarget,
   listScoreHistory,
+  slashActiveCreatorStakesForAgent,
   sumFraudPenaltyByTarget,
 } from '../db.js'
 import { ErrorCodes } from '../errors.js'
@@ -454,6 +456,10 @@ export async function submitFraudReport(
   })
 
   applyReportPenalty(target, PENALTY_PER_REPORT)
+  const slashedStakes = slashActiveCreatorStakesForAgent(target, reportId)
+  if (slashedStakes.total_score_boost > 0) {
+    adjustScoreByStakeBoost(target, -slashedStakes.total_score_boost)
+  }
   const currentState = getForensicsSignalSnapshot(target)
 
   const updatedRow = getScore(target)
@@ -466,6 +472,9 @@ export async function submitFraudReport(
     reason: body.reason,
     reportReason: body.reason,
     penaltyApplied: PENALTY_PER_REPORT,
+    creatorStakeCountSlashed: slashedStakes.stake_count,
+    creatorStakeAmountSlashed: slashedStakes.total_stake_amount,
+    creatorStakeBoostRemoved: slashedStakes.total_score_boost,
     targetCurrentScore,
     riskLevel: currentState.riskLevel,
     currentRiskLevel: currentState.riskLevel,

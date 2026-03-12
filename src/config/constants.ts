@@ -13,11 +13,19 @@ import { buildPublicUrl } from './public.js'
 /** Maps API path → price in USDC. Used by both x402 middleware and query logger. */
 export const ENDPOINT_PRICING: Record<string, number> = {
   '/v1/score/full': 0.1,
+  '/v1/score/risk': 0.5,
   '/v1/score/refresh': 0.25,
   '/v1/report': 0.02,
+  '/v1/rate': 0.01,
   '/v1/data/fraud/blacklist': 0.05,
   '/v1/data/decay': 0.15,
   '/v1/data/graph': 0.2,
+  '/v1/data/intent': 0.25,
+  '/v1/data/ratings': 0.1,
+  '/v1/data/economy/summary': 0.1,
+  '/v1/data/economy/volume': 0.1,
+  '/v1/data/economy/survival': 0.15,
+  '/v1/cluster': 0.15,
   '/v1/score/batch': 0.5,
   '/v1/score/history': 0.15,
   '/v1/forensics/summary': 0.1,
@@ -49,6 +57,28 @@ export const REPORT_CONFIG = {
   MAX_REPORTS_PER_PAIR: 3,
   /** Max characters for report details field */
   MAX_DETAILS_LENGTH: 1000,
+} as const
+
+export const RATING_CONFIG = {
+  /** Max characters for optional rating comments */
+  MAX_COMMENT_LENGTH: 500,
+} as const
+
+export const STAKING_CONFIG = {
+  /** Minimum creator stake amount accepted for a trust signal */
+  MIN_STAKE_AMOUNT_USDC: 10,
+  /** DJD protocol fee charged on each creator stake */
+  PLATFORM_FEE_RATE: 0.01,
+  /** Floating-point tolerance when validating 1% fee transfers */
+  FEE_EPSILON_USDC: 0.000001,
+  /** Per-stake score boosts — intentionally modest so staking complements, not dominates, behavior data */
+  BOOST_BREAKPOINTS: [
+    { minAmount: 1000, boost: 5 },
+    { minAmount: 500, boost: 4 },
+    { minAmount: 250, boost: 3 },
+    { minAmount: 50, boost: 2 },
+    { minAmount: 10, boost: 1 },
+  ] as const,
 } as const
 
 // ── Rate Limiting ───────────────────────────────────────────────────────────

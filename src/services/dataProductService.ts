@@ -1,7 +1,10 @@
 import {
   countScoreDecay,
+  getIntentSummaryByTarget,
+  getIntentTierBreakdownByTarget,
   getRelationshipGraphSummary,
   getScore,
+  listIntentSignalsByTarget,
   listRelationshipCounterparties,
   listScoreDecay,
 } from '../db.js'
@@ -14,6 +17,8 @@ const DEFAULT_DECAY_LIMIT = 50
 const MAX_DECAY_LIMIT = 100
 const DEFAULT_GRAPH_LIMIT = 25
 const MAX_GRAPH_LIMIT = 100
+const DEFAULT_INTENT_LIMIT = 25
+const MAX_INTENT_LIMIT = 100
 
 interface DataProductServiceError {
   ok: false
@@ -46,6 +51,11 @@ interface DecayParams {
 }
 
 interface GraphParams {
+  rawWallet: string | undefined
+  limit: string | undefined
+}
+
+interface IntentParams {
   rawWallet: string | undefined
   limit: string | undefined
 }
@@ -267,6 +277,93 @@ export function getRelationshipGraphView(params: GraphParams): DataProductServic
       count: summary.counterparty_count,
       returned: rows.length,
       summary,
+    },
+  }
+}
+
+export function getIntentSignalsView(params: IntentParams): DataProductServiceResult<{
+  wallet: Address
+  current_score: number | null
+  current_tier: string | null
+  summary: {
+    intent_count: number
+    conversions: number
+    conversion_rate: number
+    avg_time_to_tx_ms: number | null
+    avg_time_to_tx_hours: number | null
+    most_recent_query_at: string | null
+    most_recent_conversion_at: string | null
+  }
+  by_tier: Array<{
+    tier_requested: string
+    count: number
+    conversions: number
+    conversion_rate: number
+  }>
+  intents: Array<{
+    counterparty_wallet: Address
+    query_timestamp: string
+    followed_by_tx: boolean
+    tx_hash: string | null
+    tx_timestamp: string | null
+    time_to_tx_ms: number | null
+    endpoint: string | null
+    tier_requested: string | null
+    price_paid: number | null
+  }>
+  count: number
+  returned: number
+}> {
+  const wallet = parseWallet(params.rawWallet)
+  if (isServiceError(wallet)) return wallet
+
+  const summary = getIntentSummaryByTarget(wallet)
+  if (summary.intent_count === 0) {
+    return notFoundError('No intent data found for this wallet')
+  }
+
+  const limit = parseClampedLimit(params.limit, DEFAULT_INTENT_LIMIT, MAX_INTENT_LIMIT)
+  const rows = listIntentSignalsByTarget(wallet, { limit })
+  const tierBreakdown = getIntentTierBreakdownByTarget(wallet)
+  const score = getScore(wallet)
+
+  return {
+    ok: true,
+    data: {
+      wallet,
+      current_score: score?.composite_score ?? null,
+      current_tier: score?.tier ?? null,
+      summary: {
+        intent_count: summary.intent_count,
+        conversions: summary.conversions,
+        conversion_rate: summary.conversion_rate,
+        avg_time_to_tx_ms: summary.avg_time_to_tx_ms,
+        avg_time_to_tx_hours:
+          summary.avg_time_to_tx_ms !== null
+            ? Math.round((summary.avg_time_to_tx_ms / 3_600_000) * 100) / 100
+            : null,
+        most_recent_query_at: summary.most_recent_query_at,
+        most_recent_conversion_at: summary.most_recent_conversion_at,
+      },
+      by_tier: tierBreakdown.map((row) => ({
+        tier_requested: row.tier_requested,
+        count: row.count,
+        conversions: row.conversions,
+        conversion_rate: row.count > 0 ? Math.round((row.conversions * 1000) / row.count) / 10 : 0,
+      })),
+      intents: rows.map((row) => ({
+        counterparty_wallet: row.requester_wallet as Address,
+        query_timestamp: row.query_timestamp,
+        followed_by_tx: row.followed_by_tx === 1,
+        tx_hash: row.tx_hash,
+        tx_timestamp: row.tx_timestamp,
+        time_to_tx_ms: row.time_to_tx_ms,
+        endpoint: row.endpoint,
+        tier_requested: row.tier_requested,
+        price_paid: row.price_paid,
+      })),
+      count: summary.intent_count,
+      returned: rows.length,
     },
   }
 }
