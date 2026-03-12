@@ -1,0 +1,3 @@
+company_or_project,contact_name,channel,link,use_case,stack,priority,status,last_contacted,notes
+Example x402 API,Founder X,X/Twitter,https://example.com,paid endpoint,Hono + x402,high,not-started,,
+Example agent tool,Founder Y,Farcaster,https://example.com,agent payments,Base wallet,high,not-started,,

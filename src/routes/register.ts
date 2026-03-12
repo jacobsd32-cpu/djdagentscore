@@ -1,97 +1,13 @@
 import { Hono } from 'hono'
-import { getRegistration, updateGithubVerification, upsertRegistration } from '../db.js'
 import { ErrorCodes, errorResponse } from '../errors.js'
-import { queueWebhookEvent } from '../jobs/webhookDelivery.js'
-import { log } from '../logger.js'
-import type { Address, AgentRegistrationBody, AgentRegistrationResponse } from '../types.js'
+import {
+  getRegistrationResponse,
+  isValidHttpsUrl,
+  registerAgent,
+  syncGithubVerification,
+} from '../services/registrationService.js'
+import type { AgentRegistrationBody } from '../types.js'
 import { normalizeWallet } from '../utils/walletUtils.js'
-
-function isValidUrl(url: string): boolean {
-  try {
-    const u = new URL(url)
-    return u.protocol === 'https:'
-  } catch {
-    return false
-  }
-}
-
-/**
- * Parse a GitHub URL and return { owner, repo } or null if not a valid GitHub repo URL.
- * Accepts: https://github.com/owner/repo  (with or without .git)
- */
-function parseGithubUrl(url: string): { owner: string; repo: string } | null {
-  try {
-    const u = new URL(url)
-    if (u.hostname !== 'github.com') return null
-    const parts = u.pathname
-      .replace(/\.git$/, '')
-      .split('/')
-      .filter(Boolean)
-    if (parts.length < 2) return null
-    return { owner: parts[0], repo: parts[1] }
-  } catch {
-    return null
-  }
-}
-
-/**
- * Verify a GitHub repo exists and is public.
- * Returns null if the repo doesn't exist or the request fails.
- */
-async function verifyGithubRepo(owner: string, repo: string): Promise<{ stars: number; pushedAt: string } | null> {
-  try {
-    const headers: Record<string, string> = {
-      Accept: 'application/vnd.github+json',
-      'User-Agent': 'djd-agent-score/1.0',
-    }
-    if (process.env.GITHUB_TOKEN) {
-      headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
-    }
-
-    const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-      headers,
-      signal: AbortSignal.timeout(10_000), // 10s timeout
-    })
-
-    if (!resp.ok) return null // 404 = doesn't exist, 403 = private
-
-    const data = (await resp.json()) as {
-      private: boolean
-      stargazers_count: number
-      pushed_at: string
-    }
-
-    if (data.private) return null // private repo doesn't count
-
-    return {
-      stars: data.stargazers_count ?? 0,
-      pushedAt: data.pushed_at,
-    }
-  } catch {
-    return null
-  }
-}
-
-/**
- * Fire-and-forget GitHub verification. Runs after the HTTP response is sent.
- * Updates the DB with verification results.
- */
-async function verifyAndStoreGithub(wallet: string, githubUrl: string): Promise<void> {
-  const parsed = parseGithubUrl(githubUrl)
-  if (!parsed) {
-    updateGithubVerification(wallet, false, null, null)
-    return
-  }
-
-  const result = await verifyGithubRepo(parsed.owner, parsed.repo)
-  if (result) {
-    updateGithubVerification(wallet, true, result.stars, result.pushedAt)
-    log.info('register', `GitHub verified: ${wallet} → ${parsed.owner}/${parsed.repo} (${result.stars}★)`)
-  } else {
-    updateGithubVerification(wallet, false, null, null)
-    log.warn('register', `GitHub not verified: ${wallet} → ${githubUrl}`)
-  }
-}
 
 const register = new Hono()
 
@@ -102,22 +18,9 @@ register.get('/', (c) => {
     return c.json(errorResponse(ErrorCodes.INVALID_WALLET, 'Invalid or missing wallet address'), 400)
   }
 
-  const row = getRegistration(wallet)
-  if (!row) {
+  const response = getRegistrationResponse(wallet)
+  if (!response) {
     return c.json(errorResponse(ErrorCodes.WALLET_NOT_FOUND, 'Wallet not registered'), 404)
-  }
-
-  const response: AgentRegistrationResponse = {
-    wallet: row.wallet as Address,
-    status: 'registered',
-    registeredAt: row.registered_at,
-    name: row.name,
-    description: row.description,
-    github_url: row.github_url,
-    website_url: row.website_url,
-    github_verified: row.github_verified === 1,
-    github_stars: row.github_stars ?? null,
-    github_pushed_at: row.github_pushed_at ?? null,
   }
 
   return c.json(response)
@@ -145,61 +48,28 @@ register.post('/', async (c) => {
   if (description !== undefined && typeof description !== 'string') {
     return c.json(errorResponse(ErrorCodes.INVALID_REGISTRATION, 'description must be a string'), 400)
   }
-  if (github_url !== undefined && !isValidUrl(github_url)) {
+  if (github_url !== undefined && !isValidHttpsUrl(github_url)) {
     return c.json(errorResponse(ErrorCodes.INVALID_REGISTRATION, 'github_url must be a valid HTTPS URL'), 400)
   }
-  if (website_url !== undefined && !isValidUrl(website_url)) {
+  if (website_url !== undefined && !isValidHttpsUrl(website_url)) {
     return c.json(errorResponse(ErrorCodes.INVALID_REGISTRATION, 'website_url must be a valid HTTPS URL'), 400)
   }
-  const existing = getRegistration(normalizedWallet)
-  const isNew = !existing
 
-  const newGithubUrl = github_url !== undefined ? (github_url?.slice(0, 200) ?? null) : (existing?.github_url ?? null)
-  const githubUrlChanged = newGithubUrl !== (existing?.github_url ?? null)
-
-  // Merge: omitted fields retain existing values; explicit null/empty clears them
-  upsertRegistration({
+  const result = registerAgent({
     wallet: normalizedWallet,
-    name: name !== undefined ? (name?.trim().slice(0, 100) ?? null) : (existing?.name ?? null),
-    description:
-      description !== undefined ? (description?.trim().slice(0, 500) ?? null) : (existing?.description ?? null),
-    github_url: newGithubUrl,
-    website_url: website_url !== undefined ? (website_url?.slice(0, 200) ?? null) : (existing?.website_url ?? null),
+    name,
+    description,
+    github_url,
+    website_url,
   })
 
-  const row = getRegistration(normalizedWallet)!
-
-  // Kick off GitHub verification asynchronously (doesn't block the response).
-  // Trigger on: new registration, URL changed, or never verified yet.
-  const neverVerified = !row.github_verified_at
-  if (newGithubUrl && (isNew || githubUrlChanged || neverVerified)) {
-    verifyAndStoreGithub(normalizedWallet, newGithubUrl).catch(() => {
+  if (result.githubUrlToVerify) {
+    syncGithubVerification(normalizedWallet, result.githubUrlToVerify).catch(() => {
       /* ignore */
     })
   }
 
-  const response: AgentRegistrationResponse = {
-    wallet: normalizedWallet as Address,
-    status: isNew ? 'registered' : 'updated',
-    registeredAt: row.registered_at,
-    name: row.name,
-    description: row.description,
-    github_url: row.github_url,
-    website_url: row.website_url,
-    github_verified: row.github_verified === 1,
-    github_stars: row.github_stars ?? null,
-    github_pushed_at: row.github_pushed_at ?? null,
-  }
-
-  queueWebhookEvent('agent.registered', {
-    wallet: normalizedWallet,
-    status: isNew ? 'registered' : 'updated',
-    registeredAt: row.registered_at,
-    name: row.name ?? null,
-    github_url: row.github_url ?? null,
-  })
-
-  return c.json(response, isNew ? 201 : 200)
+  return c.json(result.response, result.httpStatus)
 })
 
 export default register

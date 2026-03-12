@@ -44,7 +44,7 @@ export function getPublicClient(): Client {
       ),
     })
   }
-  // @ts-expect-error — dual viem type copies (direct + x402-hono transitive) create nominal mismatch
+  // @ts-expect-error — dual viem type copies (direct + @x402/hono transitive) create nominal mismatch
   return _publicClient
 }
 
@@ -246,13 +246,6 @@ export async function checkERC8004Registration(wallet: `0x${string}`): Promise<b
  */
 export async function getCurrentBlock(): Promise<bigint> {
   return getPublicClient().getBlockNumber()
-}
-
-/** Convert raw USDC units (6 decimals) to a USD dollar string, e.g. "12.50" */
-export function usdcToUsd(raw: bigint): string {
-  const whole = raw / 1_000_000n
-  const frac = raw % 1_000_000n
-  return `${whole}.${frac.toString().padStart(6, '0').slice(0, 2)}`
 }
 
 /** Convert raw USDC units to a float */

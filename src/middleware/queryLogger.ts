@@ -9,10 +9,12 @@ import { ENDPOINT_PRICING } from '../config/constants.js'
 import { insertQueryLog } from '../db.js'
 import { log } from '../logger.js'
 import { incHttpRequest } from '../metrics.js'
+import { parsePackageClientHeader, trackGrowthEventSafe } from '../services/growthService.js'
 import { getPayerWallet } from '../utils/paymentUtils.js'
 
 const FREE_ENDPOINTS = new Set([
   '/health',
+  '/v1/analytics/event',
   '/v1/leaderboard',
   '/v1/score/basic',
   '/v1/badge',
@@ -24,6 +26,9 @@ const FREE_ENDPOINTS = new Set([
   '/v1/certification',        // GET check is free
   '/v1/certification/badge',  // SVG badge is free
   '/v1/webhooks',             // webhook management is free (paid via subscription)
+  '/v1/webhooks/presets',
+  '/v1/monitor',              // monitoring management is free (paid via subscription)
+  '/v1/monitor/presets',
   '/billing/checkout',        // Stripe billing — self-service
   '/billing/success',
   '/billing/plans',
@@ -32,6 +37,11 @@ const FREE_ENDPOINTS = new Set([
   '/pricing',                 // Pricing page
 ])
 
+const FREE_ENDPOINT_PREFIXES = [
+  '/v1/webhooks/',
+  '/v1/monitor/',
+]
+
 function tierFromEndpoint(endpoint: string): string {
   if (endpoint.includes('/score/basic')) return 'basic'
   if (endpoint.includes('/score/full')) return 'full'
@@ -39,6 +49,11 @@ function tierFromEndpoint(endpoint: string): string {
   if (endpoint.includes('/score/batch')) return 'batch'
   if (endpoint.includes('/score/history')) return 'history'
   if (endpoint.includes('/certification/apply')) return 'certification'
+  if (endpoint.includes('/data/decay')) return 'decay'
+  if (endpoint.includes('/data/graph')) return 'graph'
+  if (endpoint.includes('/data/economy')) return 'economy'
+  if (endpoint.includes('/forensics/')) return 'forensics'
+  if (endpoint.includes('/monitor')) return 'monitoring'
   if (endpoint.includes('/report')) return 'report'
   if (endpoint.includes('/blacklist')) return 'fraud'
   return 'free'
@@ -57,7 +72,9 @@ export const queryLoggerMiddleware: MiddlewareHandler = async (c, next) => {
   try {
     const path = c.req.path
     const pricePaid = ENDPOINT_PRICING[path] ?? 0
-    const isFreeEndpoint = FREE_ENDPOINTS.has(path) ? 1 : 0
+    const isFreeEndpoint = FREE_ENDPOINTS.has(path) || FREE_ENDPOINT_PREFIXES.some((prefix) => path.startsWith(prefix))
+      ? 1
+      : 0
     // freeTier middleware sets this context variable for free-tier basic lookups
     const isFreeByQuota = c.get('freeTier') ? 1 : 0
     const isFreeTier = isFreeEndpoint || isFreeByQuota
@@ -98,6 +115,23 @@ export const queryLoggerMiddleware: MiddlewareHandler = async (c, next) => {
       is_free_tier: isFreeTier,
       timestamp: new Date().toISOString(),
     })
+
+    const packageClient = parsePackageClientHeader(c.req.header('x-djd-client'))
+    if (packageClient && httpStatus >= 200 && httpStatus < 500) {
+      trackGrowthEventSafe({
+        event: 'package_request',
+        source: 'server',
+        wallet: requesterWallet,
+        packageName: packageClient.packageName,
+        userAgent: c.req.header('user-agent') ?? null,
+        metadata: {
+          endpoint: path,
+          version: packageClient.version,
+          responseSource,
+          status: httpStatus,
+        },
+      })
+    }
   } catch (err) {
     // Never let logging failure affect the response
     log.error('queryLogger', 'Failed to log', { requestId, error: err })

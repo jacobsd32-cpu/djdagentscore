@@ -27,7 +27,7 @@ from pydantic import BaseModel, Field
 # Defaults
 # ---------------------------------------------------------------------------
 
-DEFAULT_BASE_URL = "https://djd-agent-score.fly.dev"
+DEFAULT_BASE_URL = "https://djdagentscore.dev"
 DEFAULT_TIMEOUT = 30.0  # seconds
 
 

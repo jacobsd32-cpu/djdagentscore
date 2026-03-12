@@ -11,10 +11,23 @@
 
 import type Database from 'better-sqlite3'
 import type Stripe from 'stripe'
+import crypto from 'node:crypto'
+import {
+  cancelSubscription,
+  findProvisionedSubscriptionBySessionId,
+  findSubscriptionBySessionId,
+  insertProvisionedSubscription,
+  pruneExpiredPendingKeyRecords,
+  storePendingKeyRecord,
+  consumePendingKeyRecord,
+  updateSubscriptionStatus,
+} from './billingStore.js'
 import { BILLING_PLANS, type BillingPlan } from '../config/plans.js'
+import { getPublicBaseUrl } from '../config/public.js'
 import { db as defaultDb } from '../db.js'
 import { log } from '../logger.js'
-import { generateApiKey, hashKey, keyPrefix } from '../utils/apiKeyUtils.js'
+import { prepareApiKeyProvisioning } from '../services/apiKeyService.js'
+import { trackGrowthEventSafe } from '../services/growthService.js'
 import { getStripe } from './stripeClient.js'
 
 // ── Checkout Session ──────────────────────────────────────────────
@@ -30,7 +43,7 @@ export async function createCheckoutSession(planId: string, email?: string): Pro
 
   const stripe = getStripe()
 
-  const baseUrl = process.env.BILLING_BASE_URL ?? 'https://djd-agent-score.fly.dev'
+  const baseUrl = getPublicBaseUrl()
 
   const params: Stripe.Checkout.SessionCreateParams = {
     mode: 'subscription',
@@ -76,11 +89,7 @@ export function provisionApiKey(
   db: Database.Database = defaultDb,
 ): ProvisionResult {
   // Idempotency check — already provisioned?
-  const existing = db
-    .prepare(
-      'SELECT api_key_id, plan FROM subscriptions WHERE stripe_checkout_session_id = ? AND api_key_id IS NOT NULL',
-    )
-    .get(sessionId) as { api_key_id: number; plan: string } | undefined
+  const existing = findProvisionedSubscriptionBySessionId(db, sessionId)
 
   if (existing) {
     log.info('billing', `Checkout already provisioned: ${sessionId}`)
@@ -88,55 +97,45 @@ export function provisionApiKey(
     return { apiKeyId: existing.api_key_id, rawKey: '', plan: existing.plan }
   }
 
-  const rawKey = generateApiKey()
-  const hash = hashKey(rawKey)
-  const prefix = keyPrefix(rawKey)
-
   // Use a "billing" wallet placeholder — Stripe customers don't have wallets
   const wallet = `stripe:${customerId}`
-
-  const nextReset = new Date()
-  nextReset.setMonth(nextReset.getMonth() + 1)
-  nextReset.setDate(1)
-  nextReset.setHours(0, 0, 0, 0)
-
-  const provision = db.transaction(() => {
-    // 1. Insert API key
-    const keyResult = db
-      .prepare(`
-        INSERT INTO api_keys (key_hash, key_prefix, wallet, name, tier, monthly_limit, usage_reset_at, stripe_customer_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `)
-      .run(
-        hash,
-        prefix,
-        wallet,
-        `${plan.name} Plan (${email ?? 'no email'})`,
-        plan.id,
-        plan.monthlyLimit,
-        nextReset.toISOString(),
-        customerId,
-      )
-
-    const apiKeyId = Number(keyResult.lastInsertRowid)
-
-    // 2. Insert subscription record
-    db.prepare(`
-      INSERT INTO subscriptions (stripe_customer_id, stripe_subscription_id, stripe_checkout_session_id, email, plan, status, api_key_id)
-      VALUES (?, ?, ?, ?, ?, 'active', ?)
-    `).run(customerId, subscriptionId, sessionId, email, plan.id, apiKeyId)
-
-    return apiKeyId
+  const provisioned = prepareApiKeyProvisioning({
+    wallet,
+    name: `${plan.name} Plan (${email ?? 'no email'})`,
+    tier: plan.id,
+    monthlyLimit: plan.monthlyLimit,
+    stripeCustomerId: customerId,
   })
 
-  const apiKeyId = provision()
+  const apiKeyId = insertProvisionedSubscription(db, {
+    apiKey: provisioned.insertInput,
+    subscription: {
+      stripe_customer_id: customerId,
+      stripe_subscription_id: subscriptionId,
+      stripe_checkout_session_id: sessionId,
+      email,
+      plan: plan.id,
+    },
+  })
 
   log.info(
     'billing',
     `API key provisioned: session=${sessionId} customer=${customerId} plan=${plan.id} keyId=${apiKeyId}`,
   )
 
-  return { apiKeyId, rawKey, plan: plan.id }
+  trackGrowthEventSafe({
+    event: 'api_key_created',
+    source: 'server',
+    page: '/billing/success',
+    metadata: {
+      tier: plan.id,
+      monthlyLimit: plan.monthlyLimit,
+      source: 'stripe',
+      customerId,
+    },
+  })
+
+  return { apiKeyId, rawKey: provisioned.rawKey, plan: plan.id }
 }
 
 // ── Subscription Lifecycle ────────────────────────────────────────
@@ -150,11 +149,7 @@ export function handleSubscriptionUpdate(
   currentPeriodEnd: string | null,
   db: Database.Database = defaultDb,
 ): void {
-  db.prepare(`
-    UPDATE subscriptions
-    SET status = ?, current_period_end = ?
-    WHERE stripe_subscription_id = ?
-  `).run(status, currentPeriodEnd, subscriptionId)
+  updateSubscriptionStatus(db, subscriptionId, status, currentPeriodEnd)
 
   log.info('billing', `Subscription updated: ${subscriptionId} → ${status}`)
 }
@@ -163,32 +158,13 @@ export function handleSubscriptionUpdate(
  * Handle subscription cancellation — deactivate the API key.
  */
 export function handleSubscriptionCanceled(subscriptionId: string, db: Database.Database = defaultDb): void {
-  const sub = db.prepare('SELECT api_key_id FROM subscriptions WHERE stripe_subscription_id = ?').get(subscriptionId) as
-    | { api_key_id: number | null }
-    | undefined
-
-  if (!sub) {
+  const result = cancelSubscription(db, subscriptionId)
+  if (!result.found) {
     log.warn('billing', 'Canceled subscription not found', { subscriptionId })
     return
   }
 
-  const cancel = db.transaction(() => {
-    // Deactivate API key
-    if (sub.api_key_id) {
-      db.prepare('UPDATE api_keys SET is_active = 0, revoked_at = datetime("now") WHERE id = ?').run(sub.api_key_id)
-    }
-
-    // Mark subscription canceled
-    db.prepare(`
-      UPDATE subscriptions
-      SET status = 'canceled', canceled_at = datetime('now')
-      WHERE stripe_subscription_id = ?
-    `).run(subscriptionId)
-  })
-
-  cancel()
-
-  log.info('billing', `Subscription canceled, key deactivated: ${subscriptionId} keyId=${sub.api_key_id}`)
+  log.info('billing', `Subscription canceled, key deactivated: ${subscriptionId} keyId=${result.apiKeyId}`)
 }
 
 // ── Customer Portal ───────────────────────────────────────────────
@@ -198,7 +174,7 @@ export function handleSubscriptionCanceled(subscriptionId: string, db: Database.
  */
 export async function createPortalSession(customerId: string): Promise<string> {
   const stripe = getStripe()
-  const baseUrl = process.env.BILLING_BASE_URL ?? 'https://djd-agent-score.fly.dev'
+  const baseUrl = getPublicBaseUrl()
 
   const session = await stripe.billingPortal.sessions.create({
     customer: customerId,
@@ -212,8 +188,6 @@ export async function createPortalSession(customerId: string): Promise<string> {
 // Raw API keys are stored in SQLite (encrypted at rest) between webhook
 // provisioning and the success page display. Keys auto-expire after 10 min.
 // Survives Fly.io restarts — fixes the critical billing bug.
-
-import crypto from 'node:crypto'
 
 const KEY_TTL_MS = 10 * 60 * 1000 // 10 minutes
 
@@ -245,10 +219,7 @@ function decryptKey(encrypted: string, iv: string, authTag: string): string {
 export function storePendingKey(sessionId: string, rawKey: string, db: Database.Database = defaultDb): void {
   const { encrypted, iv, authTag } = encryptKey(rawKey)
   const expiresAt = new Date(Date.now() + KEY_TTL_MS).toISOString()
-  db.prepare(`
-    INSERT OR REPLACE INTO pending_keys (session_id, key_encrypted, iv, auth_tag, expires_at)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(sessionId, encrypted, iv, authTag, expiresAt)
+  storePendingKeyRecord(db, sessionId, encrypted, iv, authTag, expiresAt)
   log.info('billing', `Pending key stored for session: ${sessionId}`)
 }
 
@@ -257,14 +228,8 @@ export function storePendingKey(sessionId: string, rawKey: string, db: Database.
  * Returns null if expired or already consumed.
  */
 export function consumePendingKey(sessionId: string, db: Database.Database = defaultDb): string | null {
-  const row = db
-    .prepare('SELECT key_encrypted, iv, auth_tag, expires_at FROM pending_keys WHERE session_id = ?')
-    .get(sessionId) as { key_encrypted: string; iv: string; auth_tag: string; expires_at: string } | undefined
-
+  const row = consumePendingKeyRecord(db, sessionId)
   if (!row) return null
-
-  // Always delete — one-time read
-  db.prepare('DELETE FROM pending_keys WHERE session_id = ?').run(sessionId)
 
   // Check expiry
   if (new Date(row.expires_at).getTime() < Date.now()) return null
@@ -279,8 +244,7 @@ export function consumePendingKey(sessionId: string, db: Database.Database = def
 
 /** Cleanup expired pending keys — called from dataPruner job. */
 export function pruneExpiredPendingKeys(db: Database.Database = defaultDb): number {
-  const result = db.prepare("DELETE FROM pending_keys WHERE expires_at < datetime('now')").run()
-  return result.changes
+  return pruneExpiredPendingKeyRecords(db)
 }
 
 // ── Lookup Helpers ────────────────────────────────────────────────
@@ -295,10 +259,14 @@ export function pruneExpiredPendingKeys(db: Database.Database = defaultDb): numb
 export function getSubscriptionBySessionId(
   sessionId: string,
   db: Database.Database = defaultDb,
-): { plan: string; apiKeyId: number; status: string } | null {
-  const row = db
-    .prepare('SELECT plan, api_key_id, status FROM subscriptions WHERE stripe_checkout_session_id = ?')
-    .get(sessionId) as { plan: string; api_key_id: number; status: string } | undefined
-
-  return row ? { plan: row.plan, apiKeyId: row.api_key_id, status: row.status } : null
+): { plan: string; apiKeyId: number | null; status: string; stripe_customer_id: string } | null {
+  const row = findSubscriptionBySessionId(db, sessionId)
+  return row
+    ? {
+        plan: row.plan,
+        apiKeyId: row.api_key_id,
+        status: row.status,
+        stripe_customer_id: row.stripe_customer_id,
+      }
+    : null
 }

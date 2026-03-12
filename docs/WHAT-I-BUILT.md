@@ -1,21 +1,23 @@
 # DJD Agent Score — What You Built (and a Harsh Honest Assessment)
 
 > **HISTORICAL DOCUMENT** — This assessment was written on 2026-02-23 during early development.
-> Many issues described below have since been fixed, including: test coverage (now 164 tests
-> across 24 files), CI/CD (GitHub Actions), admin auth (X-ADMIN-KEY), structured logging,
+> Many issues described below have since been fixed, including: test coverage (now 298 tests
+> across 33 files), CI/CD (GitHub Actions), admin auth (X-ADMIN-KEY), structured logging,
 > rate limiting on paid endpoints, monitoring (Prometheus /metrics), and the addition of
 > API key auth, webhooks, historical score API, and certified agent badges.
 > Additionally, three scoring engine gaps have been closed: (1) Behavior dimension now uses
 > Bayesian blending for low-data wallets instead of flat defaults, (2) Capability dimension
 > expanded with unique counterparties and service longevity signals, (3) Auto-recalibration
-> feedback loop dynamically adjusts tier thresholds based on outcome data.
+> feedback loop dynamically adjusts tier thresholds based on outcome data. Since this review,
+> the runtime has also been split into shared app, API-only, worker-only, and legacy combined
+> entrypoints with graceful shutdown for background jobs.
 > See [architecture.md](architecture.md) for the current state of the codebase.
 
 > Written: 2026-02-23
 > Codebase: ~7,250 lines of TypeScript across 30+ source files
 > Tests: 9 test files, ~420 lines, 20 passing assertions
 > Database: SQLite with 26 tables
-> Stack: Hono + viem + better-sqlite3 + x402-hono
+> Stack: Hono + viem + better-sqlite3 + /hono
 
 ---
 

@@ -136,9 +136,28 @@ export function createTestDb(): Database.Database {
       reason          TEXT NOT NULL,
       details         TEXT NOT NULL DEFAULT '',
       created_at      TEXT NOT NULL,
-      penalty_applied INTEGER NOT NULL DEFAULT 0
+      penalty_applied INTEGER NOT NULL DEFAULT 0,
+      disputed        INTEGER NOT NULL DEFAULT 0,
+      dispute_resolved INTEGER NOT NULL DEFAULT 0,
+      invalidated_at  TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_reports_target ON fraud_reports(target_wallet);
+
+    CREATE TABLE IF NOT EXISTS fraud_disputes (
+      id               TEXT PRIMARY KEY,
+      report_id        TEXT NOT NULL UNIQUE,
+      target_wallet    TEXT NOT NULL,
+      disputing_wallet TEXT NOT NULL,
+      reason           TEXT NOT NULL,
+      details          TEXT NOT NULL,
+      status           TEXT NOT NULL DEFAULT 'open',
+      resolution       TEXT,
+      resolution_notes TEXT,
+      created_at       TEXT NOT NULL,
+      resolved_at      TEXT,
+      resolved_by      TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_fraud_disputes_target ON fraud_disputes(target_wallet, created_at DESC);
 
     CREATE TABLE IF NOT EXISTS usdc_transfers (
       tx_hash TEXT UNIQUE,
@@ -207,6 +226,15 @@ export function createTestDb(): Database.Database {
       current_period_end        TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS pending_keys (
+      session_id  TEXT PRIMARY KEY,
+      key_encrypted TEXT NOT NULL,
+      iv          TEXT NOT NULL,
+      auth_tag    TEXT NOT NULL,
+      expires_at  TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_pending_keys_expires ON pending_keys(expires_at);
+
     CREATE TABLE IF NOT EXISTS score_history (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       wallet TEXT NOT NULL,
@@ -224,6 +252,9 @@ export function createTestDb(): Database.Database {
       secret      TEXT NOT NULL,
       events      TEXT NOT NULL,
       tier        TEXT NOT NULL DEFAULT 'basic',
+      threshold_score INTEGER,
+      forensics_min_risk_level TEXT,
+      forensics_report_reasons TEXT,
       is_active   INTEGER NOT NULL DEFAULT 1,
       created_at  TEXT NOT NULL DEFAULT (datetime('now')),
       failure_count INTEGER NOT NULL DEFAULT 0,
@@ -232,6 +263,19 @@ export function createTestDb(): Database.Database {
     );
     CREATE INDEX IF NOT EXISTS idx_webhooks_wallet ON webhooks(wallet);
     CREATE INDEX IF NOT EXISTS idx_webhooks_active ON webhooks(is_active, events);
+
+    CREATE TABLE IF NOT EXISTS monitoring_subscriptions (
+      id TEXT PRIMARY KEY,
+      subscriber_wallet TEXT NOT NULL,
+      target_wallet TEXT NOT NULL,
+      webhook_id INTEGER NOT NULL UNIQUE REFERENCES webhooks(id),
+      policy_type TEXT NOT NULL,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      disabled_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_monitoring_subs_subscriber ON monitoring_subscriptions(subscriber_wallet, is_active);
+    CREATE INDEX IF NOT EXISTS idx_monitoring_subs_target ON monitoring_subscriptions(target_wallet, is_active);
 
     CREATE TABLE IF NOT EXISTS webhook_deliveries (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -41,14 +41,6 @@ const baseLogger = pino({
   transport: buildTransport(),
 })
 
-/**
- * Create a child logger bound to a tag. Useful for hot-path modules
- * that want to avoid passing the tag on every call.
- */
-export function childLogger(tag: string): pino.Logger {
-  return baseLogger.child({ tag })
-}
-
 // ---------- Facade matching the old log.{info,warn,error}(tag, msg, extra?) API ----------
 // This keeps all 12 existing call-sites working without changes.
 

@@ -1,24 +1,58 @@
 # DJD Agent Score
 
-Trust scores for AI agent wallets. One API call, no signup.
+Screen Base wallets before your agent sends funds or fulfills a paid x402 request.
 
-On-chain reputation scoring for autonomous AI agents on Base, monetized via [x402](https://github.com/coinbase/x402) micropayments.
+DJD Agent Score turns on-chain payment history into a 0-100 trust score so you can block obvious bad counterparties before money moves.
 
 [![Listed in the Coinbase x402 Ecosystem](https://img.shields.io/badge/Coinbase_x402-Ecosystem-0052FF?style=flat&logo=coinbase)](https://github.com/coinbase/x402)
 [![npm: djd-agent-score](https://img.shields.io/npm/v/djd-agent-score?label=npm%3A%20SDK)](https://www.npmjs.com/package/djd-agent-score)
 [![npm: djd-agent-score-mcp](https://img.shields.io/npm/v/djd-agent-score-mcp?label=npm%3A%20MCP)](https://www.npmjs.com/package/djd-agent-score-mcp)
-[![PyPI: agentscore](https://img.shields.io/pypi/v/agentscore?label=PyPI%3A%20agentscore)](https://pypi.org/project/agentscore/)
+[![npm: x402-agent-score](https://img.shields.io/npm/v/x402-agent-score?label=npm%3A%20x402%20gate)](https://www.npmjs.com/package/x402-agent-score)
+[![PyPI: djd-agent-score](https://img.shields.io/pypi/v/djd-agent-score?label=PyPI%3A%20djd-agent-score)](https://pypi.org/project/djd-agent-score/)
 
-[Live API](https://djd-agent-score.fly.dev) · [API Docs](https://djd-agent-score.fly.dev/docs) · [OpenAPI Spec](https://djd-agent-score.fly.dev/openapi.json) · [Leaderboard](https://djd-agent-score.fly.dev/v1/leaderboard)
+[Live API](https://djdagentscore.dev) · [API Docs](https://djdagentscore.dev/docs) · [OpenAPI Spec](https://djdagentscore.dev/openapi.json) · [Leaderboard](https://djdagentscore.dev/v1/leaderboard)
 
 ---
 
-## Try it now
+## Start here: gate an x402 route
 
-Score any wallet. No API key, no signup, no payment. 10 free calls per day.
+If you run a paid Hono endpoint, this is the best first integration.
+
+```ts
+import { Hono } from 'hono'
+import { agentScoreGate } from 'x402-agent-score'
+
+const app = new Hono()
+
+app.use(
+  '/premium/*',
+  agentScoreGate({
+    minScore: 60,
+    onUnknown: 'reject',
+  }),
+)
+
+app.post('/premium/search', async (c) => {
+  return c.json({ ok: true })
+})
+```
+
+Install:
 
 ```bash
-curl "https://djd-agent-score.fly.dev/v1/score/basic?wallet=0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528"
+npm i x402-agent-score
+```
+
+Reference example: [examples/x402-hono.ts](./examples/x402-hono.ts)
+
+---
+
+## Try a free lookup
+
+Score any wallet with no signup, no API key, and no payment. The free tier includes 10 basic lookups per day.
+
+```bash
+curl "https://djdagentscore.dev/v1/score/basic?wallet=0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528"
 ```
 
 Returns:
@@ -45,28 +79,56 @@ Returns:
 Embed a live score badge in your own README:
 
 ```markdown
-![Agent Score](https://djd-agent-score.fly.dev/v1/badge/0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528.svg)
+![Agent Score](https://djdagentscore.dev/v1/badge/0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528.svg)
 ```
 
-View any wallet's profile page: [djd-agent-score.fly.dev/agent/{wallet}](https://djd-agent-score.fly.dev/agent/0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528)
+View any wallet's profile page: [djdagentscore.dev/agent/{wallet}](https://djdagentscore.dev/agent/0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528)
 
 ---
 
-## The problem
+## What you can do with it
 
-Your agent is about to send $500 USDC to a wallet it's never seen before. Should it?
+- Reject low-trust payers before your paid x402 route runs.
+- Score a wallet before your agent sends USDC or assigns work.
+- Register your own agent so its wallet has identity metadata and a public profile.
+- Use the paid endpoints when you need deeper history, integrity signals, or forced refreshes.
 
-That wallet might belong to a legit service provider with 6 months of clean transaction history. Or it might be a fresh sybil wallet that was created 3 hours ago to drain your agent's funds.
+## Built for one concrete wedge first
 
-DJD Agent Score answers this in one API call — no signup, no API key, no payment for the free tier. Score any wallet on Base in under 200ms. The scoring engine analyzes real on-chain USDC transaction history, partner diversity, account age, and runs sybil/gaming detection across 12 behavioral checks.
+**x402 service providers** — Gate paid routes by payer reputation. That is the clearest problem and the easiest integration path.
 
-## Built for
+**Agent developers** — Score a wallet before your agent sends money, accepts a request, or enters a paid interaction.
 
-**AI agent developers** — Check a wallet's reputation before your agent sends payment, accepts a request, or enters a contract. Works with AgentKit, Eliza, Automaton, or any framework that transacts on Base.
+**Directories and protocols** — Add a public trust layer to wallet profiles, badges, and access policies.
 
-**x402 service providers** — Gate access to your paid API by agent reputation. Low-trust wallets pay more or get blocked. High-trust wallets get priority. One middleware call.
+---
 
-**DeFi protocols** — Set risk parameters based on agent scores. Before allowing an agent to interact with your lending pool, DEX, or yield vault, check if it's a real operator or a bot farm.
+## Pick your path
+
+| Path | Use it for | Install / docs |
+|---|---|---|
+| **x402 middleware** | Best first integration for paid Hono routes | [npm: x402-agent-score](https://www.npmjs.com/package/x402-agent-score) · [reference example](./examples/x402-hono.ts) |
+| **REST API** | Fastest way to score a wallet before sending funds | [API docs](https://djdagentscore.dev/docs) |
+| **TypeScript SDK** | Typed JS/TS integrations | [npm: djd-agent-score](https://www.npmjs.com/package/djd-agent-score) |
+| **MCP server** | Claude, Cursor, Windsurf, Codex, or any MCP client | [npm: djd-agent-score-mcp](https://www.npmjs.com/package/djd-agent-score-mcp) |
+
+---
+
+## Register your agent
+
+Publishing your wallet metadata is free and adds identity context to your profile and score.
+
+```bash
+curl -X POST https://djdagentscore.dev/v1/agent/register \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "wallet": "0xYourAgentWallet",
+    "name": "My Agent",
+    "description": "What your agent does",
+    "github_url": "https://github.com/you/your-agent",
+    "website_url": "https://your-agent.com"
+  }'
+```
 
 ---
 
@@ -77,7 +139,7 @@ DJD Agent Score answers this in one API call — no signup, no API key, no payme
 ```js
 // Free tier: 10 calls/day, no payment needed
 const response = await fetch(
-  "https://djd-agent-score.fly.dev/v1/score/basic?wallet=" + agentWallet
+  "https://djdagentscore.dev/v1/score/basic?wallet=" + agentWallet
 );
 const { score, tier, confidence } = await response.json();
 
@@ -96,7 +158,7 @@ if (score < 50 || confidence < 0.3) {
 import requests
 
 resp = requests.get(
-    "https://djd-agent-score.fly.dev/v1/score/basic",
+    "https://djdagentscore.dev/v1/score/basic",
     params={"wallet": agent_wallet}
 )
 data = resp.json()
@@ -112,9 +174,9 @@ else:
 ### curl (paid endpoint with x402)
 
 ```bash
-# Full score breakdown — $0.10 USDC via x402
-# x402-compatible clients handle the payment header automatically
-curl "https://djd-agent-score.fly.dev/v1/score/full?wallet=0x…" \
+# Full score breakdown for production checks
+# x402-compatible clients attach the payment header automatically
+curl "https://djdagentscore.dev/v1/score/full?wallet=0x…" \
   -H "X-PAYMENT: <payment_proof>"
 ```
 
@@ -181,23 +243,9 @@ Paid endpoints return `402 Payment Required` without a valid payment proof or AP
 
 ---
 
-## Register your agent
+## Need a pilot path?
 
-Registered wallets get a +10 point identity bonus. Free, one call.
-
-```bash
-curl -X POST https://djd-agent-score.fly.dev/v1/agent/register \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "wallet": "0xYourAgentWallet",
-    "name": "My Agent",
-    "description": "What your agent does",
-    "github_url": "https://github.com/you/your-agent",
-    "website_url": "https://your-agent.com"
-  }'
-```
-
-Only `wallet` is required. Returns `201` on first registration, `200` on update. Re-posting updates metadata (upsert, omitted fields preserved). Linking a valid GitHub repo enables verification for additional identity scoring.
+If you want to use DJD Agent Score in production and want help choosing a starting score threshold or rollout policy, reach out at [feedback@djdagentscore.dev](mailto:feedback@djdagentscore.dev).
 
 ---
 
@@ -206,7 +254,7 @@ Only `wallet` is required. Returns `201` on first registration, `200` on update.
 Submit reports against wallets engaged in misconduct. $0.02 per report to prevent spam. Verified reports apply a score penalty.
 
 ```bash
-curl -X POST https://djd-agent-score.fly.dev/v1/report \
+curl -X POST https://djdagentscore.dev/v1/report \
   -H 'Content-Type: application/json' \
   -H 'X-PAYMENT: <payment_proof>' \
   -d '{
@@ -230,7 +278,39 @@ npm install
 npm run dev
 ```
 
-Requires **Node.js v22**. Starts on `http://localhost:3000`.
+Requires **Node.js v22**. `npm run dev` keeps the legacy combined runtime. Starts on `http://localhost:3000`.
+
+To run the split runtimes independently:
+
+```bash
+npm run dev:api
+npm run dev:worker
+```
+
+Production-style entrypoints are also available after build:
+
+```bash
+npm run start:api
+npm run start:worker
+```
+
+### Runtime topology
+
+- `src/app.ts` builds the shared Hono app: routes, middleware, billing, and x402.
+- `src/api.ts` runs the HTTP API only.
+- `src/worker.ts` runs indexers, refreshers, anomaly detection, webhook delivery, and publishing jobs.
+- `src/index.ts` is the legacy combined runtime and remains the default `npm run dev` / `npm start` path.
+
+Recommended deployment shape:
+
+- API process: `npm run start:api`
+- Worker process: `npm run start:worker`
+- Combined runtime: only for local development or backwards-compatible single-process deploys
+
+Current production note:
+
+- The Fly deployment should remain on the combined runtime until storage changes.
+- This app still uses SQLite on a Fly volume, and that storage model blocks a safe API/worker machine split against the same database file.
 
 ### Environment variables
 
@@ -240,6 +320,9 @@ Requires **Node.js v22**. Starts on `http://localhost:3000`.
 | `PAY_TO` | `0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528` | USDC recipient for x402 payments |
 | `FACILITATOR_URL` | `https://x402.org/facilitator` | x402 facilitator endpoint |
 | `BASE_RPC_URL` | `https://base-mainnet.public.blastapi.io` | Base RPC (BlastAPI recommended) |
+| `ENABLE_BLOCKCHAIN_INDEXER` | `true` | Enable x402 settlement indexing in worker/combined runtime |
+| `ENABLE_USDC_INDEXER` | `true` | Enable USDC transfer indexing in worker/combined runtime |
+| `ENABLE_HOURLY_REFRESH` | `true` | Enable hourly score refresh in worker/combined runtime |
 
 ---
 
@@ -264,7 +347,7 @@ Requires **Node.js v22**. Starts on `http://localhost:3000`.
 x402-compatible agents can discover all DJD endpoints automatically:
 
 ```bash
-curl https://djd-agent-score.fly.dev/.well-known/x402
+curl https://djdagentscore.dev/.well-known/x402
 ```
 
 Returns a machine-readable manifest of every endpoint, its price, input schema, and integration options.

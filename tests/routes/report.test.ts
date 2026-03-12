@@ -3,15 +3,33 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mockInsertReport = vi.fn()
 const mockGetScore = vi.fn().mockReturnValue({ composite_score: 50 })
 const mockApplyReportPenalty = vi.fn()
-const mockScoreToTier = vi.fn().mockReturnValue('Established')
 const mockCountReporterReportsForTarget = vi.fn().mockReturnValue(0)
+const mockQueueWebhookEvent = vi.fn()
 
 vi.mock('../../src/db.js', () => ({
   insertReport: (...args: unknown[]) => mockInsertReport(...args),
   getScore: (...args: unknown[]) => mockGetScore(...args),
   applyReportPenalty: (...args: unknown[]) => mockApplyReportPenalty(...args),
-  scoreToTier: (...args: unknown[]) => mockScoreToTier(...args),
+  createFraudDispute: vi.fn(),
+  getFraudDisputeByReportId: () => undefined,
+  getFraudReportById: () => undefined,
   countReporterReportsForTarget: (...args: unknown[]) => mockCountReporterReportsForTarget(...args),
+  countFraudDisputesByTarget: () => 0,
+  countScoreHistory: () => 0,
+  countFraudReportsByTarget: () => 0,
+  countDistinctReportersByTarget: () => 0,
+  countForensicsFeed: () => 0,
+  countForensicsWatchlistTargets: () => 0,
+  getFraudReasonBreakdown: () => [],
+  listForensicsFeed: () => [],
+  listForensicsWatchlist: () => [],
+  listFraudReportsByTarget: () => [],
+  listScoreHistory: () => [],
+  sumFraudPenaltyByTarget: () => 0,
+}))
+
+vi.mock('../../src/jobs/webhookDelivery.js', () => ({
+  queueWebhookEvent: (...args: unknown[]) => mockQueueWebhookEvent(...args),
 }))
 
 // uuid mock for deterministic IDs
@@ -63,6 +81,14 @@ describe('POST /v1/report', () => {
     expect(body.penaltyApplied).toBe(5)
     expect(mockInsertReport).toHaveBeenCalledOnce()
     expect(mockApplyReportPenalty).toHaveBeenCalledOnce()
+    expect(mockQueueWebhookEvent).toHaveBeenCalledWith(
+      'fraud.reported',
+      expect.objectContaining({
+        reportId: 'test-uuid-1234',
+        target: VALID_BODY.target,
+        reporter: REPORTER_WALLET,
+      }),
+    )
   })
 
   it('returns 429 when reporter has already filed 3 reports against target', async () => {

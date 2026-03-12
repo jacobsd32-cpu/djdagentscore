@@ -16,6 +16,8 @@ export interface DJDApiError {
   message?: string
 }
 
+const CLIENT_HEADER = 'djd-agent-score-mcp/1.0.2'
+
 export class DJDClient {
   private readonly baseUrl: string
   private readonly apiKey: string | undefined
@@ -40,6 +42,7 @@ export class DJDClient {
 
     const headers: Record<string, string> = {
       Accept: 'application/json',
+      'X-DJD-Client': CLIENT_HEADER,
     }
 
     if (this.apiKey) {

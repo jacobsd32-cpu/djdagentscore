@@ -6,7 +6,7 @@
  * Exposes DJD reputation scoring as MCP tools for AI assistants.
  *
  * Environment variables:
- *   DJD_API_URL  — API base URL (default: https://djd-agent-score.fly.dev)
+ *   DJD_API_URL  — API base URL (default: https://djdagentscore.dev)
  *   DJD_API_KEY  — API key for paid endpoints (optional; free tools work without it)
  */
 
@@ -16,7 +16,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { DJDClient } from './client.js'
 import { registerTools } from './tools.js'
 
-const DEFAULT_API_URL = 'https://djd-agent-score.fly.dev'
+const DEFAULT_API_URL = 'https://djdagentscore.dev'
 
 const client = new DJDClient({
   baseUrl: process.env.DJD_API_URL ?? DEFAULT_API_URL,
@@ -25,7 +25,7 @@ const client = new DJDClient({
 
 const server = new McpServer({
   name: 'djd-agent-score',
-  version: '0.1.0',
+  version: '1.0.2',
 })
 
 registerTools(server, client)

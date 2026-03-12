@@ -12,6 +12,9 @@ const { testDb } = vi.hoisted(() => {
       secret      TEXT NOT NULL,
       events      TEXT NOT NULL,
       tier        TEXT NOT NULL DEFAULT 'basic',
+      threshold_score INTEGER,
+      forensics_min_risk_level TEXT,
+      forensics_report_reasons TEXT,
       is_active   INTEGER NOT NULL DEFAULT 1,
       created_at  TEXT NOT NULL DEFAULT (datetime('now')),
       failure_count INTEGER NOT NULL DEFAULT 0,
@@ -42,7 +45,82 @@ const { testDb } = vi.hoisted(() => {
 })
 
 vi.mock('../../src/db.js', () => ({
-  db: testDb,
+  listActiveWebhooks: () =>
+    testDb
+      .prepare(
+        'SELECT id, wallet, url, secret, events, tier, failure_count, forensics_min_risk_level, forensics_report_reasons FROM webhooks WHERE is_active = 1',
+      )
+      .all(),
+  listThresholdWebhooks: () =>
+    testDb
+      .prepare(`
+        SELECT id, wallet, url, secret, events, tier, failure_count, threshold_score, forensics_min_risk_level, forensics_report_reasons
+        FROM webhooks
+        WHERE is_active = 1 AND threshold_score IS NOT NULL
+      `)
+      .all(),
+  insertWebhookDeliveries: (webhooks: Array<{ id: number }>, eventType: string, payload: string) => {
+    const stmt = testDb.prepare(`
+      INSERT INTO webhook_deliveries (webhook_id, event_type, payload)
+      VALUES (?, ?, ?)
+    `)
+    const run = testDb.transaction((rows: Array<{ id: number }>) => {
+      for (const webhook of rows) {
+        stmt.run(webhook.id, eventType, payload)
+      }
+    })
+    run(webhooks)
+  },
+  listPendingWebhookDeliveries: (maxAttempts: number) =>
+    testDb
+      .prepare(`
+        SELECT wd.id, wd.webhook_id, wd.event_type, wd.payload, wd.attempt,
+               w.url, w.secret
+        FROM webhook_deliveries wd
+        JOIN webhooks w ON w.id = wd.webhook_id
+        WHERE wd.delivered_at IS NULL
+          AND (wd.next_retry_at IS NULL OR wd.next_retry_at <= datetime('now'))
+          AND wd.attempt <= ?
+        ORDER BY wd.created_at ASC
+        LIMIT 50
+      `)
+      .all(maxAttempts),
+  markWebhookDeliverySuccess: (deliveryId: number, webhookId: number, statusCode: number) => {
+    testDb
+      .prepare("UPDATE webhook_deliveries SET delivered_at = datetime('now'), status_code = ? WHERE id = ?")
+      .run(statusCode, deliveryId)
+    testDb
+      .prepare("UPDATE webhooks SET failure_count = 0, last_delivery_at = datetime('now') WHERE id = ?")
+      .run(webhookId)
+  },
+  markWebhookDeliveryFinalFailure: (
+    deliveryId: number,
+    nextAttempt: number,
+    webhookId: number,
+    statusCode: number | null,
+  ) => {
+    testDb
+      .prepare('UPDATE webhook_deliveries SET status_code = ?, attempt = ? WHERE id = ?')
+      .run(statusCode, nextAttempt, deliveryId)
+    testDb.prepare('UPDATE webhooks SET failure_count = failure_count + 1 WHERE id = ?').run(webhookId)
+    const row = testDb.prepare('SELECT failure_count FROM webhooks WHERE id = ?').get(webhookId) as {
+      failure_count: number
+    }
+    return row.failure_count
+  },
+  disableWebhook: (id: number) => {
+    testDb.prepare("UPDATE webhooks SET is_active = 0, disabled_at = datetime('now') WHERE id = ?").run(id)
+  },
+  scheduleWebhookDeliveryRetry: (
+    deliveryId: number,
+    nextAttempt: number,
+    nextRetryAt: string,
+    statusCode: number | null,
+  ) => {
+    testDb
+      .prepare('UPDATE webhook_deliveries SET attempt = ?, next_retry_at = ?, status_code = ? WHERE id = ?')
+      .run(nextAttempt, nextRetryAt, statusCode, deliveryId)
+  },
 }))
 
 vi.mock('../../src/logger.js', () => ({
@@ -57,7 +135,7 @@ vi.mock('../../src/logger.js', () => ({
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
 
-import { processWebhookQueue, queueWebhookEvent } from '../../src/jobs/webhookDelivery.js'
+import { checkScoreThresholds, processWebhookQueue, queueWebhookEvent } from '../../src/jobs/webhookDelivery.js'
 
 function insertWebhook(
   overrides: Partial<{
@@ -66,6 +144,9 @@ function insertWebhook(
     secret: string
     events: string[]
     tier: string
+    threshold_score: number | null
+    forensics_min_risk_level: string | null
+    forensics_report_reasons: string | null
     is_active: number
   }> = {},
 ): number {
@@ -75,15 +156,38 @@ function insertWebhook(
     secret = 'test-secret-hex',
     events = ['score.updated'],
     tier = 'basic',
+    threshold_score = null,
+    forensics_min_risk_level = null,
+    forensics_report_reasons = null,
     is_active = 1,
   } = overrides
 
   const result = testDb
     .prepare(`
-    INSERT INTO webhooks (wallet, url, secret, events, tier, is_active)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO webhooks (
+      wallet,
+      url,
+      secret,
+      events,
+      tier,
+      threshold_score,
+      forensics_min_risk_level,
+      forensics_report_reasons,
+      is_active
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
-    .run(wallet, url, secret, JSON.stringify(events), tier, is_active)
+    .run(
+      wallet,
+      url,
+      secret,
+      JSON.stringify(events),
+      tier,
+      threshold_score,
+      forensics_min_risk_level,
+      forensics_report_reasons,
+      is_active,
+    )
 
   return Number(result.lastInsertRowid)
 }
@@ -96,8 +200,8 @@ describe('queueWebhookEvent', () => {
   })
 
   it('creates delivery rows for matching webhooks', () => {
-    const hookId1 = insertWebhook({ events: ['score.updated', 'fraud.reported'] })
-    const hookId2 = insertWebhook({ wallet: '0xdef456', events: ['score.updated'] })
+    const hookId1 = insertWebhook({ wallet: '0x111', events: ['score.updated', 'fraud.reported'] })
+    const hookId2 = insertWebhook({ wallet: '0x111', url: 'https://example.com/hook-2', events: ['score.updated'] })
 
     queueWebhookEvent('score.updated', { wallet: '0x111', score: 85 })
 
@@ -120,7 +224,7 @@ describe('queueWebhookEvent', () => {
   })
 
   it('creates no delivery rows for non-matching event', () => {
-    insertWebhook({ events: ['fraud.reported'] })
+    insertWebhook({ wallet: '0x111', events: ['fraud.reported'] })
 
     queueWebhookEvent('score.updated', { wallet: '0x111' })
 
@@ -129,7 +233,7 @@ describe('queueWebhookEvent', () => {
   })
 
   it('skips inactive webhooks', () => {
-    insertWebhook({ events: ['score.updated'], is_active: 0 })
+    insertWebhook({ wallet: '0x111', events: ['score.updated'], is_active: 0 })
 
     queueWebhookEvent('score.updated', { wallet: '0x111' })
 
@@ -138,14 +242,147 @@ describe('queueWebhookEvent', () => {
   })
 
   it('queues only for webhooks subscribed to the specific event', () => {
-    insertWebhook({ events: ['score.updated'] })
-    insertWebhook({ wallet: '0xdef456', events: ['fraud.reported'] })
+    insertWebhook({ wallet: '0x111', events: ['score.updated'] })
+    insertWebhook({ wallet: '0x999', events: ['fraud.reported'] })
     insertWebhook({ wallet: '0xghi789', events: ['score.updated', 'agent.registered'] })
 
     queueWebhookEvent('fraud.reported', { target: '0x999' })
 
     const deliveries = testDb.prepare('SELECT * FROM webhook_deliveries').all() as Array<{ webhook_id: number }>
     expect(deliveries).toHaveLength(1)
+  })
+
+  it('queues the new forensics monitoring events for subscribed webhooks', () => {
+    insertWebhook({ wallet: '0x111', events: ['forensics.risk.changed'] })
+
+    queueWebhookEvent('forensics.risk.changed', {
+      wallet: '0x111',
+      previousRiskLevel: 'watch',
+      currentRiskLevel: 'elevated',
+    })
+
+    const deliveries = testDb.prepare('SELECT * FROM webhook_deliveries').all() as Array<{
+      event_type: string
+      payload: string
+    }>
+    expect(deliveries).toHaveLength(1)
+    expect(deliveries[0].event_type).toBe('forensics.risk.changed')
+    expect(JSON.parse(deliveries[0].payload).data.currentRiskLevel).toBe('elevated')
+  })
+
+  it('queues anomaly monitoring events for subscribed wallets', () => {
+    insertWebhook({ wallet: '0x111', events: ['anomaly.score_drop'] })
+
+    queueWebhookEvent('anomaly.score_drop', {
+      wallet: '0x111',
+      anomalyType: 'score_drop',
+      currentScore: 42,
+      previousScore: 63,
+      scoreDelta: -21,
+    })
+
+    const deliveries = testDb.prepare('SELECT * FROM webhook_deliveries').all() as Array<{
+      event_type: string
+      payload: string
+    }>
+    expect(deliveries).toHaveLength(1)
+    expect(deliveries[0].event_type).toBe('anomaly.score_drop')
+    expect(JSON.parse(deliveries[0].payload).data.currentScore).toBe(42)
+  })
+
+  it('only queues deliveries for the subscribed wallet subject', () => {
+    insertWebhook({ wallet: '0xabc123', events: ['score.updated'] })
+    insertWebhook({ wallet: '0xdef456', events: ['score.updated'] })
+
+    queueWebhookEvent('score.updated', { wallet: '0xdef456', score: 72 })
+
+    const deliveries = testDb.prepare('SELECT webhook_id FROM webhook_deliveries').all() as Array<{
+      webhook_id: number
+    }>
+    expect(deliveries).toHaveLength(1)
+  })
+
+  it('applies forensics risk and reason filters before queueing deliveries', () => {
+    insertWebhook({
+      wallet: '0xabc123',
+      events: ['fraud.reported'],
+      forensics_min_risk_level: 'elevated',
+      forensics_report_reasons: JSON.stringify(['payment_fraud']),
+    })
+    insertWebhook({
+      wallet: '0xabc123',
+      events: ['fraud.reported'],
+      forensics_min_risk_level: 'critical',
+      forensics_report_reasons: JSON.stringify(['payment_fraud']),
+    })
+    insertWebhook({
+      wallet: '0xabc123',
+      events: ['fraud.reported'],
+      forensics_min_risk_level: 'watch',
+      forensics_report_reasons: JSON.stringify(['impersonation']),
+    })
+
+    queueWebhookEvent('fraud.reported', {
+      target: '0xabc123',
+      reportReason: 'payment_fraud',
+      currentRiskLevel: 'elevated',
+    })
+
+    const deliveries = testDb.prepare('SELECT webhook_id FROM webhook_deliveries').all() as Array<{
+      webhook_id: number
+    }>
+    expect(deliveries).toHaveLength(1)
+  })
+})
+
+describe('checkScoreThresholds', () => {
+  beforeEach(() => {
+    testDb.prepare('DELETE FROM webhook_deliveries').run()
+    testDb.prepare('DELETE FROM webhooks').run()
+    vi.clearAllMocks()
+  })
+
+  it('queues a threshold delivery when a wallet crosses its configured score threshold', () => {
+    insertWebhook({
+      wallet: '0xabc123',
+      events: ['score.threshold'],
+      threshold_score: 60,
+    })
+
+    checkScoreThresholds('0xabc123', 67, 58, 'Watch')
+
+    const deliveries = testDb.prepare('SELECT event_type, payload FROM webhook_deliveries').all() as Array<{
+      event_type: string
+      payload: string
+    }>
+
+    expect(deliveries).toHaveLength(1)
+    expect(deliveries[0].event_type).toBe('score.threshold')
+    expect(JSON.parse(deliveries[0].payload).data).toEqual({
+      wallet: '0xabc123',
+      oldScore: 67,
+      newScore: 58,
+      tier: 'Watch',
+      crossed: 'down',
+    })
+  })
+
+  it('ignores threshold subscriptions for other wallets or when the threshold is not crossed', () => {
+    insertWebhook({
+      wallet: '0xabc123',
+      events: ['score.threshold'],
+      threshold_score: 60,
+    })
+    insertWebhook({
+      wallet: '0xdef456',
+      events: ['score.threshold'],
+      threshold_score: 50,
+    })
+
+    checkScoreThresholds('0xabc123', 67, 61, 'Established')
+
+    const deliveries = testDb.prepare('SELECT * FROM webhook_deliveries').all()
+    expect(deliveries).toHaveLength(0)
   })
 })
 

@@ -1,5 +1,9 @@
+import { getSupportEmail } from '../config/public.js'
+
 // ─── Legal page templates ───
 // White theme (Terms/Privacy), dark GitHub theme (Leaderboard)
+
+const SUPPORT_EMAIL = getSupportEmail()
 
 export const wrapHtml = (title: string, content: string) => `<!DOCTYPE html>
 <html lang="en">
@@ -115,7 +119,7 @@ export const tosContent = `
 <p>These Terms constitute the entire agreement between you and the Company regarding the Service and supersede all prior agreements and understandings.</p>
 
 <h1>18. Contact</h1>
-<p>For questions regarding these Terms, contact: feedback@djdagentscore.dev</p>
+<p>For questions regarding these Terms, contact: ${SUPPORT_EMAIL}</p>
 `
 
 // ─── PRIVACY POLICY ───
@@ -202,7 +206,7 @@ export const privacyContent = `
 
 <h1>12. Contact</h1>
 <p>For questions, concerns, or data subject requests regarding this Privacy Policy, contact:</p>
-<p>DJD Agent Score<br>feedback@djdagentscore.dev</p>
+<p>DJD Agent Score<br>${SUPPORT_EMAIL}</p>
 `
 
 // ─── LEADERBOARD (dark GitHub theme, client-side rendered) ───

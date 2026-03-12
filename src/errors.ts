@@ -55,6 +55,10 @@ export const ErrorCodes = {
   DUPLICATE_REPORT: 'duplicate_report',
   REPORT_LIMIT_EXCEEDED: 'report_limit_exceeded',
   SELF_REPORT: 'self_report',
+  INVALID_DISPUTE: 'invalid_dispute',
+  DISPUTE_NOT_FOUND: 'dispute_not_found',
+  DISPUTE_ALREADY_OPEN: 'dispute_already_open',
+  DISPUTE_ALREADY_RESOLVED: 'dispute_already_resolved',
 
   // Registration
   INVALID_REGISTRATION: 'invalid_registration',
@@ -72,6 +76,9 @@ export const ErrorCodes = {
   WEBHOOK_NOT_FOUND: 'webhook_not_found',
   WEBHOOK_LIMIT_EXCEEDED: 'webhook_limit_exceeded',
   WEBHOOK_URL_INVALID: 'webhook_url_invalid',
+  MONITORING_INVALID: 'monitoring_invalid',
+  MONITORING_NOT_FOUND: 'monitoring_not_found',
+  MONITORING_LIMIT_EXCEEDED: 'monitoring_limit_exceeded',
 
   // Billing
   BILLING_DISABLED: 'billing_disabled',
@@ -82,7 +89,11 @@ export const ErrorCodes = {
 
   // History
   HISTORY_NOT_FOUND: 'history_not_found',
+  FORENSICS_NOT_FOUND: 'forensics_not_found',
   INVALID_DATE_RANGE: 'invalid_date_range',
+
+  // Analytics
+  INVALID_PERIOD: 'invalid_period',
 
   // Certification
   CERT_REQUIREMENTS_NOT_MET: 'cert_requirements_not_met',

@@ -42,7 +42,10 @@ db.exec(`
     reason          TEXT NOT NULL,
     details         TEXT NOT NULL,
     created_at      TEXT NOT NULL,
-    penalty_applied INTEGER NOT NULL DEFAULT 0
+    penalty_applied INTEGER NOT NULL DEFAULT 0,
+    disputed        INTEGER NOT NULL DEFAULT 0,
+    dispute_resolved INTEGER NOT NULL DEFAULT 0,
+    invalidated_at  TEXT
   );
 
   CREATE INDEX IF NOT EXISTS idx_reports_target ON fraud_reports(target_wallet);
@@ -80,6 +83,11 @@ addColumnIfMissing('score_outcomes', 'behavior_at_query', 'INTEGER')
 // Migrate score_history to include confidence + model_version
 addColumnIfMissing('score_history', 'confidence', 'REAL DEFAULT 0.0')
 addColumnIfMissing('score_history', 'model_version', "TEXT DEFAULT '1.0.0'")
+
+// Migrate fraud_reports to support dispute workflows
+addColumnIfMissing('fraud_reports', 'disputed', 'INTEGER NOT NULL DEFAULT 0')
+addColumnIfMissing('fraud_reports', 'dispute_resolved', 'INTEGER NOT NULL DEFAULT 0')
+addColumnIfMissing('fraud_reports', 'invalidated_at', 'TEXT')
 
 // ---------- New tables ----------
 
@@ -203,6 +211,23 @@ db.exec(`
     last_detected     TEXT
   );
 
+  CREATE TABLE IF NOT EXISTS fraud_disputes (
+    id               TEXT PRIMARY KEY,
+    report_id        TEXT NOT NULL UNIQUE REFERENCES fraud_reports(id),
+    target_wallet    TEXT NOT NULL,
+    disputing_wallet TEXT NOT NULL,
+    reason           TEXT NOT NULL,
+    details          TEXT NOT NULL,
+    status           TEXT NOT NULL DEFAULT 'open',
+    resolution       TEXT,
+    resolution_notes TEXT,
+    created_at       TEXT NOT NULL,
+    resolved_at      TEXT,
+    resolved_by      TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_fraud_disputes_target ON fraud_disputes(target_wallet, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_fraud_disputes_status ON fraud_disputes(status, created_at DESC);
+
   -- Analytics
   CREATE TABLE IF NOT EXISTS query_log (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -224,6 +249,30 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_qlog_timestamp  ON query_log(timestamp DESC);
   CREATE INDEX IF NOT EXISTS idx_qlog_endpoint   ON query_log(endpoint,         timestamp DESC);
   CREATE INDEX IF NOT EXISTS idx_qlog_free_tier  ON query_log(requester_wallet, endpoint, is_free_tier, timestamp DESC);
+
+  CREATE TABLE IF NOT EXISTS growth_events (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_name    TEXT NOT NULL,
+    source        TEXT NOT NULL DEFAULT 'web',
+    anonymous_id  TEXT,
+    session_id    TEXT,
+    page_path     TEXT,
+    referrer      TEXT,
+    wallet        TEXT,
+    package_name  TEXT,
+    user_agent    TEXT,
+    utm_source    TEXT,
+    utm_medium    TEXT,
+    utm_campaign  TEXT,
+    metadata_json TEXT,
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_growth_events_name     ON growth_events(event_name, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_growth_events_source   ON growth_events(source, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_growth_events_session  ON growth_events(session_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_growth_events_anon     ON growth_events(anonymous_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_growth_events_wallet   ON growth_events(wallet, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_growth_events_package  ON growth_events(package_name, created_at DESC);
 
   CREATE TABLE IF NOT EXISTS intent_signals (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -369,8 +418,6 @@ db.exec(`
     last_used_at TEXT,
     revoked_at TEXT
   );
-  CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
-  CREATE INDEX IF NOT EXISTS idx_api_keys_wallet ON api_keys(wallet);
 
   -- Webhook subscriptions
   CREATE TABLE IF NOT EXISTS webhooks (
@@ -380,14 +427,26 @@ db.exec(`
     secret      TEXT NOT NULL,
     events      TEXT NOT NULL,
     tier        TEXT NOT NULL DEFAULT 'basic',
+    threshold_score INTEGER,
+    forensics_min_risk_level TEXT,
+    forensics_report_reasons TEXT,
     is_active   INTEGER NOT NULL DEFAULT 1,
     created_at  TEXT NOT NULL DEFAULT (datetime('now')),
     failure_count INTEGER NOT NULL DEFAULT 0,
     last_delivery_at TEXT,
     disabled_at TEXT
   );
-  CREATE INDEX IF NOT EXISTS idx_webhooks_wallet ON webhooks(wallet);
-  CREATE INDEX IF NOT EXISTS idx_webhooks_active ON webhooks(is_active, events);
+
+  CREATE TABLE IF NOT EXISTS monitoring_subscriptions (
+    id TEXT PRIMARY KEY,
+    subscriber_wallet TEXT NOT NULL,
+    target_wallet TEXT NOT NULL,
+    webhook_id INTEGER NOT NULL UNIQUE REFERENCES webhooks(id),
+    policy_type TEXT NOT NULL,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    disabled_at TEXT
+  );
 
   CREATE TABLE IF NOT EXISTS webhook_deliveries (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -405,6 +464,47 @@ db.exec(`
     WHERE status_code IS NULL OR status_code >= 400;
 `)
 
+// Legacy production volumes can have older versions of these tables without the
+// newer lifecycle columns. Add them before creating indexes or compiling
+// prepared statements that reference them.
+addColumnIfMissing('api_keys', 'tier', "TEXT NOT NULL DEFAULT 'standard'")
+addColumnIfMissing('api_keys', 'monthly_limit', 'INTEGER NOT NULL DEFAULT 10000')
+addColumnIfMissing('api_keys', 'monthly_used', 'INTEGER NOT NULL DEFAULT 0')
+addColumnIfMissing('api_keys', 'usage_reset_at', 'TEXT')
+addColumnIfMissing('api_keys', 'is_active', 'INTEGER NOT NULL DEFAULT 1')
+addColumnIfMissing('api_keys', 'created_at', 'TEXT')
+addColumnIfMissing('api_keys', 'last_used_at', 'TEXT')
+addColumnIfMissing('api_keys', 'revoked_at', 'TEXT')
+addColumnIfMissing('api_keys', 'stripe_customer_id', 'TEXT')
+
+addColumnIfMissing('webhooks', 'tier', "TEXT NOT NULL DEFAULT 'basic'")
+addColumnIfMissing('webhooks', 'threshold_score', 'INTEGER')
+addColumnIfMissing('webhooks', 'forensics_min_risk_level', 'TEXT')
+addColumnIfMissing('webhooks', 'forensics_report_reasons', 'TEXT')
+addColumnIfMissing('webhooks', 'is_active', 'INTEGER NOT NULL DEFAULT 1')
+addColumnIfMissing('webhooks', 'created_at', 'TEXT')
+addColumnIfMissing('webhooks', 'failure_count', 'INTEGER NOT NULL DEFAULT 0')
+addColumnIfMissing('webhooks', 'last_delivery_at', 'TEXT')
+addColumnIfMissing('webhooks', 'disabled_at', 'TEXT')
+
+addColumnIfMissing('monitoring_subscriptions', 'subscriber_wallet', 'TEXT')
+addColumnIfMissing('monitoring_subscriptions', 'target_wallet', 'TEXT')
+addColumnIfMissing('monitoring_subscriptions', 'webhook_id', 'INTEGER')
+addColumnIfMissing('monitoring_subscriptions', 'policy_type', 'TEXT')
+addColumnIfMissing('monitoring_subscriptions', 'is_active', 'INTEGER NOT NULL DEFAULT 1')
+addColumnIfMissing('monitoring_subscriptions', 'created_at', 'TEXT')
+addColumnIfMissing('monitoring_subscriptions', 'disabled_at', 'TEXT')
+
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
+  CREATE INDEX IF NOT EXISTS idx_api_keys_wallet ON api_keys(wallet);
+  CREATE INDEX IF NOT EXISTS idx_webhooks_wallet ON webhooks(wallet);
+  CREATE INDEX IF NOT EXISTS idx_webhooks_active ON webhooks(is_active, events);
+  CREATE INDEX IF NOT EXISTS idx_monitoring_subs_webhook ON monitoring_subscriptions(webhook_id);
+  CREATE INDEX IF NOT EXISTS idx_monitoring_subs_subscriber ON monitoring_subscriptions(subscriber_wallet, is_active);
+  CREATE INDEX IF NOT EXISTS idx_monitoring_subs_target ON monitoring_subscriptions(target_wallet, is_active);
+`)
+
 // ── Agent Certification ──────────────────────────────────────────────────────
 db.exec(`
   CREATE TABLE IF NOT EXISTS certifications (
@@ -419,6 +519,14 @@ db.exec(`
     revoked_at  TEXT,
     revocation_reason TEXT
   );
+`)
+
+addColumnIfMissing('certifications', 'is_active', 'INTEGER NOT NULL DEFAULT 1')
+addColumnIfMissing('certifications', 'tx_hash', 'TEXT')
+addColumnIfMissing('certifications', 'revoked_at', 'TEXT')
+addColumnIfMissing('certifications', 'revocation_reason', 'TEXT')
+
+db.exec(`
   CREATE INDEX IF NOT EXISTS idx_certs_wallet ON certifications(wallet);
   CREATE INDEX IF NOT EXISTS idx_certs_active ON certifications(is_active, expires_at);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_certs_wallet_active ON certifications(wallet)
@@ -454,12 +562,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_subscriptions_customer ON subscriptions(stripe_customer_id);
   CREATE INDEX IF NOT EXISTS idx_subscriptions_checkout ON subscriptions(stripe_checkout_session_id);
 `)
-
-// Add stripe_customer_id to api_keys (nullable — admin-created keys won't have one)
-addColumnIfMissing('api_keys', 'stripe_customer_id', 'TEXT')
-
-// Add threshold_score to webhooks (nullable — only used for score.threshold events)
-addColumnIfMissing('webhooks', 'threshold_score', 'INTEGER')
 
 // ── Pending Keys (Phase 3B: persist across restarts) ──────────────────────
 db.exec(`

@@ -21,3 +21,28 @@ export function hashKey(key: string): string {
 export function keyPrefix(key: string): string {
   return `${key.slice(0, 16)}...`
 }
+
+export interface ApiKeyMaterial {
+  rawKey: string
+  keyHash: string
+  keyPrefix: string
+}
+
+/** Generate the raw key plus the derived values stored in the database. */
+export function createApiKeyMaterial(): ApiKeyMaterial {
+  const rawKey = generateApiKey()
+  return {
+    rawKey,
+    keyHash: hashKey(rawKey),
+    keyPrefix: keyPrefix(rawKey),
+  }
+}
+
+/** Calculate the next monthly quota reset timestamp (first day of next month at 00:00). */
+export function getNextUsageResetAt(from = new Date()): string {
+  const nextReset = new Date(from)
+  nextReset.setUTCMonth(nextReset.getUTCMonth() + 1)
+  nextReset.setUTCDate(1)
+  nextReset.setUTCHours(0, 0, 0, 0)
+  return nextReset.toISOString()
+}

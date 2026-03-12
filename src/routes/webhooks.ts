@@ -1,19 +1,34 @@
-import crypto from 'node:crypto'
 import type { Context } from 'hono'
 import { Hono } from 'hono'
-import { db } from '../db.js'
+
 import { errorResponse } from '../errors.js'
 import { adminAuth } from '../middleware/adminAuth.js'
+import {
+  createAdminWebhook,
+  createWalletWebhook,
+  deactivateAdminWebhook,
+  deactivateWalletWebhookRecord,
+  getWebhookDetail,
+  listAdminWebhooks,
+  listWalletWebhookRecords,
+  listWebhookPresets,
+  sendTestWebhook,
+} from '../services/webhookService.js'
 import type { AppEnv } from '../types/hono-env.js'
-import { isValidWebhookUrl } from '../types.js'
 
 /** Helper to read API key wallet from the context (set by apiKeyAuth middleware on the parent app). */
 function getApiKeyWallet(c: Context): string | null {
   return (c as Context<AppEnv>).get('apiKeyWallet') ?? null
 }
 
-const VALID_EVENTS = ['score.updated', 'score.expired', 'fraud.reported', 'agent.registered', 'score.threshold']
-const MAX_WEBHOOKS_PER_WALLET = 10
+function webhookResponseFields(webhook: { threshold_score?: number | null; forensics_filter?: unknown }) {
+  return {
+    ...(webhook.threshold_score !== null && webhook.threshold_score !== undefined
+      ? { threshold_score: webhook.threshold_score }
+      : {}),
+    ...(webhook.forensics_filter ? { forensics_filter: webhook.forensics_filter } : {}),
+  }
+}
 
 // ---------- Admin routes ----------
 const adminWebhooks = new Hono()
@@ -22,44 +37,23 @@ adminWebhooks.use('*', adminAuth)
 
 // POST / — Create webhook
 adminWebhooks.post('/', async (c) => {
-  const body = await c.req.json().catch(() => null)
-  if (!body?.wallet || !body?.url || !body?.events) {
-    return c.json(errorResponse('webhook_invalid', 'wallet, url, and events[] are required'), 400)
+  const outcome = createAdminWebhook(await c.req.json().catch(() => null))
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message), outcome.status)
   }
 
-  // Validate URL — must be HTTPS and not target internal networks (H1 SSRF fix)
-  if (!isValidWebhookUrl(body.url)) {
-    return c.json(
-      errorResponse('webhook_url_invalid', 'Invalid webhook URL: must be HTTPS and not target internal networks'),
-      400,
-    )
-  }
-
-  // Validate events
-  const events = body.events as string[]
-  if (!Array.isArray(events) || events.length === 0 || !events.every((e: string) => VALID_EVENTS.includes(e))) {
-    return c.json(errorResponse('webhook_invalid', `Invalid events. Valid: ${VALID_EVENTS.join(', ')}`), 400)
-  }
-
-  const secret = crypto.randomBytes(32).toString('hex')
-  const tier = body.tier ?? 'basic'
-
-  const result = db
-    .prepare(`
-    INSERT INTO webhooks (wallet, url, secret, events, tier)
-    VALUES (?, ?, ?, ?, ?)
-  `)
-    .run(body.wallet.toLowerCase(), body.url, secret, JSON.stringify(events), tier)
-
+  const { webhook, message } = outcome
   return c.json(
     {
-      id: result.lastInsertRowid,
-      wallet: body.wallet.toLowerCase(),
-      url: body.url,
-      secret,
-      events,
-      tier,
-      message: 'Store the secret securely — used to verify webhook signatures.',
+      id: webhook.id,
+      wallet: webhook.wallet,
+      url: webhook.url,
+      secret: webhook.secret,
+      events: webhook.events,
+      tier: webhook.tier,
+      ...webhookResponseFields(webhook),
+      ...(outcome.presetsApplied.length > 0 ? { presets_applied: outcome.presetsApplied } : {}),
+      message,
     },
     201,
   )
@@ -67,104 +61,64 @@ adminWebhooks.post('/', async (c) => {
 
 // GET / — List all webhooks
 adminWebhooks.get('/', (c) => {
-  const webhooks = db
-    .prepare(`
-    SELECT id, wallet, url, events, tier, is_active, created_at, failure_count, last_delivery_at, disabled_at
-    FROM webhooks ORDER BY created_at DESC
-  `)
-    .all()
+  const webhooks = listAdminWebhooks()
 
   return c.json({
-    webhooks: (webhooks as Record<string, unknown>[]).map((w) => ({ ...w, events: JSON.parse(w.events as string) })),
+    webhooks: webhooks.map((webhook) => ({
+      id: webhook.id,
+      wallet: webhook.wallet,
+      url: webhook.url,
+      events: webhook.events,
+      tier: webhook.tier,
+      is_active: webhook.is_active,
+      created_at: webhook.created_at,
+      failure_count: webhook.failure_count,
+      last_delivery_at: webhook.last_delivery_at,
+      disabled_at: webhook.disabled_at,
+      ...webhookResponseFields(webhook),
+    })),
     count: webhooks.length,
   })
 })
 
 // GET /:id — Webhook detail + recent deliveries
 adminWebhooks.get('/:id', (c) => {
-  const id = Number(c.req.param('id'))
-  const webhook = db.prepare('SELECT * FROM webhooks WHERE id = ?').get(id) as Record<string, unknown> | undefined
+  const webhook = getWebhookDetail(Number(c.req.param('id')))
   if (!webhook) return c.json(errorResponse('webhook_not_found', 'Webhook not found'), 404)
 
-  const deliveries = db
-    .prepare(`
-    SELECT id, event_type, status_code, attempt, delivered_at, created_at
-    FROM webhook_deliveries WHERE webhook_id = ? ORDER BY created_at DESC LIMIT 20
-  `)
-    .all(id)
-
-  return c.json({
-    ...webhook,
-    events: JSON.parse(webhook.events as string),
-    recent_deliveries: deliveries,
-  })
+  return c.json(webhook)
 })
 
 // DELETE /:id — Deactivate webhook
 adminWebhooks.delete('/:id', (c) => {
-  const id = Number(c.req.param('id'))
-  const result = db
-    .prepare(`UPDATE webhooks SET is_active = 0, disabled_at = datetime('now') WHERE id = ? AND is_active = 1`)
-    .run(id)
-  if (result.changes === 0)
+  if (!deactivateAdminWebhook(Number(c.req.param('id')))) {
     return c.json(errorResponse('webhook_not_found', 'Webhook not found or already disabled'), 404)
+  }
+
   return c.json({ success: true, message: 'Webhook deactivated' })
 })
 
 // POST /:id/test — Send test event
 adminWebhooks.post('/:id/test', async (c) => {
-  const id = Number(c.req.param('id'))
-  const webhook = db.prepare('SELECT * FROM webhooks WHERE id = ?').get(id) as Record<string, unknown> | undefined
-  if (!webhook) return c.json(errorResponse('webhook_not_found', 'Webhook not found'), 404)
-
-  // SSRF prevention on test delivery too (H1 fix)
-  if (!isValidWebhookUrl(webhook.url as string)) {
-    return c.json(
-      errorResponse('webhook_url_invalid', 'Webhook URL is unsafe — must be HTTPS and not target internal networks'),
-      400,
-    )
+  const outcome = await sendTestWebhook(Number(c.req.param('id')))
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message), outcome.status)
   }
 
-  const testPayload = {
-    event: 'test',
-    timestamp: new Date().toISOString(),
-    data: { message: 'This is a test webhook delivery from DJD Agent Score' },
-  }
-
-  try {
-    const body = JSON.stringify(testPayload)
-    const signature = crypto
-      .createHmac('sha256', webhook.secret as string)
-      .update(body)
-      .digest('hex')
-
-    const resp = await fetch(webhook.url as string, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-DJD-Signature': `sha256=${signature}`,
-        'X-DJD-Event': 'test',
-      },
-      body,
-      signal: AbortSignal.timeout(10000),
-    })
-
-    return c.json({
-      success: resp.ok,
-      status_code: resp.status,
-      message: resp.ok ? 'Test delivery successful' : 'Test delivery failed',
-    })
-  } catch (err) {
-    return c.json({
-      success: false,
-      status_code: null,
-      message: `Test delivery failed: ${(err as Error).message}`,
-    })
-  }
+  return c.json({
+    success: outcome.success,
+    status_code: outcome.statusCode,
+    message: outcome.message,
+  })
 })
 
 // ---------- Public self-service routes ----------
 const publicWebhooks = new Hono()
+
+publicWebhooks.get('/presets', (c) => {
+  const presets = listWebhookPresets()
+  return c.json({ presets, count: presets.length })
+})
 
 // POST / — Register webhook (authenticated by API key)
 publicWebhooks.post('/', async (c) => {
@@ -173,52 +127,21 @@ publicWebhooks.post('/', async (c) => {
     return c.json(errorResponse('unauthorized', 'API key required to register webhooks'), 401)
   }
 
-  // Check webhook limit
-  const row = db
-    .prepare('SELECT COUNT(*) as count FROM webhooks WHERE wallet = ? AND is_active = 1')
-    .get(wallet.toLowerCase()) as { count: number } | undefined
-  const count = row?.count ?? 0
-  if (count >= MAX_WEBHOOKS_PER_WALLET) {
-    return c.json(
-      errorResponse('webhook_limit_exceeded', `Maximum ${MAX_WEBHOOKS_PER_WALLET} active webhooks per wallet`),
-      429,
-    )
+  const outcome = createWalletWebhook(wallet, await c.req.json().catch(() => null))
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message), outcome.status)
   }
 
-  const body = await c.req.json().catch(() => null)
-  if (!body?.url || !body?.events) {
-    return c.json(errorResponse('webhook_invalid', 'url and events[] are required'), 400)
-  }
-
-  // Validate URL — must be HTTPS and not target internal networks (H1 SSRF fix)
-  if (!isValidWebhookUrl(body.url)) {
-    return c.json(
-      errorResponse('webhook_url_invalid', 'Invalid webhook URL: must be HTTPS and not target internal networks'),
-      400,
-    )
-  }
-
-  const events = body.events as string[]
-  if (!Array.isArray(events) || events.length === 0 || !events.every((e: string) => VALID_EVENTS.includes(e))) {
-    return c.json(errorResponse('webhook_invalid', `Invalid events. Valid: ${VALID_EVENTS.join(', ')}`), 400)
-  }
-
-  const secret = crypto.randomBytes(32).toString('hex')
-
-  const result = db
-    .prepare(`
-    INSERT INTO webhooks (wallet, url, secret, events, tier)
-    VALUES (?, ?, ?, ?, 'basic')
-  `)
-    .run(wallet.toLowerCase(), body.url, secret, JSON.stringify(events))
-
+  const { webhook, message } = outcome
   return c.json(
     {
-      id: result.lastInsertRowid,
-      url: body.url,
-      secret,
-      events,
-      message: 'Store the secret securely — used to verify webhook signatures.',
+      id: webhook.id,
+      url: webhook.url,
+      secret: webhook.secret,
+      events: webhook.events,
+      ...webhookResponseFields(webhook),
+      ...(outcome.presetsApplied.length > 0 ? { presets_applied: outcome.presetsApplied } : {}),
+      message,
     },
     201,
   )
@@ -229,15 +152,20 @@ publicWebhooks.get('/', (c) => {
   const wallet = getApiKeyWallet(c)
   if (!wallet) return c.json(errorResponse('unauthorized', 'API key required'), 401)
 
-  const webhooks = db
-    .prepare(`
-    SELECT id, url, events, tier, is_active, created_at, failure_count, last_delivery_at
-    FROM webhooks WHERE wallet = ? ORDER BY created_at DESC
-  `)
-    .all(wallet.toLowerCase())
+  const webhooks = listWalletWebhookRecords(wallet)
 
   return c.json({
-    webhooks: (webhooks as Record<string, unknown>[]).map((w) => ({ ...w, events: JSON.parse(w.events as string) })),
+    webhooks: webhooks.map((webhook) => ({
+      id: webhook.id,
+      url: webhook.url,
+      events: webhook.events,
+      tier: webhook.tier,
+      is_active: webhook.is_active,
+      created_at: webhook.created_at,
+      failure_count: webhook.failure_count,
+      last_delivery_at: webhook.last_delivery_at,
+      ...webhookResponseFields(webhook),
+    })),
     count: webhooks.length,
   })
 })
@@ -247,14 +175,10 @@ publicWebhooks.delete('/:id', (c) => {
   const wallet = getApiKeyWallet(c)
   if (!wallet) return c.json(errorResponse('unauthorized', 'API key required'), 401)
 
-  const id = Number(c.req.param('id'))
-  const result = db
-    .prepare(
-      `UPDATE webhooks SET is_active = 0, disabled_at = datetime('now') WHERE id = ? AND wallet = ? AND is_active = 1`,
-    )
-    .run(id, wallet.toLowerCase())
-  if (result.changes === 0)
+  if (!deactivateWalletWebhookRecord(Number(c.req.param('id')), wallet)) {
     return c.json(errorResponse('webhook_not_found', 'Webhook not found or already disabled'), 404)
+  }
+
   return c.json({ success: true })
 })
 

@@ -1,20 +1,20 @@
-# djd-agent-score-client
+# djd-agent-score
 
-TypeScript client SDK for the [DJD Agent Score API](https://djd-agent-score.fly.dev) --- on-chain reputation scoring for autonomous AI agents on Base L2.
+TypeScript client SDK for the [DJD Agent Score API](https://djdagentscore.dev) --- on-chain reputation scoring for autonomous AI agents on Base L2.
 
 ## Install
 
 ```bash
-npm install djd-agent-score-client
+npm install djd-agent-score
 ```
 
 ## Quick Start
 
 ```typescript
-import { DJDAgentScore } from 'djd-agent-score-client'
+import { DJDAgentScore } from 'djd-agent-score'
 
 const client = new DJDAgentScore({
-  baseUrl: 'https://djd-agent-score.fly.dev',
+  baseUrl: 'https://djdagentscore.dev',
 })
 
 // Free: basic score (10/day)
@@ -34,7 +34,7 @@ Paid endpoints require a payment header provider that generates x402 USDC paymen
 
 ```typescript
 const client = new DJDAgentScore({
-  baseUrl: 'https://djd-agent-score.fly.dev',
+  baseUrl: 'https://djdagentscore.dev',
   paymentHeaderProvider: async (endpoint, price) => {
     // Your x402 payment logic here
     return base64EncodedPaymentHeader
@@ -74,7 +74,7 @@ await client.submitReport({
 ## Error Handling
 
 ```typescript
-import { DJDScoreError } from 'djd-agent-score-client'
+import { DJDScoreError } from 'djd-agent-score'
 
 try {
   await client.getBasicScore('invalid')
@@ -90,7 +90,7 @@ try {
 
 ```typescript
 const client = new DJDAgentScore({
-  baseUrl: 'https://djd-agent-score.fly.dev',
+  baseUrl: 'https://djdagentscore.dev',
   timeoutMs: 15_000,      // Request timeout (default: 30s)
   maxRetries: 3,           // Retry on 5xx (default: 2)
   paymentHeaderProvider,   // x402 payment header generator

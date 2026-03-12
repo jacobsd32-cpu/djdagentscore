@@ -1,3 +1,5 @@
+import { buildPublicUrl } from '../config/public.js'
+
 /**
  * Billing Success Page Template
  *
@@ -17,6 +19,7 @@ interface SuccessPageProps {
 
 export function successPageHtml(props: SuccessPageProps): string {
   const { apiKey, planName, monthlyLimit, alreadyConsumed, error } = props
+  const fullScoreUrl = buildPublicUrl('/v1/score/full?wallet=0xYOUR_WALLET')
 
   let body: string
 
@@ -54,7 +57,7 @@ export function successPageHtml(props: SuccessPageProps): string {
           </div>
           <div class="tab-content active" id="tab-curl">
             <pre><code>curl -H "Authorization: Bearer YOUR_API_KEY" \\
-  "https://djdagentscore.dev/v1/score/full?wallet=0xYOUR_WALLET"</code></pre>
+  "${fullScoreUrl}"</code></pre>
             <button class="snippet-copy" onclick="copySnippet('curl')">Copy</button>
           </div>
           <div class="tab-content" id="tab-typescript">

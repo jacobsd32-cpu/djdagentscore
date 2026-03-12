@@ -1,6 +1,9 @@
 import { Hono } from 'hono'
+import { buildPublicUrl, getSupportEmail } from '../config/public.js'
 
 const methodology = new Hono()
+const METHODOLOGY_URL = buildPublicUrl('/methodology')
+const SUPPORT_EMAIL = getSupportEmail()
 
 // ─── Design tokens (matches blog.ts / index.html) ───
 
@@ -14,7 +17,7 @@ const pageHtml = `<!DOCTYPE html>
 <meta property="og:type" content="article">
 <meta property="og:title" content="Scoring Methodology — DJD Agent Score">
 <meta property="og:description" content="How we score wallets: five on-chain dimensions, sybil detection, gaming penalties, and adaptive calibration.">
-<meta property="og:url" content="https://djdagentscore.dev/methodology">
+<meta property="og:url" content="${METHODOLOGY_URL}">
 <meta property="og:site_name" content="DJD Agent Score">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Scoring Methodology — DJD Agent Score">
@@ -322,7 +325,7 @@ output   = clamp(0, 100, final)          // dampened by confidence level</code><
 
     <p style="margin-top:32px;font-size:13px;color:var(--text-muted);font-style:italic">
       Model version 2.5.0. This methodology is a living document &mdash; updated as the scoring engine evolves.
-      Questions or feedback? Reach out at <a href="mailto:jacobsd32@gmail.com">jacobsd32@gmail.com</a>.
+      Questions or feedback? Reach out at <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a>.
     </p>
   </div>
 </div>

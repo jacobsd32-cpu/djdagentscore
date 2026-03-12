@@ -25,7 +25,7 @@ export function blockToIsoTimestamp(blockNumber: bigint, anchorBlock: bigint, an
  * Extract the suggested safe end-block from a BlastAPI "too many results" error.
  * Error format: "query exceeds max results 20000, retry with the range START-END"
  */
-export function parseSuggestedEnd(err: unknown): bigint | null {
+function parseSuggestedEnd(err: unknown): bigint | null {
   const msg =
     (err as { details?: string; message?: string })?.details ?? (err as { message?: string })?.message ?? String(err)
   const m = msg.match(/retry with the range \d+-(\d+)/)
@@ -66,7 +66,10 @@ export async function iterateChunks(opts: ChunkIteratorOptions): Promise<number>
       if (chunkSize < initialChunkSize) {
         chunkSize = chunkSize * 2n > initialChunkSize ? initialChunkSize : chunkSize * 2n
       }
-      await new Promise((r) => setTimeout(r, yieldMs))
+      // Yield the event loop between chunks — use at least 100ms to ensure
+      // HTTP handlers (especially health checks) can interleave even under
+      // heavy SQLite write load.
+      await new Promise((r) => setTimeout(r, Math.max(yieldMs, 100)))
     } catch (err) {
       // BlastAPI tells us the max safe range — use it directly
       const suggestedEnd = parseSuggestedEnd(err)

@@ -1,3 +1,5 @@
+import { buildPublicUrl } from './public.js'
+
 /**
  * Centralized configuration constants.
  *
@@ -14,20 +16,20 @@ export const ENDPOINT_PRICING: Record<string, number> = {
   '/v1/score/refresh': 0.25,
   '/v1/report': 0.02,
   '/v1/data/fraud/blacklist': 0.05,
+  '/v1/data/decay': 0.15,
+  '/v1/data/graph': 0.2,
   '/v1/score/batch': 0.5,
   '/v1/score/history': 0.15,
+  '/v1/forensics/summary': 0.1,
+  '/v1/forensics/dispute': 0.05,
+  '/v1/forensics/feed': 0.3,
+  '/v1/forensics/reports': 0.15,
+  '/v1/forensics/watchlist': 0.25,
+  '/v1/forensics/timeline': 0.2,
   '/v1/certification/apply': 99.0,
 }
 
 // ── Tier Configuration ──────────────────────────────────────────────────────
-
-/** Default tier score thresholds (can be overridden by auto-recalibration). */
-export const DEFAULT_TIER_THRESHOLDS = {
-  Elite: 90,
-  Trusted: 75,
-  Established: 50,
-  Emerging: 25,
-} as const
 
 /** Tier → color mapping for SVG badges. */
 export const TIER_COLORS: Record<string, string> = {
@@ -123,17 +125,6 @@ export const WEBHOOK_CONFIG = {
 
 // ── Score Queue ─────────────────────────────────────────────────────────────
 
-export const SCORE_QUEUE_CONFIG = {
-  /** Time-to-live for a queued job before cleanup (ms) */
-  JOB_TTL_MS: 10 * 60 * 1000,
-  /** How often to clean up expired jobs (ms) */
-  CLEANUP_INTERVAL_MS: 5 * 60 * 1000,
-  /** Max concurrent scoring jobs */
-  MAX_CONCURRENT_JOBS: 1,
-  /** Max pending jobs in queue */
-  MAX_PENDING_JOBS: 50,
-} as const
-
 // ── Blockchain Indexer (x402 payments) ──────────────────────────────────
 
 export const BLOCKCHAIN_INDEXER_CONFIG = {
@@ -165,23 +156,24 @@ export const USDC_INDEXER_CONFIG = {
   /** Delay on RPC error before retry */
   RETRY_DELAY_MS: 30_000,
   /** Blocks per getLogs call (reduced to limit transfers per cycle) */
-  LOG_CHUNK_SIZE: 25n,
-  /** ~5 getLogs/sec to avoid rate limits */
-  RATE_LIMIT_DELAY_MS: 250,
+  LOG_CHUNK_SIZE: 50n,
+  /** ~2 getLogs/sec to keep event loop responsive for health checks */
+  RATE_LIMIT_DELAY_MS: 500,
   /** Max gap to index on startup (~12h at 2s/block) */
   MAX_CATCHUP_BLOCKS: 21_600n,
   /** Cap expensive wallet stats refresh per chunk */
-  MAX_WALLET_REFRESH_PER_CHUNK: 2,
-  /** SQLite micro-batch size to avoid blocking the event loop */
+  MAX_WALLET_REFRESH_PER_CHUNK: 3,
+  /** SQLite micro-batch size — small to keep write lock hold time <5ms */
   MICRO_BATCH_SIZE: 25,
-  /** Event loop yield between micro-batches (ms) */
-  EVENT_LOOP_YIELD_MS: 100,
+  /** Event loop yield between micro-batches (ms) — generous to let health checks through */
+  EVENT_LOOP_YIELD_MS: 150,
   /** Blocks behind tip at which we skip wallet stats refresh */
   CATCHUP_THRESHOLD: 50n,
   /** Max blocks to process in a single poll cycle.
-   *  Caps the event-loop cost of catch-up — excess blocks are processed in
-   *  subsequent 15s poll cycles instead of one giant batch. */
-  MAX_BLOCKS_PER_CYCLE: 100n,
+   *  Reduced from 200 to 75 — on Base each block has ~50 USDC transfers,
+   *  so 75 blocks ≈ 3,750 transfers per cycle. This keeps each cycle's
+   *  event-loop cost under 3 seconds, well within health check tolerance. */
+  MAX_BLOCKS_PER_CYCLE: 75n,
 } as const
 
 // ── Data Pruning ────────────────────────────────────────────────────────
@@ -219,7 +211,7 @@ export const REPUTATION_PUBLISHER_CONFIG = {
   /** Min ETH balance required to publish (0.001 ETH) */
   MIN_ETH_BALANCE: 1_000_000_000_000_000n,
   /** Full score endpoint URL embedded in on-chain record */
-  SCORE_ENDPOINT: 'https://agentscore.ai/v1/score/full',
+  SCORE_ENDPOINT: buildPublicUrl('/v1/score/full'),
 } as const
 
 // ── Anomaly Detector ────────────────────────────────────────────────────

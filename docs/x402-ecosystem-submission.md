@@ -15,7 +15,7 @@ Create this file in the coinbase/x402 repo:
   "name": "DJD Agent Score",
   "description": "On-chain reputation scoring for autonomous AI agents on Base. Five-dimension trust scores (0–100) covering reliability, viability, identity, behavior, and capability. Free tier for basic lookups; paid endpoints via x402 USDC micropayments. API keys available for high-volume access.",
   "logoUrl": "/logos/djd-agent-score.png",
-  "websiteUrl": "https://djd-agent-score.fly.dev",
+  "websiteUrl": "https://djdagentscore.dev",
   "category": "Services/Endpoints"
 }
 ```
@@ -38,8 +38,8 @@ feat(ecosystem): add DJD Agent Score — reputation scoring for AI agents
 ```markdown
 ## DJD Agent Score
 
-**URL:** https://djd-agent-score.fly.dev
-**Docs:** https://djd-agent-score.fly.dev/docs
+**URL:** https://djdagentscore.dev
+**Docs:** https://djdagentscore.dev/docs
 **Category:** Services/Endpoints
 
 ### What it does
@@ -65,20 +65,20 @@ making this a native x402 service — it eats its own dog food.
 
 ```
 # Free — 10 basic score lookups per day, no payment needed
-GET https://djd-agent-score.fly.dev/v1/score/basic?wallet=0x...
+GET https://djdagentscore.dev/v1/score/basic?wallet=0x...
 
 # Free — register your agent (+10 identity bonus)
-POST https://djd-agent-score.fly.dev/v1/agent/register
+POST https://djdagentscore.dev/v1/agent/register
 { "wallet": "0x...", "name": "My Agent", "github_url": "https://..." }
 
 # $0.10 USDC via x402 — full breakdown with dimensions
-GET https://djd-agent-score.fly.dev/v1/score/full?wallet=0x...
+GET https://djdagentscore.dev/v1/score/full?wallet=0x...
 
 # $0.25 USDC via x402 — force live recalculation
-GET https://djd-agent-score.fly.dev/v1/score/refresh?wallet=0x...
+GET https://djdagentscore.dev/v1/score/refresh?wallet=0x...
 
 # $0.15 USDC via x402 — historical scores with trend analysis
-GET https://djd-agent-score.fly.dev/v1/score/history?wallet=0x...
+GET https://djdagentscore.dev/v1/score/history?wallet=0x...
 ```
 
 ### Technical notes

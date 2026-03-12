@@ -75,6 +75,24 @@ export const REPORT_REASONS: ReportReason[] = [
   'other',
 ]
 
+export type DisputeReason =
+  | 'fulfilled_service'
+  | 'mistaken_identity'
+  | 'resolved_offchain'
+  | 'inaccurate_report'
+  | 'other'
+
+export const DISPUTE_REASONS: DisputeReason[] = [
+  'fulfilled_service',
+  'mistaken_identity',
+  'resolved_offchain',
+  'inaccurate_report',
+  'other',
+]
+
+export type DisputeStatus = 'open' | 'resolved'
+export type DisputeResolution = 'upheld' | 'rejected'
+
 // ---------- Dimension raw data ----------
 
 export interface ReliabilityData {
@@ -244,6 +262,24 @@ export interface FraudReportRow {
   details: string
   created_at: string
   penalty_applied: number
+  disputed: number
+  dispute_resolved: number
+  invalidated_at: string | null
+}
+
+export interface FraudDisputeRow {
+  id: string
+  report_id: string
+  target_wallet: string
+  disputing_wallet: string
+  reason: string
+  details: string
+  status: DisputeStatus
+  resolution: DisputeResolution | null
+  resolution_notes: string | null
+  created_at: string
+  resolved_at: string | null
+  resolved_by: string | null
 }
 
 // ---------- Agent Registration ----------
@@ -298,6 +334,17 @@ export interface ReportResponse {
   status: string
   targetCurrentScore: number
   penaltyApplied: number
+}
+
+export interface FraudDisputeBody {
+  report_id: string
+  reason: DisputeReason
+  details: string
+}
+
+export interface FraudDisputeResolutionBody {
+  resolution: DisputeResolution
+  notes?: string
 }
 
 // ---------- Leaderboard ----------

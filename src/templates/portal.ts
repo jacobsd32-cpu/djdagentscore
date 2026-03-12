@@ -155,6 +155,8 @@ export function portalPageHtml(): string {
 </div>
 
 <script>
+let activeApiKey = '';
+
 async function sha256(text) {
   const encoder = new TextEncoder();
   const data = encoder.encode(text);
@@ -192,8 +194,10 @@ async function authenticate() {
     }
 
     const data = await res.json();
+    activeApiKey = key;
     renderDashboard(data);
   } catch (e) {
+    activeApiKey = '';
     errEl.textContent = e.message;
     errEl.style.display = 'block';
     btn.disabled = false;
@@ -229,9 +233,32 @@ function renderDashboard(d) {
   }
 }
 
-function openPortal() {
+async function openPortal() {
   const cid = document.getElementById('portal-btn').dataset.customerId;
-  if (cid) window.location.href = '/billing/portal?customer_id=' + encodeURIComponent(cid);
+  if (!cid || !activeApiKey) return;
+
+  try {
+    const res = await fetch('/billing/portal?customer_id=' + encodeURIComponent(cid), {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer ' + activeApiKey,
+      },
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      throw new Error(err?.error?.message ?? 'Unable to open billing portal');
+    }
+
+    const data = await res.json();
+    if (!data.url) {
+      throw new Error('Billing portal URL missing');
+    }
+
+    window.location.href = data.url;
+  } catch (e) {
+    window.alert(e.message ?? 'Unable to open billing portal');
+  }
 }
 
 document.getElementById('key-input').addEventListener('keydown', (e) => {

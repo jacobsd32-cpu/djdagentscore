@@ -13,99 +13,47 @@
  *   POST /admin/:id/revoke   — revoke a certification
  *   GET  /admin/revenue      — revenue summary
  */
-import type { Context } from 'hono'
 import { Hono } from 'hono'
 import type { AppEnv } from '../types/hono-env.js'
-import { db } from '../db.js'
 import { errorResponse } from '../errors.js'
 import { adminAuth } from '../middleware/adminAuth.js'
-import { makeBadge } from '../utils/badgeGenerator.js'
+import {
+  applyForCertificationByPayer,
+  getCertificationRevenue,
+  getCertificationBadgeView,
+  getCertificationStatusView,
+  listCertificationRecords,
+  revokeCertificationRecord,
+} from '../services/certificationService.js'
 import { getPayerWallet } from '../utils/paymentUtils.js'
-import { normalizeWallet } from '../utils/walletUtils.js'
-
-// ---------- Types ----------
-
-interface ScoreRow {
-  wallet: string
-  composite_score: number
-  tier: string
-  expires_at: string
-}
-
-interface RegistrationRow {
-  wallet: string
-  name: string | null
-}
-
-interface CertificationRow {
-  id: number
-  wallet: string
-  tier: string
-  score_at_certification: number
-  granted_at: string
-  expires_at: string
-  is_active: number
-  tx_hash: string | null
-  revoked_at: string | null
-  revocation_reason: string | null
-}
 
 // ---------- Router ----------
 
-const certification = new Hono()
+const certification = new Hono<AppEnv>()
 
 // ── Public: Check certification status ──────────────────────────────────────
 
 certification.get('/:wallet', (c) => {
-  const wallet = normalizeWallet(c.req.param('wallet'))
-  if (!wallet) {
-    return c.json(errorResponse('invalid_wallet', 'Valid Ethereum wallet address required'), 400)
+  const outcome = getCertificationStatusView(c.req.param('wallet'))
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
   }
 
-  const cert = db.prepare(
-    `SELECT * FROM certifications
-     WHERE wallet = ? AND is_active = 1 AND expires_at > datetime('now')
-     LIMIT 1`,
-  ).get(wallet) as CertificationRow | undefined
-
-  if (!cert) {
-    return c.json(errorResponse('cert_not_found', 'No active certification found for this wallet'), 404)
-  }
-
-  return c.json({
-    wallet: cert.wallet,
-    tier: cert.tier,
-    score_at_certification: cert.score_at_certification,
-    granted_at: cert.granted_at,
-    expires_at: cert.expires_at,
-    is_valid: true,
-  })
+  return c.json(outcome.data)
 })
 
 // ── Public: SVG badge ───────────────────────────────────────────────────────
 
 certification.get('/badge/:wallet', (c) => {
-  const wallet = normalizeWallet(c.req.param('wallet'))
-  if (!wallet) {
-    return c.text('Invalid wallet address', 400)
+  const outcome = getCertificationBadgeView(c.req.param('wallet'))
+  if (!outcome.ok) {
+    return c.text(outcome.message, outcome.status)
   }
-
-  const cert = db.prepare(
-    `SELECT * FROM certifications
-     WHERE wallet = ? AND is_active = 1 AND expires_at > datetime('now')
-     LIMIT 1`,
-  ).get(wallet) as CertificationRow | undefined
-
-  const certified = !!cert
-  const label = 'djd certified'
-  const value = cert ? `✓ Score ${cert.score_at_certification}` : 'not certified'
-  const color = certified ? '#16a34a' : '#6b7280'
-  const svg = makeBadge(label, value, color)
 
   c.header('Content-Type', 'image/svg+xml')
   c.header('Cache-Control', 'public, max-age=3600')
   c.header('X-Content-Type-Options', 'nosniff')
-  return c.body(svg)
+  return c.body(outcome.data.svg)
 })
 
 // ── Paid: Apply for certification ($99 USDC) ───────────────────────────────
@@ -114,140 +62,36 @@ certification.get('/badge/:wallet', (c) => {
 // one-time purchase that must be paid via x402.
 
 certification.post('/apply', (c) => {
-  // Certification MUST be paid via x402 — reject API key-only requests.
-  // API keys bypass x402 for per-query convenience, but certification is a
-  // $99 purchase that requires actual payment proof.
-  const apiKeyId = (c as unknown as Context<AppEnv>).get('apiKeyId')
   const paymentHeader = c.req.header('X-PAYMENT') ?? c.req.header('x-payment')
-  if (apiKeyId && !paymentHeader) {
+  if (c.get('apiKeyId') && !paymentHeader) {
     return c.json(
-      errorResponse('payment_required', 'Certification requires $99 USDC payment via x402. API key authentication alone is not sufficient for this endpoint.'),
+      errorResponse(
+        'payment_required',
+        'Certification requires $99 USDC payment via x402. API key authentication alone is not sufficient for this endpoint.',
+      ),
       402,
     )
   }
 
-  // Extract payer wallet using the shared utility (handles both x402 and API key auth)
-  const wallet = normalizeWallet(getPayerWallet(c))
-  if (!wallet) {
-    return c.json(errorResponse('invalid_wallet', 'Valid Ethereum wallet address required'), 400)
+  const outcome = applyForCertificationByPayer(getPayerWallet(c))
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
   }
 
-  // All validation + INSERT in a single transaction to prevent race conditions.
-  // Without this, concurrent requests could both pass the "no active cert" check
-  // and the second INSERT would throw an unhandled SQLITE_CONSTRAINT error.
-  const certifyTxn = db.transaction((w: string) => {
-    // 1. Must have a current (non-expired) score
-    const scoreRow = db.prepare(
-      `SELECT * FROM scores WHERE wallet = ? LIMIT 1`,
-    ).get(w) as ScoreRow | undefined
-
-    if (!scoreRow || scoreRow.expires_at <= new Date().toISOString()) {
-      return { error: 'cert_requirements_not_met', message: 'Score has expired — request a fresh score first', status: 400 as const }
-    }
-
-    // 2. Composite score must be >= 75
-    if (scoreRow.composite_score < 75) {
-      return { error: 'cert_score_too_low', message: 'Composite score must be >= 75 for certification', status: 400 as const, data: { current_score: scoreRow.composite_score } }
-    }
-
-    // 3. Must be a registered agent
-    const registration = db.prepare(
-      `SELECT * FROM agent_registrations WHERE wallet = ? LIMIT 1`,
-    ).get(w) as RegistrationRow | undefined
-
-    if (!registration) {
-      return { error: 'cert_not_registered', message: 'Agent must be registered before applying for certification', status: 400 as const }
-    }
-
-    // 4. Must not already have an active cert
-    const existingCert = db.prepare(
-      `SELECT * FROM certifications
-       WHERE wallet = ? AND is_active = 1 AND expires_at > datetime('now')
-       LIMIT 1`,
-    ).get(w) as CertificationRow | undefined
-
-    if (existingCert) {
-      return { error: 'cert_already_active', message: 'Wallet already has an active certification', status: 409 as const }
-    }
-
-    // All checks passed — grant certification
-    const result = db.prepare(
-      `INSERT INTO certifications (wallet, tier, score_at_certification, expires_at)
-       VALUES (?, ?, ?, datetime('now', '+1 year'))`,
-    ).run(w, scoreRow.tier, scoreRow.composite_score)
-
-    const newCert = db.prepare(
-      `SELECT * FROM certifications WHERE id = ?`,
-    ).get(result.lastInsertRowid) as CertificationRow
-
-    return { cert: newCert }
-  })
-
-  try {
-    const outcome = certifyTxn(wallet)
-
-    if ('error' in outcome) {
-      const err = outcome as { error: string; message: string; status: 400 | 409; data?: Record<string, unknown> }
-      return c.json(
-        errorResponse(err.error, err.message, err.data),
-        err.status,
-      )
-    }
-
-    const newCert = outcome.cert
-    return c.json({
-      id: newCert.id,
-      wallet: newCert.wallet,
-      tier: newCert.tier,
-      score_at_certification: newCert.score_at_certification,
-      granted_at: newCert.granted_at,
-      expires_at: newCert.expires_at,
-      is_active: true,
-      message: 'Certification granted for 1 year',
-    }, 201)
-  } catch (err: unknown) {
-    // Handle UNIQUE constraint race: if a concurrent request inserted first,
-    // treat as a duplicate rather than a 500.
-    if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
-      return c.json(
-        errorResponse('cert_already_active', 'Wallet already has an active certification'),
-        409,
-      )
-    }
-    throw err
-  }
+  return c.json(outcome.data, outcome.status ?? 201)
 })
 
 // ── Admin: List all certifications ──────────────────────────────────────────
 
 certification.get('/admin/all', adminAuth, (c) => {
-  const certs = db.prepare(
-    `SELECT * FROM certifications ORDER BY granted_at DESC`,
-  ).all() as CertificationRow[]
-
-  return c.json({
-    certifications: certs.map((cert) => ({
-      id: cert.id,
-      wallet: cert.wallet,
-      tier: cert.tier,
-      score_at_certification: cert.score_at_certification,
-      granted_at: cert.granted_at,
-      expires_at: cert.expires_at,
-      is_active: cert.is_active === 1,
-      revoked_at: cert.revoked_at,
-      revocation_reason: cert.revocation_reason,
-    })),
-    count: certs.length,
-  })
+  const certifications = listCertificationRecords()
+  return c.json({ certifications, count: certifications.length })
 })
 
 // ── Admin: Revoke a certification ───────────────────────────────────────────
 
 certification.post('/admin/:id/revoke', adminAuth, async (c) => {
   const id = Number(c.req.param('id'))
-  if (!Number.isInteger(id) || id <= 0) {
-    return c.json(errorResponse('invalid_request', 'Invalid certification ID'), 400)
-  }
 
   let reason = 'Administrative revocation'
   try {
@@ -257,60 +101,18 @@ certification.post('/admin/:id/revoke', adminAuth, async (c) => {
     // No body or invalid JSON — use default reason
   }
 
-  const result = db.prepare(
-    `UPDATE certifications
-     SET is_active = 0, revoked_at = datetime('now'), revocation_reason = ?
-     WHERE id = ? AND is_active = 1`,
-  ).run(reason, id)
-
-  if (result.changes === 0) {
-    return c.json(errorResponse('cert_not_found', 'Certification not found or already revoked'), 404)
+  const outcome = revokeCertificationRecord(id, reason)
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
   }
 
-  return c.json({
-    success: true,
-    message: 'Certification revoked',
-    id,
-    reason,
-  })
+  return c.json(outcome.data)
 })
 
 // ── Admin: Revenue summary ──────────────────────────────────────────────────
 
 certification.get('/admin/revenue', adminAuth, (c) => {
-  const total = db.prepare(
-    `SELECT COUNT(*) as count FROM certifications`,
-  ).get() as { count: number }
-
-  const active = db.prepare(
-    `SELECT COUNT(*) as count FROM certifications WHERE is_active = 1 AND expires_at > datetime('now')`,
-  ).get() as { count: number }
-
-  const revoked = db.prepare(
-    `SELECT COUNT(*) as count FROM certifications WHERE revoked_at IS NOT NULL`,
-  ).get() as { count: number }
-
-  const byMonth = db.prepare(
-    `SELECT
-       strftime('%Y-%m', granted_at) as month,
-       COUNT(*) as count,
-       SUM(CASE WHEN revoked_at IS NOT NULL THEN 1 ELSE 0 END) as revoked_count,
-       SUM(99) as gross_revenue_usd,
-       SUM(CASE WHEN revoked_at IS NULL THEN 99 ELSE 0 END) as net_revenue_usd
-     FROM certifications
-     GROUP BY strftime('%Y-%m', granted_at)
-     ORDER BY month DESC`,
-  ).all() as Array<{ month: string; count: number; revoked_count: number; gross_revenue_usd: number; net_revenue_usd: number }>
-
-  return c.json({
-    total_certifications: total.count,
-    active_certifications: active.count,
-    revoked_certifications: revoked.count,
-    gross_revenue_usd: total.count * 99,
-    net_revenue_usd: (total.count - revoked.count) * 99,
-    price_per_cert_usd: 99,
-    by_month: byMonth,
-  })
+  return c.json(getCertificationRevenue())
 })
 
 export default certification

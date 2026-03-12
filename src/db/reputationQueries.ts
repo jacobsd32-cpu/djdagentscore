@@ -1,0 +1,218 @@
+import { log } from '../logger.js'
+import type { ScoreRow, Tier } from '../types.js'
+import { db } from './connection.js'
+
+const stmtUpsertScore = db.prepare(`
+  INSERT INTO scores
+    (wallet, composite_score, reliability_score, viability_score, identity_score, capability_score,
+     tier, raw_data, calculated_at, expires_at,
+     confidence, recommendation, model_version, sybil_flag, sybil_indicators, gaming_indicators, behavior_score)
+  VALUES
+    (@wallet, @composite_score, @reliability_score, @viability_score, @identity_score, @capability_score,
+     @tier, @raw_data, @calculated_at, @expires_at,
+     @confidence, @recommendation, @model_version, @sybil_flag, @sybil_indicators, @gaming_indicators, @behavior_score)
+  ON CONFLICT(wallet) DO UPDATE SET
+    composite_score   = excluded.composite_score,
+    reliability_score = excluded.reliability_score,
+    viability_score   = excluded.viability_score,
+    identity_score    = excluded.identity_score,
+    capability_score  = excluded.capability_score,
+    tier              = excluded.tier,
+    raw_data          = excluded.raw_data,
+    calculated_at     = excluded.calculated_at,
+    expires_at        = excluded.expires_at,
+    confidence        = excluded.confidence,
+    recommendation    = excluded.recommendation,
+    model_version     = excluded.model_version,
+    sybil_flag        = excluded.sybil_flag,
+    sybil_indicators  = excluded.sybil_indicators,
+    gaming_indicators = excluded.gaming_indicators,
+    behavior_score    = excluded.behavior_score
+`)
+
+const stmtGetScore = db.prepare<[string], ScoreRow>(`
+  SELECT * FROM scores WHERE wallet = ?
+`)
+
+const stmtInsertHistory = db.prepare(`
+  INSERT INTO score_history (wallet, score, calculated_at, confidence, model_version)
+  VALUES (?, ?, ?, ?, ?)
+`)
+
+const stmtInsertDecay = db.prepare(`INSERT INTO score_decay (wallet, composite_score) VALUES (?, ?)`)
+const stmtUpdateWalletIndex = db.prepare(`UPDATE wallet_index SET is_scored = 1, last_seen = ? WHERE wallet = ?`)
+const stmtPruneHistory = db.prepare(
+  `DELETE FROM score_history WHERE wallet = ? AND id NOT IN
+   (SELECT id FROM score_history WHERE wallet = ? ORDER BY calculated_at DESC LIMIT 50)`,
+)
+
+const stmtPruneDecay = db.prepare(
+  `DELETE FROM score_decay WHERE wallet = ? AND rowid NOT IN (
+    SELECT rowid FROM score_decay WHERE wallet = ? ORDER BY recorded_at DESC LIMIT 50
+  )`,
+)
+
+const stmtPruneSnapshots = db.prepare(
+  `DELETE FROM wallet_snapshots WHERE wallet = ? AND rowid NOT IN (
+    SELECT rowid FROM wallet_snapshots WHERE wallet = ? ORDER BY snapshot_at DESC LIMIT 50
+  )`,
+)
+
+const stmtGetExpired = db.prepare<[], { wallet: string }>(`
+  SELECT wallet FROM scores WHERE expires_at < datetime('now')
+`)
+
+const stmtGetUnscoredWallets = db.prepare<[number], { wallet: string }>(`
+  SELECT w.wallet
+  FROM wallet_index w
+  LEFT JOIN scores s ON s.wallet = w.wallet
+  WHERE s.wallet IS NULL
+    AND w.total_tx_count >= 3
+  ORDER BY w.last_seen DESC
+  LIMIT ?
+`)
+
+const stmtCountScores = db.prepare<[], { count: number }>(`
+  SELECT COUNT(*) as count FROM scores
+`)
+
+const TTL_MS = 60 * 60 * 1000
+
+let tierThresholds = { Elite: 90, Trusted: 75, Established: 50, Emerging: 25 }
+let thresholdsCachedAt = 0
+
+function refreshThresholds(): void {
+  if (Date.now() - thresholdsCachedAt < 60_000) return
+  try {
+    const raw = db.prepare('SELECT value FROM indexer_state WHERE key = ?').get('tier_threshold_adjustments') as
+      | { value: string }
+      | undefined
+    if (raw?.value) {
+      const parsed = JSON.parse(raw.value) as { thresholds: typeof tierThresholds }
+      if (parsed.thresholds) tierThresholds = parsed.thresholds
+    }
+  } catch (err) {
+    log.warn('db', 'Failed to parse tier_threshold_adjustments — using defaults', err)
+  }
+  thresholdsCachedAt = Date.now()
+}
+
+/** Prune old wallet snapshots, keeping the 50 most recent. Call from the snapshot job, not from score upsert. */
+export function pruneWalletSnapshots(wallet: string): void {
+  stmtPruneSnapshots.run(wallet, wallet)
+}
+
+export function scoreToTier(score: number): Tier {
+  refreshThresholds()
+  if (score >= tierThresholds.Elite) return 'Elite'
+  if (score >= tierThresholds.Trusted) return 'Trusted'
+  if (score >= tierThresholds.Established) return 'Established'
+  if (score >= tierThresholds.Emerging) return 'Emerging'
+  return 'Unverified'
+}
+
+export interface ScoreMetadata {
+  confidence?: number
+  recommendation?: string
+  modelVersion?: string
+  sybilFlag?: boolean
+  sybilIndicators?: string[]
+  gamingIndicators?: string[]
+}
+
+const upsertScoreTxn = db.transaction(
+  (
+    wallet: string,
+    compositeScore: number,
+    reliabilityScore: number,
+    viabilityScore: number,
+    identityScore: number,
+    capabilityScore: number,
+    behaviorScore: number | null,
+    tier: string,
+    rawData: object,
+    now: Date,
+    expiresAt: Date,
+    meta: ScoreMetadata,
+  ) => {
+    stmtUpsertScore.run({
+      wallet,
+      composite_score: compositeScore,
+      reliability_score: reliabilityScore,
+      viability_score: viabilityScore,
+      identity_score: identityScore,
+      capability_score: capabilityScore,
+      behavior_score: behaviorScore,
+      tier,
+      raw_data: JSON.stringify(rawData),
+      calculated_at: now.toISOString(),
+      expires_at: expiresAt.toISOString(),
+      confidence: meta.confidence ?? 0.0,
+      recommendation: meta.recommendation ?? 'insufficient_history',
+      model_version: meta.modelVersion ?? '1.0.0',
+      sybil_flag: meta.sybilFlag ? 1 : 0,
+      sybil_indicators: JSON.stringify(meta.sybilIndicators ?? []),
+      gaming_indicators: JSON.stringify(meta.gamingIndicators ?? []),
+    })
+
+    stmtInsertHistory.run(
+      wallet,
+      compositeScore,
+      now.toISOString(),
+      meta.confidence ?? 0.0,
+      meta.modelVersion ?? '1.0.0',
+    )
+
+    stmtInsertDecay.run(wallet, compositeScore)
+    stmtUpdateWalletIndex.run(now.toISOString(), wallet)
+    stmtPruneHistory.run(wallet, wallet)
+    stmtPruneDecay.run(wallet, wallet)
+  },
+)
+
+export function upsertScore(
+  wallet: string,
+  compositeScore: number,
+  reliabilityScore: number,
+  viabilityScore: number,
+  identityScore: number,
+  capabilityScore: number,
+  behaviorScore: number | null,
+  rawData: object,
+  meta: ScoreMetadata = {},
+): void {
+  const now = new Date()
+  const expiresAt = new Date(now.getTime() + TTL_MS)
+  const tier = scoreToTier(compositeScore)
+
+  upsertScoreTxn(
+    wallet.toLowerCase(),
+    compositeScore,
+    reliabilityScore,
+    viabilityScore,
+    identityScore,
+    capabilityScore,
+    behaviorScore,
+    tier,
+    rawData,
+    now,
+    expiresAt,
+    meta,
+  )
+}
+
+export function getScore(wallet: string): ScoreRow | undefined {
+  return stmtGetScore.get(wallet)
+}
+
+export function getExpiredWallets(): string[] {
+  return stmtGetExpired.all().map((row) => row.wallet)
+}
+
+export function getUnscoredWallets(limit: number): string[] {
+  return stmtGetUnscoredWallets.all(limit).map((row) => row.wallet)
+}
+
+export function countCachedScores(): number {
+  return stmtCountScores.get()!.count
+}

@@ -138,7 +138,7 @@ export interface ApiError {
 }
 
 export interface ClientOptions {
-  /** Base URL of the DJD Agent Score API (e.g., "https://djd-agent-score.fly.dev") */
+  /** Base URL of the DJD Agent Score API (e.g., "https://djdagentscore.dev") */
   baseUrl: string
   /** Optional x402 payment header generator. Called before paid requests. */
   paymentHeaderProvider?: (endpoint: string, price: string) => Promise<string> | string

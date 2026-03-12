@@ -2,10 +2,10 @@
  * Database barrel — re-exports connection, schema (side-effect), and query helpers.
  *
  * Existing imports like `import { upsertScore, db } from '../db.js'` continue
- * to work unchanged.  Internally the logic lives in:
+ * to work unchanged. Internally the logic lives in:
  *   - db/connection.ts  — SQLite instance + pragmas
  *   - db/schema.ts      — CREATE TABLE + migrations (side-effect)
- *   - db/queries.ts     — prepared statements + exported helpers
+ *   - db/queries.ts     — barrel over domain-scoped query modules
  */
 
 // Side-effect: ensures all tables + migrations run before queries compile.

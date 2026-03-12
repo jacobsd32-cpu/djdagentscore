@@ -1,6 +1,6 @@
 {
   "name": "x402-agent-score",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Hono middleware to gate x402 API requests by agent reputation score",
   "type": "module",
   "main": "./dist/index.js",
@@ -16,7 +16,9 @@
   ],
   "scripts": {
     "build": "tsc",
-    "prepublishOnly": "npm run build"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "keywords": [
     "hono",
@@ -29,15 +31,25 @@
   ],
   "author": "DJD Agent Score",
   "license": "MIT",
+  "homepage": "https://djdagentscore.dev",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jacobsd32-cpu/djdagentscore"
+    "url": "https://github.com/jacobsd32-cpu/djdagentscore.git",
+    "directory": "packages/x402-agent-score"
   },
   "peerDependencies": {
     "hono": ">=3.0.0"
   },
   "devDependencies": {
-    "hono": "^4.12.1",
-    "typescript": "^5.9.3"
+    "@types/node": "^25.3.0",
+    "hono": "^4.12.7",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   }
 }
