@@ -35,6 +35,12 @@ const stmtListApiKeys = db.prepare<[], ApiKeyRow>(`
   FROM api_keys ORDER BY created_at DESC
 `)
 
+const stmtFindApiKeyByHash = db.prepare<[string], ApiKeyRow>(`
+  SELECT id, key_prefix, wallet, name, tier, monthly_limit, monthly_used,
+         usage_reset_at, is_active, created_at, last_used_at, revoked_at, stripe_customer_id
+  FROM api_keys WHERE key_hash = ?
+`)
+
 const stmtRevokeApiKey = db.prepare(`
   UPDATE api_keys SET revoked_at = datetime('now'), is_active = 0 WHERE id = ? AND revoked_at IS NULL
 `)
@@ -69,6 +75,10 @@ export function insertApiKey(input: {
 
 export function listApiKeys(): ApiKeyRow[] {
   return stmtListApiKeys.all()
+}
+
+export function findApiKeyByHash(keyHash: string): ApiKeyRow | undefined {
+  return stmtFindApiKeyByHash.get(keyHash)
 }
 
 export function revokeApiKey(id: number): boolean {

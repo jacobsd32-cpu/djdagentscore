@@ -1,6 +1,6 @@
 import { insertApiKey, listApiKeys, resetApiKeyUsage, revokeApiKey } from '../db.js'
 import type { ApiKeyRow } from '../db.js'
-import { generateApiKey, hashKey, keyPrefix } from '../utils/apiKeyUtils.js'
+import { createApiKeyMaterial, getNextUsageResetAt } from '../utils/apiKeyUtils.js'
 
 export interface ApiKeyServiceError {
   ok: false
@@ -17,12 +17,18 @@ export interface ApiKeyCreateSuccess {
 
 export type ApiKeyCreateResult = ApiKeyServiceError | ApiKeyCreateSuccess
 
-export function getNextUsageResetAt(from = new Date()): string {
-  const nextReset = new Date(from)
-  nextReset.setMonth(nextReset.getMonth() + 1)
-  nextReset.setDate(1)
-  nextReset.setHours(0, 0, 0, 0)
-  return nextReset.toISOString()
+export interface ApiKeyProvisionDraft {
+  rawKey: string
+  insertInput: {
+    key_hash: string
+    key_prefix: string
+    wallet: string
+    name: string | null
+    tier: string
+    monthly_limit: number
+    usage_reset_at: string
+    stripe_customer_id?: string | null
+  }
 }
 
 function invalidRequest(message: string): ApiKeyServiceError {
@@ -64,27 +70,47 @@ function normalizeMonthlyLimit(value: unknown): number {
   return value
 }
 
+export function prepareApiKeyProvisioning(input: {
+  wallet: string
+  name: string | null
+  tier: string
+  monthlyLimit: number
+  stripeCustomerId?: string | null
+}): ApiKeyProvisionDraft {
+  const material = createApiKeyMaterial()
+  return {
+    rawKey: material.rawKey,
+    insertInput: {
+      key_hash: material.keyHash,
+      key_prefix: material.keyPrefix,
+      wallet: input.wallet.toLowerCase(),
+      name: input.name,
+      tier: input.tier,
+      monthly_limit: input.monthlyLimit,
+      usage_reset_at: getNextUsageResetAt(),
+      stripe_customer_id: input.stripeCustomerId ?? null,
+    },
+  }
+}
+
 export function createAdminApiKey(body: unknown): ApiKeyCreateResult {
   if (!isRecord(body) || typeof body.wallet !== 'string' || !body.wallet.trim()) {
     return invalidRequest('wallet is required')
   }
 
-  const rawKey = generateApiKey()
-  const created = insertApiKey({
-    key_hash: hashKey(rawKey),
-    key_prefix: keyPrefix(rawKey),
-    wallet: body.wallet.toLowerCase(),
+  const provisioned = prepareApiKeyProvisioning({
+    wallet: body.wallet,
     name: normalizeOptionalString(body.name),
     tier: normalizeTier(body.tier),
-    monthly_limit: normalizeMonthlyLimit(body.monthly_limit),
-    usage_reset_at: getNextUsageResetAt(),
+    monthlyLimit: normalizeMonthlyLimit(body.monthly_limit),
   })
+  const created = insertApiKey(provisioned.insertInput)
 
   return {
     ok: true,
     apiKey: {
       ...created,
-      key: rawKey,
+      key: provisioned.rawKey,
     },
     message: 'Store this key securely — it cannot be retrieved again.',
   }

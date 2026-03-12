@@ -40,6 +40,7 @@ src/
 ├── services/
 │   ├── apiKeyService.ts            # Admin API key lifecycle and reset policy
 │   ├── certificationService.ts     # Certification rules and workflow orchestration
+│   ├── portalService.ts            # Developer portal usage and analytics lookup
 │   ├── registrationService.ts      # Agent registration and GitHub identity workflow
 │   ├── webhookQueueService.ts      # Worker-side webhook queueing, delivery, and retry policy
 │   └── webhookService.ts           # Webhook validation, lifecycle, and test delivery

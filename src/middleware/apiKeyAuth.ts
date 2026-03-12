@@ -4,10 +4,10 @@
  * If valid + under quota: sets context vars and skips x402/freeTier.
  * If invalid/missing: passes through to downstream middleware.
  */
-import crypto from 'node:crypto'
 import type { MiddlewareHandler } from 'hono'
 import { db } from '../db.js'
 import { errorResponse, ErrorCodes } from '../errors.js'
+import { getNextUsageResetAt, hashKey } from '../utils/apiKeyUtils.js'
 
 interface ApiKeyRow {
   id: number
@@ -22,10 +22,6 @@ interface ApiKeyRow {
   is_active: number
   last_used_at: string | null
   revoked_at: string | null
-}
-
-function hashKey(key: string): string {
-  return crypto.createHash('sha256').update(key).digest('hex')
 }
 
 const stmtFindKey = db.prepare<[string], ApiKeyRow>(
@@ -65,13 +61,10 @@ export const apiKeyAuthMiddleware: MiddlewareHandler = async (c, next) => {
   // Check if usage needs monthly reset
   const now = new Date()
   if (new Date(row.usage_reset_at) <= now) {
-    const nextReset = new Date(now)
-    nextReset.setMonth(nextReset.getMonth() + 1)
-    nextReset.setDate(1)
-    nextReset.setHours(0, 0, 0, 0)
-    stmtResetUsage.run(nextReset.toISOString(), hash)
+    const nextReset = getNextUsageResetAt(now)
+    stmtResetUsage.run(nextReset, hash)
     row.monthly_used = 0
-    row.usage_reset_at = nextReset.toISOString()
+    row.usage_reset_at = nextReset
   }
 
   if (row.monthly_used >= row.monthly_limit) {

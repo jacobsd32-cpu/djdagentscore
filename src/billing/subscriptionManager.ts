@@ -14,7 +14,7 @@ import type Stripe from 'stripe'
 import { BILLING_PLANS, type BillingPlan } from '../config/plans.js'
 import { db as defaultDb } from '../db.js'
 import { log } from '../logger.js'
-import { generateApiKey, hashKey, keyPrefix } from '../utils/apiKeyUtils.js'
+import { prepareApiKeyProvisioning } from '../services/apiKeyService.js'
 import { getStripe } from './stripeClient.js'
 
 // ── Checkout Session ──────────────────────────────────────────────
@@ -88,17 +88,15 @@ export function provisionApiKey(
     return { apiKeyId: existing.api_key_id, rawKey: '', plan: existing.plan }
   }
 
-  const rawKey = generateApiKey()
-  const hash = hashKey(rawKey)
-  const prefix = keyPrefix(rawKey)
-
   // Use a "billing" wallet placeholder — Stripe customers don't have wallets
   const wallet = `stripe:${customerId}`
-
-  const nextReset = new Date()
-  nextReset.setMonth(nextReset.getMonth() + 1)
-  nextReset.setDate(1)
-  nextReset.setHours(0, 0, 0, 0)
+  const provisioned = prepareApiKeyProvisioning({
+    wallet,
+    name: `${plan.name} Plan (${email ?? 'no email'})`,
+    tier: plan.id,
+    monthlyLimit: plan.monthlyLimit,
+    stripeCustomerId: customerId,
+  })
 
   const provision = db.transaction(() => {
     // 1. Insert API key
@@ -108,14 +106,14 @@ export function provisionApiKey(
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `)
       .run(
-        hash,
-        prefix,
-        wallet,
-        `${plan.name} Plan (${email ?? 'no email'})`,
-        plan.id,
-        plan.monthlyLimit,
-        nextReset.toISOString(),
-        customerId,
+        provisioned.insertInput.key_hash,
+        provisioned.insertInput.key_prefix,
+        provisioned.insertInput.wallet,
+        provisioned.insertInput.name,
+        provisioned.insertInput.tier,
+        provisioned.insertInput.monthly_limit,
+        provisioned.insertInput.usage_reset_at,
+        provisioned.insertInput.stripe_customer_id ?? null,
       )
 
     const apiKeyId = Number(keyResult.lastInsertRowid)
@@ -136,7 +134,7 @@ export function provisionApiKey(
     `API key provisioned: session=${sessionId} customer=${customerId} plan=${plan.id} keyId=${apiKeyId}`,
   )
 
-  return { apiKeyId, rawKey, plan: plan.id }
+  return { apiKeyId, rawKey: provisioned.rawKey, plan: plan.id }
 }
 
 // ── Subscription Lifecycle ────────────────────────────────────────
