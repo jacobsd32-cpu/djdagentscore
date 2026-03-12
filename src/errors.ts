@@ -84,6 +84,9 @@ export const ErrorCodes = {
   HISTORY_NOT_FOUND: 'history_not_found',
   INVALID_DATE_RANGE: 'invalid_date_range',
 
+  // Analytics
+  INVALID_PERIOD: 'invalid_period',
+
   // Certification
   CERT_REQUIREMENTS_NOT_MET: 'cert_requirements_not_met',
   CERT_NOT_FOUND: 'cert_not_found',

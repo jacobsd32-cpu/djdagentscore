@@ -1,23 +1,22 @@
 import { Hono } from 'hono'
-import { getEcosystemStats, getRecentActivity } from '../db.js'
-import { explorerDashboardHtml } from '../templates/explorer.js'
+import {
+  getExplorerActivityFeed,
+  getExplorerDashboardPage,
+  getExplorerStatsSnapshot,
+} from '../services/analyticsService.js'
 
 const explorer = new Hono()
 
 explorer.get('/', (c) => {
-  const stats = getEcosystemStats()
-  return c.html(explorerDashboardHtml(stats))
+  return c.html(getExplorerDashboardPage().html)
 })
 
 explorer.get('/api/stats', (c) => {
-  const stats = getEcosystemStats()
-  return c.json(stats)
+  return c.json(getExplorerStatsSnapshot())
 })
 
 explorer.get('/api/activity', (c) => {
-  const limit = Math.min(Number(c.req.query('limit') ?? 20), 50)
-  const activity = getRecentActivity(limit)
-  return c.json({ activity })
+  return c.json(getExplorerActivityFeed(c.req.query('limit')))
 })
 
 export default explorer
