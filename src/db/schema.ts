@@ -228,6 +228,24 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_fraud_disputes_target ON fraud_disputes(target_wallet, created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_fraud_disputes_status ON fraud_disputes(status, created_at DESC);
 
+  CREATE TABLE IF NOT EXISTS mutual_ratings (
+    id           TEXT PRIMARY KEY,
+    rater_wallet TEXT NOT NULL,
+    rated_wallet TEXT NOT NULL,
+    tx_hash      TEXT NOT NULL,
+    rating       INTEGER NOT NULL,
+    comment      TEXT,
+    created_at   TEXT NOT NULL
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_mutual_ratings_pair_tx
+    ON mutual_ratings(rater_wallet, rated_wallet, tx_hash);
+  CREATE INDEX IF NOT EXISTS idx_mutual_ratings_rated
+    ON mutual_ratings(rated_wallet, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_mutual_ratings_rater
+    ON mutual_ratings(rater_wallet, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_mutual_ratings_tx
+    ON mutual_ratings(tx_hash);
+
   -- Analytics
   CREATE TABLE IF NOT EXISTS query_log (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,

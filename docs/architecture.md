@@ -21,7 +21,7 @@ src/
 │   └── env.ts                      # Environment helpers and runtime toggles
 ├── db/
 │   ├── connection.ts               # SQLite connection (DELETE journal mode)
-│   ├── schema.ts                   # 32-table schema, migrations, indexes
+│   ├── schema.ts                   # 33-table schema, migrations, indexes
 │   ├── dataQueries.ts              # Score-decay and relationship-graph read models for DJD data products
 │   ├── certificationQueries.ts     # DJD Certify persistence and certification revenue rollups
 │   ├── directoryQueries.ts         # Public leaderboard and trust-directory read models
@@ -29,6 +29,7 @@ src/
 │   ├── identityQueries.ts          # Agent registration and GitHub identity persistence
 │   ├── monitoringQueries.ts        # Managed monitoring-subscription persistence over webhook delivery
 │   ├── reputationQueries.ts        # Scores, tier thresholds, and score-write persistence
+│   ├── ratingsQueries.ts           # Mutual counterparty ratings persistence, transaction validation, and sentiment rollups
 │   ├── evidenceQueries.ts          # Query logs, indexer state, transfer evidence, webhook persistence
 │   ├── platformQueries.ts          # API key persistence and developer platform records
 │   ├── analyticsQueries.ts         # Revenue, explorer, economy, publication queries
@@ -62,6 +63,7 @@ src/
 │   ├── opsService.ts               # Health and Prometheus metrics payload assembly with runtime-safe caching
 │   ├── portalService.ts            # Developer portal usage and analytics lookup
 │   ├── registrationService.ts      # Agent registration and GitHub identity workflow
+│   ├── ratingsService.ts           # Transaction-backed mutual-rating intake and ratings data-product views
 │   ├── scoreService.ts             # Score request orchestration for sync, batch, and async job APIs
 │   ├── stripeWebhookService.ts     # Stripe signature verification and webhook event handling
 │   ├── webhookQueueService.ts      # Worker-side webhook queueing, wallet-scoped delivery, retry policy, and live Forensics/anomaly events
@@ -79,11 +81,12 @@ src/
 │   ├── score.ts                    # GET /v1/score/*
 │   ├── history.ts                  # GET /v1/score/history (paid)
 │   ├── report.ts                   # POST /v1/report
+│   ├── ratings.ts                  # POST /v1/rate
 │   ├── monitoring.ts               # /v1/monitor/* managed monitoring subscriptions and presets
 │   ├── forensics.ts                # /v1/forensics/* (summary, dispute intake, feed, watchlist, reports, merged timeline)
 │   ├── leaderboard.ts              # GET /v1/leaderboard
 │   ├── badge.ts                    # GET /v1/badge/*.svg
-│   ├── data.ts                     # /v1/data/decay and /v1/data/graph
+│   ├── data.ts                     # /v1/data/decay, /v1/data/graph, and /v1/data/ratings
 │   ├── agent.ts                    # GET /agent/{wallet} (HTML)
 │   ├── blacklist.ts                # GET /v1/data/fraud/blacklist
 │   ├── certification.ts            # /v1/certification/* (apply, status, badge)
@@ -186,11 +189,12 @@ Separate indexer for standard USDC `Transfer` events. Feeds the Reliability and 
 
 ### Database (`src/db/`)
 
-SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached volume compatibility). 32 tables:
+SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached volume compatibility). 33 tables:
 
 - `scores` — cached composite + dimension scores
 - `score_history` — historical score snapshots
 - `fraud_reports` — user-submitted misconduct reports
+- `mutual_ratings` — transaction-backed peer ratings and community sentiment signals
 - `agent_registrations` — voluntary wallet registration metadata
 - `query_log` — per-request logging for rate limiting and analytics
 - `x402_settlements` — indexed EIP-3009 events

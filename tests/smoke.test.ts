@@ -11,6 +11,7 @@ describe('test infrastructure', () => {
     expect(names).toContain('raw_transactions')
     expect(names).toContain('wallet_index')
     expect(names).toContain('scores')
+    expect(names).toContain('mutual_ratings')
     db.close()
   })
 })

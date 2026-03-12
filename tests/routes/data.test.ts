@@ -34,6 +34,17 @@ const { testDb } = vi.hoisted(() => {
 
 vi.mock('../../src/db.js', () => ({
   getScore: (wallet: string) => testDb.prepare('SELECT * FROM scores WHERE wallet = ?').get(wallet),
+  getIndexedTransactionBetweenWallets: () => undefined,
+  getMutualRatingByTxAndPair: () => undefined,
+  getRatingBreakdownForWallet: () => [],
+  getRatingsSummaryForWallet: () => ({
+    rating_count: 0,
+    unique_raters: 0,
+    average_rating: null,
+    most_recent_rating_at: null,
+  }),
+  insertMutualRating: () => undefined,
+  listMutualRatingsByWallet: () => [],
   listScoreDecay: (wallet: string, options: { after?: string; before?: string; limit: number }) => {
     let sql = 'SELECT wallet, composite_score, recorded_at FROM score_decay WHERE wallet = ?'
     const args: Array<string | number> = [wallet]

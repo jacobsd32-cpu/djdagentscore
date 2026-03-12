@@ -14,6 +14,7 @@
     { "name": "score",         "description": "Score lookup and computation" },
     { "name": "register",      "description": "Agent self-registration" },
     { "name": "report",        "description": "Fraud reporting" },
+    { "name": "ratings",       "description": "Transaction-backed mutual counterparty ratings" },
     { "name": "data",          "description": "Aggregated data endpoints" },
     { "name": "system",        "description": "Health and metadata" },
     { "name": "api-keys",      "description": "API key management (admin)" },
@@ -325,6 +326,38 @@
         }
       }
     },
+    "/v1/rate": {
+      "post": {
+        "tags": ["ratings"],
+        "summary": "Submit a mutual counterparty rating",
+        "description": "Submit a transaction-backed 1-5 star rating for a counterparty wallet. The payer wallet becomes the rater, and the `tx_hash` must reference an indexed transaction worth at least $0.10 USDC between the two wallets. **Requires x402 payment of $0.01 USDC on Base.**",
+        "operationId": "submitRating",
+        "security": [{ "x402": [] }],
+        "x-x402": { "price": "$0.01", "network": "base" },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RatingRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Rating submitted",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RatingResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "409": { "description": "Duplicate rating", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
     "/v1/data/fraud/blacklist": {
       "get": {
         "tags": ["data"],
@@ -423,6 +456,40 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/DataGraphResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/v1/data/ratings": {
+      "get": {
+        "tags": ["data"],
+        "summary": "Counterparty ratings",
+        "description": "Returns aggregate mutual-rating sentiment and recent transaction-backed ratings for a wallet. **Requires x402 payment of $0.10 USDC on Base.**",
+        "operationId": "getRatings",
+        "parameters": [
+          { "$ref": "#/components/parameters/wallet" },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum ratings to return (default: 25, max: 100)",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 25 }
+          }
+        ],
+        "security": [{ "x402": [] }],
+        "x-x402": { "price": "$0.10", "network": "base" },
+        "responses": {
+          "200": {
+            "description": "Ratings data returned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DataRatingsResponse" }
               }
             }
           },
@@ -1916,6 +1983,28 @@
           "penaltyApplied":    { "type": "integer" }
         }
       },
+      "RatingRequest": {
+        "type": "object",
+        "required": ["rated_wallet", "tx_hash", "rating"],
+        "properties": {
+          "rated_wallet": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$", "description": "Wallet being rated" },
+          "tx_hash": { "type": "string", "pattern": "^0x[0-9a-fA-F]{64}$", "description": "Indexed transaction hash between payer and rated wallet with at least $0.10 USDC of settlement" },
+          "rating": { "type": "integer", "minimum": 1, "maximum": 5, "description": "Star rating from 1 to 5" },
+          "comment": { "type": "string", "maxLength": 500, "description": "Optional comment about the transaction" }
+        }
+      },
+      "RatingResponse": {
+        "type": "object",
+        "properties": {
+          "ratingId": { "type": "string", "format": "uuid" },
+          "status": { "type": "string", "enum": ["accepted"] },
+          "ratedWallet": { "type": "string" },
+          "txHash": { "type": "string" },
+          "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "averageRating": { "type": "number" },
+          "ratingCount": { "type": "integer" }
+        }
+      },
       "BlacklistResponse": {
         "type": "object",
         "properties": {
@@ -2019,6 +2108,46 @@
               "last_interaction": { "type": "string", "format": "date-time", "nullable": true }
             }
           }
+        }
+      },
+      "DataRatingsBreakdown": {
+        "type": "object",
+        "properties": {
+          "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "count": { "type": "integer" }
+        }
+      },
+      "DataRatingsItem": {
+        "type": "object",
+        "properties": {
+          "rating_id": { "type": "string", "format": "uuid" },
+          "rater_wallet": { "type": "string" },
+          "tx_hash": { "type": "string" },
+          "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "comment": { "type": "string", "nullable": true },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "DataRatingsResponse": {
+        "type": "object",
+        "properties": {
+          "wallet": { "type": "string" },
+          "current_score": { "type": "integer", "nullable": true },
+          "current_tier": { "type": "string", "nullable": true },
+          "average_rating": { "type": "number" },
+          "rating_count": { "type": "integer" },
+          "unique_raters": { "type": "integer" },
+          "most_recent_rating_at": { "type": "string", "format": "date-time", "nullable": true },
+          "breakdown": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DataRatingsBreakdown" }
+          },
+          "ratings": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DataRatingsItem" }
+          },
+          "count": { "type": "integer" },
+          "returned": { "type": "integer" }
         }
       },
       "FraudDisputeRequest": {
