@@ -9,11 +9,11 @@ jobs:
     name: Lint, Typecheck & Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
           token: ${{ secrets.GH_PAT }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
@@ -35,20 +35,23 @@ jobs:
       matrix:
         include:
           - path: packages/djd-agent-score-client
+            bootstrap: ""
             install: npm ci
             verify: npm run typecheck && npm run build && npm pack --dry-run
           - path: packages/djd-agent-score-mcp
+            bootstrap: npm ci --prefix packages/djd-agent-score-client
             install: npm ci
             verify: npm run typecheck && npm test && npm run build && npm pack --dry-run
           - path: packages/x402-agent-score
+            bootstrap: ""
             install: npm ci
             verify: npm run typecheck && npm test && npm run build && npm pack --dry-run
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
           token: ${{ secrets.GH_PAT }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
@@ -57,6 +60,8 @@ jobs:
             packages/djd-agent-score-client/package-lock.json
             packages/djd-agent-score-mcp/package-lock.json
             packages/x402-agent-score/package-lock.json
+      - if: ${{ matrix.bootstrap != '' }}
+        run: ${{ matrix.bootstrap }}
       - run: ${{ matrix.install }}
         working-directory: ${{ matrix.path }}
       - run: ${{ matrix.verify }}
