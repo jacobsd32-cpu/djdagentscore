@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url'
 
 const HARD_CODED_REFERENCES = [
   { needle: 'https://djdagentscore.dev', label: 'production base URL' },
-  { needle: 'feedback@djdagentscore.dev', label: 'production support email' },
+  { needle: 'drewjacobs32@gmail.com', label: 'production support email' },
 ]
 
 const ALLOWED_RELATIVE_PATHS = new Set(['src/config/public.ts'])
