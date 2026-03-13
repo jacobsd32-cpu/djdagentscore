@@ -127,7 +127,7 @@ export const tosContent = `
 export const privacyContent = `
 <h1 class="title">DJD AGENT SCORE</h1>
 <h1 class="subtitle">PRIVACY POLICY</h1>
-<p class="date">Last Updated: February 20, 2026</p>
+<p class="date">Last Updated: March 14, 2026</p>
 
 <p>This Privacy Policy describes how DJD Agent Score (&ldquo;<strong>Company,</strong>&rdquo; &ldquo;<strong>we,</strong>&rdquo; &ldquo;<strong>our</strong>&rdquo;) collects, uses, stores, and discloses information in connection with the DJD Agent Score API and related services (the &ldquo;<strong>Service</strong>&rdquo;). By using the Service, you acknowledge and agree to this Privacy Policy.</p>
 
@@ -157,8 +157,11 @@ export const privacyContent = `
 <h2>2.3 User-Submitted Data</h2>
 <p>When you submit fraud reports, ratings, or other content through the Service, we collect the content of your submission, the submitting wallet address, the target wallet address, supporting evidence (transaction hashes), and timestamps. All user-submitted data is voluntary.</p>
 
-<h2>2.4 Information We Do NOT Collect</h2>
-<p>We do not collect names, email addresses, phone numbers, physical addresses, government identification numbers, biometric data, or any traditional PII. We do not use cookies, tracking pixels, or browser fingerprinting. We do not integrate with advertising networks. The Service does not have user accounts, logins, or passwords.</p>
+<h2>2.4 Reviewer Session Data</h2>
+<p>The internal reviewer dashboard uses a short-lived, signed <code>HttpOnly</code> session cookie to authenticate administrative review actions. This cookie is not used for advertising, analytics, or cross-site tracking. It exists solely to protect internal certification review workflows and expires automatically.</p>
+
+<h2>2.5 Information We Do NOT Collect</h2>
+<p>We do not collect names, email addresses, phone numbers, physical addresses, government identification numbers, biometric data, or any traditional PII. We do not use tracking pixels or browser fingerprinting. We do not integrate with advertising networks. The Service does not have consumer-facing user accounts, social profiles, or password-based logins.</p>
 
 <h1>3. How We Use Information</h1>
 <p><strong>Service delivery:</strong> Calculating reputation scores, processing fraud reports, generating leaderboards, and serving API responses.</p>

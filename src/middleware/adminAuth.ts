@@ -1,5 +1,6 @@
 import crypto from 'node:crypto'
 import type { Context, Next } from 'hono'
+import { hasValidReviewerSession } from './reviewerSession.js'
 
 /**
  * Shared admin authentication middleware.
@@ -26,7 +27,10 @@ export async function adminAuth(c: Context, next: Next) {
     return c.json({ error: 'Admin key not configured' }, 503)
   }
 
-  if (!hasValidAdminKey(c.req.header('x-admin-key'))) {
+  const headerAuthorized = hasValidAdminKey(c.req.header('x-admin-key'))
+  const reviewerSessionAuthorized = headerAuthorized ? false : await hasValidReviewerSession(c)
+
+  if (!headerAuthorized && !reviewerSessionAuthorized) {
     return c.json({ error: 'Unauthorized' }, 401)
   }
   await next()
