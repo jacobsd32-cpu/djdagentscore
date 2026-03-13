@@ -64,6 +64,8 @@ describe('GET /health', () => {
     delete process.env.ENABLE_BLOCKCHAIN_INDEXER
     delete process.env.ENABLE_USDC_INDEXER
     delete process.env.ENABLE_HOURLY_REFRESH
+    delete process.env.GITHUB_TOKEN
+    delete process.env.PUBLISHER_PRIVATE_KEY
 
     const { resetHealthPayloadCache } = await import('../../src/services/opsService.js')
     resetHealthPayloadCache()
@@ -105,6 +107,16 @@ describe('GET /health', () => {
     expect(body.modelVersion).toBe(MODEL_VERSION)
     expect(body.modelVersion).toBe('2.5.0')
     expect(body.uptime).toBe(123)
+    expect(body.warnings).toEqual([
+      {
+        code: 'github_token_missing',
+        message: 'GITHUB_TOKEN not set — GitHub verification is limited to unauthenticated rate limits.',
+      },
+      {
+        code: 'publisher_private_key_missing',
+        message: 'PUBLISHER_PRIVATE_KEY not set — ERC-8004 on-chain publication is disabled.',
+      },
+    ])
     expect(body.runtime).toEqual({
       mode: 'combined',
       apiEnabled: true,
@@ -122,6 +134,17 @@ describe('GET /health', () => {
           configured: true,
           active: true,
         },
+      },
+    })
+    expect(body.integrations).toEqual({
+      githubVerification: {
+        authenticated: false,
+        mode: 'unauthenticated',
+        rateLimitPerHour: 60,
+      },
+      erc8004Publisher: {
+        configured: false,
+        active: false,
       },
     })
     expect(body.database).toBeDefined()
@@ -213,6 +236,35 @@ describe('GET /health', () => {
       hourlyRefresh: {
         configured: false,
         active: false,
+      },
+    })
+  })
+
+  it('reports authenticated GitHub verification and active publisher when configured', async () => {
+    process.env.GITHUB_TOKEN = 'github-token'
+    process.env.PUBLISHER_PRIVATE_KEY = '0xabc123'
+
+    const { Hono } = await import('hono')
+    const { default: healthRoute } = await import('../../src/routes/health.js')
+
+    const app = new Hono()
+    app.route('/health', healthRoute)
+
+    const res = await app.request('/health', {
+      headers: { 'x-admin-key': process.env.ADMIN_KEY as string },
+    })
+    const body = await res.json()
+
+    expect(body.warnings).toEqual([])
+    expect(body.integrations).toEqual({
+      githubVerification: {
+        authenticated: true,
+        mode: 'authenticated',
+        rateLimitPerHour: 5000,
+      },
+      erc8004Publisher: {
+        configured: true,
+        active: true,
       },
     })
   })
