@@ -117,12 +117,18 @@ const stmtGetPendingCertificationReviewRequest = db.prepare<[string], Certificat
 `)
 
 const stmtListCertificationReviewRequests = db.prepare<
-  [string | null, string | null, number],
+  [string | null, string | null, string | null, string | null, string | null, string | null, number],
   CertificationReviewRequestRow
 >(
   `
     ${CERTIFICATION_REVIEW_SELECT}
     WHERE (? IS NULL OR r.status = ?)
+      AND (
+        ? IS NULL
+        OR LOWER(r.wallet) LIKE ?
+        OR LOWER(COALESCE(reg.name, '')) LIKE ?
+        OR LOWER(COALESCE(reg.description, '')) LIKE ?
+      )
     ORDER BY r.requested_at DESC, r.id DESC
     LIMIT ?
   `,
@@ -301,8 +307,13 @@ export function getPendingCertificationReviewRequest(wallet: string): Certificat
   return stmtGetPendingCertificationReviewRequest.get(wallet)
 }
 
-export function listCertificationReviewRequests(status: string | null, limit: number): CertificationReviewRequestRow[] {
-  return stmtListCertificationReviewRequests.all(status, status, limit)
+export function listCertificationReviewRequests(
+  status: string | null,
+  search: string | null,
+  limit: number,
+): CertificationReviewRequestRow[] {
+  const searchLike = search ? `%${search}%` : null
+  return stmtListCertificationReviewRequests.all(status, status, search, searchLike, searchLike, searchLike, limit)
 }
 
 export function updateCertificationReviewRequestDecision(

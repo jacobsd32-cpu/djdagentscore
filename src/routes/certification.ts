@@ -149,6 +149,7 @@ certification.get('/admin/all', adminAuth, (c) => {
 certification.get('/admin/reviews', adminAuth, (c) => {
   const outcome = listCertificationReviewRequestViews({
     status: c.req.query('status'),
+    search: c.req.query('search'),
     limit: c.req.query('limit'),
   })
   if (!outcome.ok) {

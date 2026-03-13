@@ -234,6 +234,7 @@ export interface CertificationReviewRequestView {
 export interface CertificationReviewQueueView {
   filters: {
     status: CertificationReviewStatus | null
+    search: string | null
     limit: number
   }
   returned: number
@@ -327,6 +328,12 @@ function normalizeReviewNote(rawNote: string | null | undefined): string | null 
   const note = rawNote?.trim()
   if (!note) return null
   return note.slice(0, 500)
+}
+
+function normalizeSearchTerm(rawSearch: string | null | undefined): string | null {
+  const normalized = rawSearch?.trim().toLowerCase()
+  if (!normalized) return null
+  return normalized.slice(0, 120)
 }
 
 function buildCertificationLinks(wallet: string): CertificationStatusView['links'] {
@@ -822,18 +829,21 @@ export function submitCertificationReviewRequest(params: {
 
 export function listCertificationReviewRequestViews(params: {
   status?: string | null | undefined
+  search?: string | null | undefined
   limit?: string | null | undefined
 }): CertificationResult<CertificationReviewQueueView> {
   const parsedLimit = Number.parseInt(params.limit ?? '50', 10)
   const limit = Number.isNaN(parsedLimit) ? 50 : Math.min(Math.max(parsedLimit, 1), 200)
   const status = normalizeReviewStatus(params.status)
-  const requests = listCertificationReviewRequests(status, limit).map(buildCertificationReviewView)
+  const search = normalizeSearchTerm(params.search)
+  const requests = listCertificationReviewRequests(status, search, limit).map(buildCertificationReviewView)
 
   return {
     ok: true,
     data: {
       filters: {
         status,
+        search,
         limit,
       },
       returned: requests.length,
