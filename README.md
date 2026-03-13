@@ -339,6 +339,7 @@ npm run smoke:deploy
 
 If `FLY_PREVIEW_PUBLIC_BASE_URL` is not set, the workflow defaults to `https://<FLY_PREVIEW_APP>.fly.dev`.
 Preview Fly configs inherit `PAY_TO` and other shared env from `fly.toml`, and automatically set `CORS_ORIGINS` to the preview public base URL so fresh preview apps can boot without a separate CORS secret.
+Preview deploys use Fly's `immediate` strategy because the preview app is a single-machine SQLite service with one attached volume; in-place updates are more reliable here than rolling replacement.
 
 The preview app should be provisioned separately from production and should have its own mounted Fly volume named `djd_agent_score_data`, since this service still runs against a single SQLite file.
 

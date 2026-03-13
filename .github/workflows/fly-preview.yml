@@ -114,6 +114,7 @@ jobs:
         run: |
           flyctl deploy \
             --remote-only \
+            --strategy immediate \
             --config .fly/preview.toml \
             --build-arg DJD_RELEASE_SHA="${GITHUB_SHA}" \
             --build-arg DJD_BUILD_TIMESTAMP="${DJD_BUILD_TIMESTAMP}"
