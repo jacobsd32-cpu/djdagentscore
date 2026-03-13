@@ -1,3 +1,7 @@
+import { REVIEWER_SESSION_MAX_AGE_SECONDS } from '../middleware/reviewerSession.js'
+
+const REVIEWER_SESSION_HOURS = Math.floor(REVIEWER_SESSION_MAX_AGE_SECONDS / 3600)
+
 export function reviewerPageHtml(): string {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -112,7 +116,7 @@ export function reviewerPageHtml(): string {
 <body>
   <div class="wrap">
     <h1>Certification Reviewer Dashboard</h1>
-    <p class="sub">Internal operations surface for DJD Certify. Load the review queue with an admin key, inspect score and profile context, then approve, request more information, reject, or issue a certification from an approved review.</p>
+    <p class="sub">Internal operations surface for DJD Certify. Start a short-lived reviewer session with the admin key, inspect score and profile context, then approve, request more information, reject, or issue a certification from an approved review.</p>
 
     <div class="card">
       <div class="auth-row">
@@ -145,10 +149,12 @@ export function reviewerPageHtml(): string {
         </div>
       </div>
       <div class="action-row" style="margin-top:14px">
+        <button class="btn btn-primary" id="loginBtn" onclick="startSession()">Start Reviewer Session</button>
         <button class="btn btn-primary" id="loadBtn" onclick="loadQueue()">Load Review Queue</button>
+        <button class="btn btn-secondary" id="logoutBtn" onclick="endSession()">End Session</button>
         <button class="btn btn-secondary" onclick="clearDashboard()">Clear</button>
       </div>
-      <div class="note">This dashboard keeps the admin key and queue filters in <code>sessionStorage</code> for the current tab only.</div>
+      <div class="note">Reviewer authentication uses a signed <code>HttpOnly</code> cookie for up to ${REVIEWER_SESSION_HOURS} hours. Only queue filters stay in <code>sessionStorage</code> for the current tab.</div>
       <div class="status" id="statusMsg"></div>
       <div class="error" id="errorMsg"></div>
     </div>
@@ -162,9 +168,11 @@ export function reviewerPageHtml(): string {
   </div>
 
 <script>
+const SESSION_API='/reviewer/session';
 const REVIEWS_API='/v1/certification/admin/reviews';
 const REVIEWER_STORAGE_KEY='djd-reviewer-dashboard';
 const DEFAULT_LIMIT='24';
+let reviewerAuthenticated=false;
 
 function esc(value){
   return String(value)
@@ -229,7 +237,6 @@ function getSearchFilter(){
 
 function getDashboardState(){
   return {
-    adminKey: document.getElementById('adminKey').value,
     search: document.getElementById('searchFilter').value,
     status: document.getElementById('statusFilter').value,
     limit: document.getElementById('limitFilter').value || DEFAULT_LIMIT
@@ -247,17 +254,15 @@ function persistDashboardState(){
 function restoreDashboardState(){
   try{
     const rawState=window.sessionStorage.getItem(REVIEWER_STORAGE_KEY);
-    if(!rawState) return false;
+    if(!rawState) return;
     const state=JSON.parse(rawState);
-    if(!state || typeof state !== 'object') return false;
+    if(!state || typeof state !== 'object') return;
 
-    if(typeof state.adminKey === 'string') document.getElementById('adminKey').value=state.adminKey;
     if(typeof state.search === 'string') document.getElementById('searchFilter').value=state.search;
     if(typeof state.status === 'string') document.getElementById('statusFilter').value=state.status;
     if(typeof state.limit === 'string' && state.limit) document.getElementById('limitFilter').value=state.limit;
-    return Boolean(typeof state.adminKey === 'string' && state.adminKey.trim());
   }catch{
-    return false;
+    return;
   }
 }
 
@@ -278,6 +283,41 @@ function getQueueParams(){
   if(search) params.set('search', search);
   if(limit) params.set('limit', limit);
   return params;
+}
+
+function defaultQueueMeta(){
+  return reviewerAuthenticated ? 'Reviewer session active' : 'Start a reviewer session';
+}
+
+function setQueueMeta(value){
+  document.getElementById('queueMeta').textContent=value;
+}
+
+function setButtonBusy(id, busy, idleLabel, busyLabel){
+  const button=document.getElementById(id);
+  button.disabled=busy;
+  button.textContent=busy ? busyLabel : idleLabel;
+}
+
+function syncAuthUi(authenticated){
+  reviewerAuthenticated=Boolean(authenticated);
+  document.getElementById('adminKey').disabled=reviewerAuthenticated;
+  document.getElementById('loginBtn').disabled=reviewerAuthenticated;
+  document.getElementById('logoutBtn').disabled=!reviewerAuthenticated;
+  document.getElementById('loadBtn').disabled=!reviewerAuthenticated;
+  if(!document.getElementById('queue').innerHTML){
+    setQueueMeta(defaultQueueMeta());
+  }
+}
+
+async function parseJsonResponse(res){
+  const text=await res.text();
+  if(!text) return null;
+  try{
+    return JSON.parse(text);
+  }catch{
+    return null;
+  }
 }
 
 function buildQueueMeta(body){
@@ -326,30 +366,104 @@ function renderRequest(request){
   '</article>';
 }
 
-async function loadQueue(){
+async function refreshSessionStatus(){
+  try{
+    const res=await fetch(SESSION_API,{cache:'no-store',credentials:'same-origin'});
+    const body=await parseJsonResponse(res);
+    syncAuthUi(Boolean(body && body.authenticated));
+  }catch{
+    syncAuthUi(false);
+  }
+}
+
+async function startSession(){
   clearMessages();
   const adminKey=getAdminKey();
   if(!adminKey){
-    showError('Enter the admin key before loading reviewer data.');
+    showError('Enter the admin key to start a reviewer session.');
+    return;
+  }
+
+  setButtonBusy('loginBtn', true, 'Start Reviewer Session', 'Starting...');
+  try{
+    const res=await fetch(SESSION_API,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      cache:'no-store',
+      credentials:'same-origin',
+      body:JSON.stringify({admin_key:adminKey})
+    });
+    const body=await parseJsonResponse(res);
+    if(!res.ok){
+      throw new Error(body && body.error && body.error.message ? body.error.message : 'Unable to start reviewer session');
+    }
+    document.getElementById('adminKey').value='';
+    syncAuthUi(true);
+    showStatus(body && body.message ? body.message : 'Reviewer session started.');
+    await loadQueue();
+  }catch(err){
+    showError(err && err.message ? err.message : 'Unable to start reviewer session.');
+  }
+  setButtonBusy('loginBtn', false, 'Start Reviewer Session', 'Starting...');
+}
+
+async function endSession(){
+  clearMessages();
+  setButtonBusy('logoutBtn', true, 'End Session', 'Ending...');
+  try{
+    const res=await fetch(SESSION_API,{
+      method:'DELETE',
+      cache:'no-store',
+      credentials:'same-origin'
+    });
+    const body=await parseJsonResponse(res);
+    if(!res.ok){
+      throw new Error(body && body.error && body.error.message ? body.error.message : 'Unable to end reviewer session');
+    }
+    document.getElementById('adminKey').value='';
+    document.getElementById('queue').innerHTML='';
+    syncAuthUi(false);
+    setQueueMeta(defaultQueueMeta());
+    showStatus(body && body.message ? body.message : 'Reviewer session ended.');
+  }catch(err){
+    showError(err && err.message ? err.message : 'Unable to end reviewer session.');
+  }
+  setButtonBusy('logoutBtn', false, 'End Session', 'Ending...');
+}
+
+async function handleAuthFailure(){
+  document.getElementById('queue').innerHTML='';
+  syncAuthUi(false);
+  setQueueMeta('Reviewer session expired');
+  showError('Reviewer session expired. Start a new reviewer session.');
+}
+
+async function loadQueue(){
+  clearMessages();
+  if(!reviewerAuthenticated){
+    showError('Start a reviewer session before loading reviewer data.');
     return;
   }
 
   persistDashboardState();
-
-  const button=document.getElementById('loadBtn');
-  button.disabled=true;
-  button.textContent='Loading...';
+  setButtonBusy('loadBtn', true, 'Load Review Queue', 'Loading...');
   try{
     const params=getQueueParams();
-    const res=await fetch(REVIEWS_API + '?' + params.toString(),{
-      headers:{'x-admin-key':adminKey}
+    const query=params.toString();
+    const res=await fetch(REVIEWS_API + (query ? '?' + query : ''),{
+      cache:'no-store',
+      credentials:'same-origin'
     });
-    const body=await res.json();
+    const body=await parseJsonResponse(res);
+    if(res.status === 401){
+      await handleAuthFailure();
+      return;
+    }
     if(!res.ok){
       throw new Error(body && body.error && body.error.message ? body.error.message : 'Unable to load review queue');
     }
 
-    document.getElementById('queueMeta').textContent=buildQueueMeta(body);
+    setQueueMeta(buildQueueMeta(body));
     document.getElementById('queue').innerHTML=body.returned
       ? body.requests.map(renderRequest).join('')
       : '<div class="card empty">No review requests matched the current filter.</div>';
@@ -357,15 +471,13 @@ async function loadQueue(){
   }catch(err){
     showError(err && err.message ? err.message : 'Unable to load reviewer queue.');
   }
-  button.disabled=false;
-  button.textContent='Load Review Queue';
+  setButtonBusy('loadBtn', !reviewerAuthenticated, 'Load Review Queue', 'Loading...');
 }
 
 async function decision(id, status){
   clearMessages();
-  const adminKey=getAdminKey();
-  if(!adminKey){
-    showError('Enter the admin key before submitting reviewer actions.');
+  if(!reviewerAuthenticated){
+    showError('Start a reviewer session before submitting reviewer actions.');
     return;
   }
   persistDashboardState();
@@ -377,21 +489,26 @@ async function decision(id, status){
     const res=await fetch('/v1/certification/admin/reviews/' + id + '/decision',{
       method:'POST',
       headers:{
-        'Content-Type':'application/json',
-        'x-admin-key':adminKey
+        'Content-Type':'application/json'
       },
+      cache:'no-store',
+      credentials:'same-origin',
       body:JSON.stringify({
         decision:status,
         note:note || undefined,
         reviewed_by:'reviewer-dashboard'
       })
     });
-    const body=await res.json();
+    const body=await parseJsonResponse(res);
+    if(res.status === 401){
+      await handleAuthFailure();
+      return;
+    }
     if(!res.ok){
       throw new Error(body && body.error && body.error.message ? body.error.message : 'Unable to update review request');
     }
     showStatus('Review updated to ' + labelForStatus(body.status).toLowerCase() + '.');
-    loadQueue();
+    await loadQueue();
   }catch(err){
     showError(err && err.message ? err.message : 'Unable to update review request.');
   }
@@ -399,9 +516,8 @@ async function decision(id, status){
 
 async function issueRequest(id){
   clearMessages();
-  const adminKey=getAdminKey();
-  if(!adminKey){
-    showError('Enter the admin key before issuing certifications.');
+  if(!reviewerAuthenticated){
+    showError('Start a reviewer session before issuing certifications.');
     return;
   }
   persistDashboardState();
@@ -411,14 +527,19 @@ async function issueRequest(id){
   try{
     const res=await fetch('/v1/certification/admin/reviews/' + id + '/issue',{
       method:'POST',
-      headers:{'x-admin-key':adminKey}
+      cache:'no-store',
+      credentials:'same-origin'
     });
-    const body=await res.json();
+    const body=await parseJsonResponse(res);
+    if(res.status === 401){
+      await handleAuthFailure();
+      return;
+    }
     if(!res.ok){
       throw new Error(body && body.error && body.error.message ? body.error.message : 'Unable to issue certification');
     }
     showStatus('Certification issued for ' + body.certification.wallet + '.');
-    loadQueue();
+    await loadQueue();
   }catch(err){
     showError(err && err.message ? err.message : 'Unable to issue certification.');
   }
@@ -427,16 +548,16 @@ async function issueRequest(id){
 function clearDashboard(){
   clearMessages();
   document.getElementById('queue').innerHTML='';
-  document.getElementById('queueMeta').textContent='Queue idle';
   document.getElementById('adminKey').value='';
   document.getElementById('searchFilter').value='';
   document.getElementById('statusFilter').value='';
   document.getElementById('limitFilter').value=DEFAULT_LIMIT;
   clearStoredDashboardState();
+  setQueueMeta(defaultQueueMeta());
 }
 
 function attachPersistenceListeners(){
-  ['adminKey','searchFilter'].forEach(function(id){
+  ['searchFilter'].forEach(function(id){
     document.getElementById(id).addEventListener('input', persistDashboardState);
   });
   ['statusFilter','limitFilter'].forEach(function(id){
@@ -447,16 +568,23 @@ function attachPersistenceListeners(){
 function attachLoadShortcuts(){
   ['adminKey','searchFilter'].forEach(function(id){
     document.getElementById(id).addEventListener('keydown', function(event){
-      if(event.key === 'Enter') loadQueue();
+      if(event.key === 'Enter'){
+        if(id === 'adminKey' && !reviewerAuthenticated){
+          startSession();
+          return;
+        }
+        loadQueue();
+      }
     });
   });
 }
 
-function initDashboard(){
-  const restoredAdminKey=restoreDashboardState();
+async function initDashboard(){
+  restoreDashboardState();
   attachPersistenceListeners();
   attachLoadShortcuts();
-  if(restoredAdminKey) loadQueue();
+  await refreshSessionStatus();
+  if(reviewerAuthenticated) loadQueue();
 }
 
 initDashboard();

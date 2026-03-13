@@ -154,6 +154,40 @@ describe('admin middleware', () => {
     expect(res.status).toBe(401)
   })
 
+  it('accepts a reviewer session cookie instead of x-admin-key', async () => {
+    process.env.ADMIN_KEY = 'secret-key'
+    state.generateCalibrationReport.mockReturnValue({
+      avg_score_by_outcome: '{"positive":{"avgScore":80}}',
+      tier_accuracy: '{"Trusted":0.8}',
+      recommendations: '["keep going"]',
+    })
+
+    const { Hono } = await import('hono')
+    const { default: adminRoute } = await import('../../src/routes/admin.js')
+    const { default: reviewerRoute } = await import('../../src/routes/reviewer.js')
+
+    const app = new Hono()
+    app.route('/admin', adminRoute)
+    app.route('/reviewer', reviewerRoute)
+
+    const sessionRes = await app.request('/reviewer/session', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ admin_key: 'secret-key' }),
+    })
+    expect(sessionRes.status).toBe(200)
+
+    const sessionCookie = sessionRes.headers.get('set-cookie')
+    expect(sessionCookie).toContain('djd_reviewer_session=')
+
+    const res = await app.request('/admin/calibration', {
+      headers: { Cookie: sessionCookie?.split(';')[0] ?? '' },
+    })
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.avg_score_by_outcome).toEqual({ positive: { avgScore: 80 } })
+  })
+
   it('returns a generated calibration report when no cached report exists', async () => {
     process.env.ADMIN_KEY = 'secret-key'
     state.generateCalibrationReport.mockReturnValue({

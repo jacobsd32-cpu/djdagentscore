@@ -58,4 +58,18 @@ describe('GET /', () => {
     delete process.env.PUBLIC_BASE_URL
     delete process.env.PUBLIC_SUPPORT_EMAIL
   })
+
+  it('describes internal reviewer session cookies in the privacy policy', async () => {
+    const app = new Hono()
+    app.route('/', legalRoute)
+
+    const res = await app.request('/privacy')
+    expect(res.status).toBe(200)
+
+    const body = await res.text()
+    expect(body).toContain('Reviewer Session Data')
+    expect(body).toContain('short-lived, signed')
+    expect(body).toContain('HttpOnly')
+    expect(body).toContain('We do not use tracking pixels or browser fingerprinting')
+  })
 })
