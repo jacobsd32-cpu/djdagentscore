@@ -109,6 +109,14 @@ addColumnIfMissing('fraud_reports', 'disputed', 'INTEGER NOT NULL DEFAULT 0')
 addColumnIfMissing('fraud_reports', 'dispute_resolved', 'INTEGER NOT NULL DEFAULT 0')
 addColumnIfMissing('fraud_reports', 'invalidated_at', 'TEXT')
 
+// Migrate creator_stakes to support staking fee accounting and slashing metadata
+addColumnIfMissing('creator_stakes', 'fee_amount', 'REAL NOT NULL DEFAULT 0')
+addColumnIfMissing('creator_stakes', 'fee_tx_hash', "TEXT NOT NULL DEFAULT ''")
+addColumnIfMissing('creator_stakes', 'score_boost', 'INTEGER NOT NULL DEFAULT 0')
+addColumnIfMissing('creator_stakes', 'return_eligible', 'INTEGER NOT NULL DEFAULT 1')
+addColumnIfMissing('creator_stakes', 'slashed_at', 'TEXT')
+addColumnIfMissing('creator_stakes', 'slash_report_id', 'TEXT')
+
 // ---------- New tables ----------
 
 db.exec(`
@@ -432,6 +440,12 @@ if (!hasUniqueIndexOnColumns('cluster_assignments', ['wallet'])) {
   `)
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_cluster_assignments_wallet_unique ON cluster_assignments(wallet)')
 }
+
+db.exec(`
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_creator_stakes_fee_tx_hash
+    ON creator_stakes(fee_tx_hash)
+    WHERE fee_tx_hash != '';
+`)
 
 // ── P1: USDC Transfer Index ───────────────────────────────────────────────
 db.exec(`

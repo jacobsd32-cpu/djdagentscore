@@ -91,4 +91,67 @@ describe('production schema bootstrap', () => {
       assigned_at: '2026-03-14T00:00:00.000Z',
     })
   })
+
+  it('repairs legacy creator_stakes schema before staking queries compile', async () => {
+    db.exec(`
+      CREATE TABLE creator_stakes (
+        id TEXT PRIMARY KEY,
+        creator_wallet TEXT NOT NULL,
+        agent_wallet TEXT NOT NULL,
+        stake_amount REAL NOT NULL,
+        stake_tx_hash TEXT NOT NULL UNIQUE,
+        status TEXT NOT NULL DEFAULT 'active',
+        staked_at TEXT NOT NULL
+      );
+
+      INSERT INTO creator_stakes (
+        id,
+        creator_wallet,
+        agent_wallet,
+        stake_amount,
+        stake_tx_hash,
+        status,
+        staked_at
+      ) VALUES (
+        'stake_1',
+        '0xcreator',
+        '0xagent',
+        25,
+        '0xstakehash',
+        'active',
+        '2026-03-13T00:00:00.000Z'
+      );
+    `)
+
+    vi.doMock('../src/db/connection.js', () => ({ db }))
+
+    await import('../src/db/schema.js')
+    const { getActiveCreatorStakeByPair } = await import('../src/db/stakingQueries.js')
+
+    const creatorStakeColumns = db.prepare('PRAGMA table_info(creator_stakes)').all() as Array<{ name: string }>
+    expect(creatorStakeColumns.map((column) => column.name)).toEqual(
+      expect.arrayContaining([
+        'fee_amount',
+        'fee_tx_hash',
+        'score_boost',
+        'return_eligible',
+        'slashed_at',
+        'slash_report_id',
+      ]),
+    )
+
+    expect(getActiveCreatorStakeByPair('0xcreator', '0xagent')).toMatchObject({
+      id: 'stake_1',
+      creator_wallet: '0xcreator',
+      agent_wallet: '0xagent',
+      stake_amount: 25,
+      fee_amount: 0,
+      fee_tx_hash: '',
+      status: 'active',
+      score_boost: 0,
+      return_eligible: 1,
+      slashed_at: null,
+      slash_report_id: null,
+    })
+  })
 })
