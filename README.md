@@ -331,6 +331,7 @@ Current production note:
 
 The deploy workflow now verifies both that `/health` is live and that the responding app reports the expected runtime mode and release SHA.
 Admin `/health` also exposes worker job enablement plus integration warnings for GitHub verification and ERC-8004 publication readiness.
+For GitHub Actions, production smoke verification can use either the `DJD_ADMIN_KEY` or legacy `ADMIN_KEY` secret; preview can use `FLY_PREVIEW_ADMIN_KEY` first, then fall back to `DJD_ADMIN_KEY` / `ADMIN_KEY`.
 
 ```bash
 DJD_HEALTHCHECK_URL=https://djdagentscore.dev/health \
@@ -347,7 +348,7 @@ npm run smoke:deploy
 - Required GitHub variable: `FLY_PREVIEW_APP`
 - Optional GitHub variable: `FLY_PREVIEW_PUBLIC_BASE_URL`
 - Optional GitHub secret: `FLY_PREVIEW_API_TOKEN` (use this when your existing `FLY_API_TOKEN` is scoped only to the production app)
-- Optional GitHub secret: `FLY_PREVIEW_ADMIN_KEY`
+- Optional GitHub secret: `FLY_PREVIEW_ADMIN_KEY` (falls back to `DJD_ADMIN_KEY`, then `ADMIN_KEY`)
 
 If `FLY_PREVIEW_PUBLIC_BASE_URL` is not set, the workflow defaults to `https://<FLY_PREVIEW_APP>.fly.dev`.
 Preview Fly configs inherit `PAY_TO` and other shared env from `fly.toml`, and automatically set `CORS_ORIGINS` to the preview public base URL so fresh preview apps can boot without a separate CORS secret.

@@ -96,10 +96,13 @@ jobs:
       - run: flyctl deploy --remote-only --strategy immediate --config fly.toml --build-arg DJD_RELEASE_SHA=${GITHUB_SHA} --build-arg DJD_BUILD_TIMESTAMP=${DJD_BUILD_TIMESTAMP}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Warn when admin smoke verification is disabled
+        if: ${{ secrets.DJD_ADMIN_KEY == '' && secrets.ADMIN_KEY == '' }}
+        run: echo "::warning::DJD_ADMIN_KEY/ADMIN_KEY secret not set; post-deploy smoke will skip admin runtime verification."
       - name: Post-deploy smoke check
         run: node scripts/post-deploy-smoke.mjs
         env:
           DJD_HEALTHCHECK_URL: https://djdagentscore.dev/health
           DJD_EXPECT_RUNTIME_MODE: combined
           DJD_EXPECT_RELEASE_SHA: ${{ github.sha }}
-          DJD_ADMIN_KEY: ${{ secrets.ADMIN_KEY }}
+          DJD_ADMIN_KEY: ${{ secrets.DJD_ADMIN_KEY != '' && secrets.DJD_ADMIN_KEY || secrets.ADMIN_KEY }}
