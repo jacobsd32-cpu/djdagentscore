@@ -34,10 +34,10 @@ export function pricingPageHtml(plans: PricingPlan[]): string {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pricing — DJD Agent Score</title>
-<meta name="description" content="Simple pricing for DJD trust infrastructure. Start with free scoring, then unlock Certify, evaluator previews, monitoring, and deeper trust surfaces with an API key.">
+<meta name="description" content="Pricing for developers building with wallet trust. Start free, then unlock API-key access to scoring, Certify, evaluator decisions, monitoring, and public trust surfaces.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Pricing — DJD Agent Score">
-<meta property="og:description" content="Simple pricing for DJD trust infrastructure, from free scoring to Certify, evaluator previews, and deeper trust surfaces.">
+<meta property="og:description" content="Pricing for developers building with wallet trust, from free scoring to Certify, evaluator decisions, and public trust surfaces.">
 <meta property="og:url" content="${pricingUrl}">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -196,26 +196,26 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
 
 <!-- HERO -->
 <div class="pricing-hero">
-  <h1>Simple pricing for <em>trust infrastructure</em></h1>
-  <p>Start with free scoring, then upgrade when you need more surface area. Every paid plan includes API access to DJD scores, Certify workflows, evaluator previews, monitoring, and trust distribution with a standard API key &mdash; no crypto wallet required.</p>
+  <h1>Pricing for developers building with <em>wallet trust</em></h1>
+  <p>In plain English, DJD helps your app decide whether to trust a wallet, show that trust publicly, and enforce rules before money moves. Start free, then upgrade when you need production API-key access to Certify, evaluator decisions, monitoring, and public trust surfaces &mdash; no crypto wallet required for human teams.</p>
 </div>
 
 <!-- HOW IT WORKS -->
 <div class="how-strip">
   <div class="how-step">
     <div class="how-num">Step 1</div>
-    <div class="how-title">Pick a plan</div>
-    <div class="how-desc">Free tier or flat monthly subscription. No usage surprises.</div>
+    <div class="how-title">Test the trust layer</div>
+    <div class="how-desc">Start with the free lookup and see how DJD scores a wallet before you wire anything deeper.</div>
   </div>
   <div class="how-step">
     <div class="how-num">Step 2</div>
-    <div class="how-title">Get your API key</div>
-    <div class="how-desc">Pay with any credit card. Receive your key instantly after checkout.</div>
+    <div class="how-title">Ship with an API key</div>
+    <div class="how-desc">Pay with any credit card. Receive your key instantly after checkout and move into production quotas.</div>
   </div>
   <div class="how-step">
     <div class="how-num">Step 3</div>
-    <div class="how-title">Ship trust into production</div>
-    <div class="how-desc">Move from raw scores to certification, evaluator, and monitoring surfaces as your workflow matures.</div>
+    <div class="how-title">Expand into trust workflows</div>
+    <div class="how-desc">Move from raw scores to certification, evaluator decisions, monitoring, and public trust distribution as your workflow matures.</div>
   </div>
 </div>
 
@@ -292,13 +292,13 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
 <!-- TWO PATHS: Developers vs Agents -->
 <div style="margin-bottom:80px">
   <div class="section-label">Two Ways to Pay</div>
-  <div class="section-title">Built for developers <em class="serif" style="color:var(--accent)">and</em> autonomous agents</div>
-  <div class="section-desc">Human teams can buy predictable access with cards. Autonomous agents can still pay per request with crypto. Same platform, same trust surfaces.</div>
+  <div class="section-title">Buy like a software team <em class="serif" style="color:var(--accent)">or</em> pay like an agent</div>
+  <div class="section-desc">DJD is built for both audiences. Human teams usually want predictable API-key billing. Autonomous agents can still pay per request with crypto. Same platform, same trust surfaces.</div>
   <div class="compare">
     <div class="compare-card">
       <div class="compare-icon">&#128187;</div>
       <div class="compare-name">For Developers</div>
-      <div class="compare-desc">Building an app, bot, or service that needs trust scores? Pay with your credit card and get a standard API key.</div>
+      <div class="compare-desc">Building a marketplace, agent tool, payment workflow, or network that needs wallet trust checks? Pay with your credit card and get a standard API key.</div>
       <ul class="compare-list">
         <li>Monthly subscription via Stripe</li>
         <li>Standard API key (Bearer token)</li>
@@ -329,10 +329,10 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
 <div class="faq">
   <div class="faq-item">
     <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
-      <span>What endpoints are included?</span>
+      <span>What am I buying?</span>
       <span class="faq-toggle">+</span>
     </div>
-    <div class="faq-a">All paid plans include access to every endpoint: full scores, risk prediction, score history, score decay curves, economy summary/volume/survival analytics, relationship graph reads, cluster analysis, transaction-intent conversion data, mutual counterparty ratings, DJD Forensics summaries, dispute intake, network feeds, watchlists, incident feeds, merged timelines, batch scoring, certification, force-refresh, and the legacy blacklist check. Growth and Scale also support wallet-scoped webhook monitoring, including preset score, anomaly, and Forensics alert bundles. Creator staking is separate from API quota billing because it validates an on-chain stake transfer plus a 1% DJD fee transfer. The free tier is limited to the basic score endpoint.</div>
+    <div class="faq-a">You are buying a developer trust layer for agent wallets: score APIs, risk and cluster reads, score history, economy analytics, counterparty ratings, DJD Forensics reads, certification workflows, evaluator decisions, force-refresh, and webhook-based monitoring. Growth and Scale expand that into higher-volume production use. The free tier is limited to the basic score endpoint.</div>
   </div>
   <div class="faq-item">
     <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
@@ -367,14 +367,14 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
       <span>What's x402? Do I need a crypto wallet?</span>
       <span class="faq-toggle">+</span>
     </div>
-    <div class="faq-a">No! x402 is a micropayment protocol for AI agents. If you're a human developer, just use a regular credit card subscription. You don't need a crypto wallet, USDC, or anything blockchain-related to use the API.</div>
+    <div class="faq-a">No. x402 is the crypto-native path for autonomous agents. If you're a human developer or software team, just use a regular credit card subscription and a normal Bearer API key. You do not need a crypto wallet, USDC, or blockchain ops to use DJD.</div>
   </div>
 </div>
 
 <!-- BOTTOM CTA -->
   <div class="bottom-cta">
-  <h2>Ready to add trust to your app?</h2>
-  <p>Start with the free tier &mdash; no signup required. Upgrade when you're ready to plug into Certify, evaluator previews, monitoring, and the certified directory.</p>
+  <h2>Ready to add wallet trust checks to your product?</h2>
+  <p>Start with the free tier &mdash; no signup required. Upgrade when you're ready for production API keys, Certify, evaluator decisions, monitoring, and the certified directory.</p>
   <div class="btn-row">
     <a href="/#lookup" class="btn btn-primary">Try Free &mdash; No Signup</a>
     <a href="${certifiedDirectoryUrl}" class="btn btn-ghost">Browse Certified Directory</a>

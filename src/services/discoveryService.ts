@@ -78,7 +78,7 @@ const SWAGGER_HTML = `<!DOCTYPE html>
 <body>
   <div class="header-banner">
     <h1>DJD Agent Score <span class="badge">API</span></h1>
-    <p>On-chain reputation scoring for autonomous AI agents &middot; <a href="/pricing" style="color:#818cf8;text-decoration:underline">View pricing &amp; plans</a></p>
+    <p>Developer docs for scoring wallets, publishing trust surfaces, and gating payouts or x402 routes &middot; <a href="/pricing" style="color:#818cf8;text-decoration:underline">View pricing &amp; plans</a></p>
   </div>
   <div id="swagger-ui"></div>
   <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js" crossorigin></script>
@@ -148,8 +148,8 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
     service: {
       name: SERVICE_TITLE,
       description:
-        'On-chain reputation scoring for autonomous AI agents on Base. ' +
-        'Score any wallet before sending money — detect sybil attacks, wash trading, and gaming.',
+        'Trust infrastructure for apps and agents on Base. ' +
+        'Score wallets, publish public trust surfaces, and gate payouts or x402 routes before money moves.',
       version: SERVICE_VERSION,
       docs: `${baseUrl}/docs`,
       openapi: `${baseUrl}/openapi.json`,

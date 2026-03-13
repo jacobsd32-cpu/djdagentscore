@@ -13,10 +13,11 @@ describe('GET /pricing', () => {
     expect(res.headers.get('cache-control')).toBe('public, max-age=3600')
 
     const body = await res.text()
-    expect(body).toContain('trust infrastructure')
-    expect(body).toContain('Certify workflows')
+    expect(body).toContain('wallet trust')
+    expect(body).toContain('production API-key access')
     expect(body).toContain('certified directory')
     expect(body).toContain('ERC-8183 evaluator preview endpoint')
+    expect(body).toContain('No. x402 is the crypto-native path for autonomous agents')
     expect(body).toContain('/directory')
     expect(body).toContain('/explorer')
   })
