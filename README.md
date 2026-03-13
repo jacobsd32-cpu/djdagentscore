@@ -330,6 +330,7 @@ Current production note:
 ### Deploy smoke checks
 
 The deploy workflow now verifies both that `/health` is live and that the responding app reports the expected runtime mode and release SHA.
+Admin `/health` also exposes worker job enablement plus integration warnings for GitHub verification and ERC-8004 publication readiness.
 
 ```bash
 DJD_HEALTHCHECK_URL=https://djdagentscore.dev/health \
@@ -368,9 +369,11 @@ Use `npm run render:fly-config -- --app <preview-app> --public-base-url <preview
 | `PAY_TO` | `0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528` | USDC recipient for x402 payments |
 | `FACILITATOR_URL` | `https://x402.org/facilitator` | x402 facilitator endpoint |
 | `BASE_RPC_URL` | `https://base-mainnet.public.blastapi.io` | Base RPC (BlastAPI recommended) |
+| `GITHUB_TOKEN` | unset | Optional GitHub API token; admin `/health` reports unauthenticated mode and 60 req/hr fallback when missing |
 | `ENABLE_BLOCKCHAIN_INDEXER` | `true` | Enable x402 settlement indexing in worker/combined runtime |
 | `ENABLE_USDC_INDEXER` | `true` | Enable USDC transfer indexing in worker/combined runtime |
 | `ENABLE_HOURLY_REFRESH` | `true` | Enable hourly score refresh in worker/combined runtime |
+| `PUBLISHER_PRIVATE_KEY` | unset | Optional Base wallet key for ERC-8004 publication; admin `/health` reports publication disabled when missing |
 | `DJD_HEALTHCHECK_URL` | `https://djdagentscore.dev/health` | Health endpoint used by `npm run smoke:deploy` |
 | `DJD_EXPECT_RUNTIME_MODE` | `combined` | Expected runtime mode for deploy smoke verification |
 | `DJD_EXPECT_RELEASE_SHA` | unset | Expected release SHA for deploy smoke verification |

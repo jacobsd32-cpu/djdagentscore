@@ -25,6 +25,10 @@ interface PublicHealthPayload {
 interface DetailedHealthPayload extends PublicHealthPayload {
   modelVersion: string
   experimentalStatus: true
+  warnings: Array<{
+    code: string
+    message: string
+  }>
   runtime: {
     mode: string
     apiEnabled: boolean
@@ -42,6 +46,17 @@ interface DetailedHealthPayload extends PublicHealthPayload {
         configured: boolean
         active: boolean
       }
+    }
+  }
+  integrations: {
+    githubVerification: {
+      authenticated: boolean
+      mode: 'authenticated' | 'unauthenticated'
+      rateLimitPerHour: number
+    }
+    erc8004Publisher: {
+      configured: boolean
+      active: boolean
     }
   }
   database: {
@@ -104,11 +119,29 @@ function buildDetailedHealthPayload(): DetailedHealthPayload {
   const blockchainIndexerEnabled = envEnabled('ENABLE_BLOCKCHAIN_INDEXER')
   const usdcTransferIndexerEnabled = envEnabled('ENABLE_USDC_INDEXER')
   const hourlyRefreshEnabled = envEnabled('ENABLE_HOURLY_REFRESH')
+  const githubTokenConfigured = Boolean(process.env.GITHUB_TOKEN)
+  const publisherConfigured = Boolean(process.env.PUBLISHER_PRIVATE_KEY)
+  const warnings: DetailedHealthPayload['warnings'] = []
+
+  if (!githubTokenConfigured) {
+    warnings.push({
+      code: 'github_token_missing',
+      message: 'GITHUB_TOKEN not set — GitHub verification is limited to unauthenticated rate limits.',
+    })
+  }
+
+  if (!publisherConfigured) {
+    warnings.push({
+      code: 'publisher_private_key_missing',
+      message: 'PUBLISHER_PRIVATE_KEY not set — ERC-8004 on-chain publication is disabled.',
+    })
+  }
 
   return {
     ...buildPublicHealthPayload(),
     modelVersion: MODEL_VERSION,
     experimentalStatus: true,
+    warnings,
     runtime: {
       mode: runtimeMode,
       apiEnabled: runtimeMode !== 'worker',
@@ -126,6 +159,17 @@ function buildDetailedHealthPayload(): DetailedHealthPayload {
           configured: hourlyRefreshEnabled,
           active: workerEnabled && hourlyRefreshEnabled,
         },
+      },
+    },
+    integrations: {
+      githubVerification: {
+        authenticated: githubTokenConfigured,
+        mode: githubTokenConfigured ? 'authenticated' : 'unauthenticated',
+        rateLimitPerHour: githubTokenConfigured ? 5000 : 60,
+      },
+      erc8004Publisher: {
+        configured: publisherConfigured,
+        active: workerEnabled && publisherConfigured,
       },
     },
     database: {
