@@ -1,4 +1,4 @@
-# Draft PR Body: runtime-split-entrypoints -> main
+# runtime-split-entrypoints -> main
 
 ## Summary
 
@@ -21,7 +21,7 @@ This includes:
 
 ## Validation
 
-- Latest preview-success run: GitHub Actions `23040711137`
+- Latest preview-success run: GitHub Actions `23040756056`
 - Preview URL: `https://djd-agent-score-preview.fly.dev`
 - Preview health confirms runtime release metadata and branch-head SHA
 - Local lint is clean
