@@ -61,6 +61,9 @@ describe('GET /health', () => {
     delete process.env.DJD_RUNTIME_MODE
     delete process.env.DJD_RELEASE_SHA
     delete process.env.DJD_BUILD_TIMESTAMP
+    delete process.env.ENABLE_BLOCKCHAIN_INDEXER
+    delete process.env.ENABLE_USDC_INDEXER
+    delete process.env.ENABLE_HOURLY_REFRESH
 
     const { resetHealthPayloadCache } = await import('../../src/services/opsService.js')
     resetHealthPayloadCache()
@@ -106,6 +109,20 @@ describe('GET /health', () => {
       mode: 'combined',
       apiEnabled: true,
       workerEnabled: true,
+      workerJobs: {
+        blockchainIndexer: {
+          configured: true,
+          active: true,
+        },
+        usdcTransferIndexer: {
+          configured: true,
+          active: true,
+        },
+        hourlyRefresh: {
+          configured: true,
+          active: true,
+        },
+      },
     })
     expect(body.database).toBeDefined()
     expect(body.indexer).toBeDefined()
@@ -166,6 +183,37 @@ describe('GET /health', () => {
       sha: 'abcdef1234567890',
       shaShort: 'abcdef1',
       builtAt: '2026-03-13T02:30:00Z',
+    })
+  })
+
+  it('reports worker jobs disabled by config without treating them as broken', async () => {
+    process.env.ENABLE_USDC_INDEXER = 'false'
+    process.env.ENABLE_HOURLY_REFRESH = 'no'
+
+    const { Hono } = await import('hono')
+    const { default: healthRoute } = await import('../../src/routes/health.js')
+
+    const app = new Hono()
+    app.route('/health', healthRoute)
+
+    const res = await app.request('/health', {
+      headers: { 'x-admin-key': process.env.ADMIN_KEY as string },
+    })
+    const body = await res.json()
+
+    expect(body.runtime.workerJobs).toEqual({
+      blockchainIndexer: {
+        configured: true,
+        active: true,
+      },
+      usdcTransferIndexer: {
+        configured: false,
+        active: false,
+      },
+      hourlyRefresh: {
+        configured: false,
+        active: false,
+      },
     })
   })
 })
