@@ -29,8 +29,9 @@ describe('GET /openapi.json', () => {
     expect(res.headers.get('content-type')).toContain('application/json')
     expect(res.headers.get('cache-control')).toBe('public, max-age=3600')
 
-    const body = JSON.parse(await res.text()) as { info?: { title?: string } }
+    const body = JSON.parse(await res.text()) as { info?: { title?: string; description?: string } }
     expect(body.info?.title).toBe('DJD Agent Score API')
+    expect(body.info?.description).toContain('Trust infrastructure')
   })
 
   it('injects the canonical public URL and support email at runtime', async () => {

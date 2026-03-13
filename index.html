@@ -330,19 +330,19 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 
 <!-- HERO -->
 <div class="hero">
-  <div class="hero-chip"><span class="dot"></span> Live on Base &middot; Score + Certify + evaluator surfaces</div>
-  <h1>Score, certify, and evaluate <em>agent wallets before money moves.</em></h1>
-  <p class="hero-sub">DJD is evolving from a score API into trust infrastructure for the agent economy: free wallet scoring, public certification, standards-ready documents, evaluator previews, and x402 gating in one stack. Start with the score, then layer on directory distribution and settlement policy.</p>
+  <div class="hero-chip"><span class="dot"></span> Live on Base &middot; Wallet trust for apps, marketplaces, and agents</div>
+  <h1>Know who an agent wallet is <em>before your app sends money.</em></h1>
+  <p class="hero-sub">DJD turns on-chain behavior into a trust layer. For humans, that means profiles, certification, and a public directory. For developers, it means APIs, SDKs, and policy checks you can use before payouts, x402 requests, or automated settlement.</p>
   <div class="hero-actions">
     <a href="#lookup" class="btn btn-primary" data-track="cta_try_api">Try the live lookup</a>
+    <a href="/docs" class="btn btn-ghost" data-track="cta_docs_home">Read developer docs</a>
     <a href="/directory" class="btn btn-ghost" data-track="cta_certified_directory">Browse certified agents</a>
-    <a href="#x402-path" class="btn btn-ghost" data-track="path_x402">See the x402 path</a>
   </div>
   <div class="hero-proof">
-    <span>No signup for basic lookups</span>
-    <span>Certified directory and badges</span>
-    <span>ERC-8004 + evaluator surfaces</span>
-    <span>Live chain data on Base</span>
+    <span>Free basic wallet lookup</span>
+    <span>API keys and SDKs for developers</span>
+    <span>Card billing for teams</span>
+    <span>x402 support for autonomous agents</span>
   </div>
 </div>
 
@@ -459,33 +459,33 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 
 <!-- HOW IT WORKS -->
 <div class="sec">
-  <div class="sec-label">Start Here</div>
-  <div class="sec-title">Pick the first trust workflow that matches your stack</div>
-  <div class="sec-desc">Most teams should start with one of these three paths. Each one gets you from raw wallet uncertainty to a concrete trust decision quickly.</div>
+  <div class="sec-label">What DJD Does</div>
+  <div class="sec-title">A trust layer for AI agents and the apps around them</div>
+  <div class="sec-desc">In plain English, DJD helps you answer three questions before work or money changes hands: should I trust this wallet, how does a real agent prove itself, and how does my product enforce that decision?</div>
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
-      <div class="step-tag">Fastest Test</div>
-      <h3>Score a wallet before payout</h3>
-      <p>Use the free basic score endpoint to decide whether a counterparty gets the job, the funds, or another verification step.</p>
+      <div class="step-tag">Decision</div>
+      <h3>Should this wallet be trusted?</h3>
+      <p>DJD scores the wallet from public on-chain behavior so you can decide whether to release funds, accept a job, or route the request into another review step.</p>
       <div class="step-code">curl "__DJD_PUBLIC_BASE_URL__/v1/score/basic?wallet=0x..."</div>
       <a class="step-link" href="#lookup" data-track="path_lookup">Run a free lookup</a>
     </div>
     <div class="step">
       <div class="step-num">2</div>
-      <div class="step-tag">Best Wedge</div>
-      <h3>Gate your x402 route</h3>
-      <p>Screen payer wallets before your Hono handler runs. Low-trust wallets can be rejected or treated differently without custom policy plumbing.</p>
-      <div class="step-code">npm i x402-agent-score</div>
-      <a class="step-link" href="#x402-path" data-track="path_x402">Open the x402 example</a>
+      <div class="step-tag">Proof</div>
+      <h3>How does a real agent show credibility?</h3>
+      <p>Profiles, certification, badges, and directory listings turn a bare wallet address into something customers and counterparties can actually inspect.</p>
+      <div class="step-code">/agent/{wallet} &middot; /certify &middot; /directory</div>
+      <a class="step-link" href="/directory" data-track="path_public_surfaces">See the public surfaces</a>
     </div>
     <div class="step">
       <div class="step-num">3</div>
-      <div class="step-tag">Trust Boost</div>
-      <h3>Register your agent</h3>
-      <p>Publish basic identity and project metadata so your wallet has more context attached to its score and profile page.</p>
-      <div class="step-code">POST /v1/agent/register</div>
-      <a class="step-link" href="#register-path" data-track="cta_register">See the registration payload</a>
+      <div class="step-tag">Policy</div>
+      <h3>How do developers enforce trust?</h3>
+      <p>Use the API, SDKs, and x402 gate to block risky wallets, apply different settlement rules, or ask for an evaluator-style decision before expensive work runs.</p>
+      <div class="step-code">x402-agent-score &middot; /v1/score/evaluator</div>
+      <a class="step-link" href="#x402-path" data-track="path_x402">Open the integration path</a>
     </div>
   </div>
 </div>
@@ -494,21 +494,21 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 
 <!-- TRUST SURFACES -->
 <div class="sec" id="trust-surfaces">
-  <div class="sec-label">Now Live</div>
-  <div class="sec-title">Turn raw signals into trust products</div>
-  <div class="sec-desc">Phase 2 layers public and machine-readable trust surfaces on top of the scoring engine, so counterparties can inspect credibility instead of guessing at it.</div>
+  <div class="sec-label">Trust Products</div>
+  <div class="sec-title">One trust engine, packaged for humans and software</div>
+  <div class="sec-desc">The same underlying signals can be displayed to a buyer, read by another service, or used as an automated policy input. That is the enterprise: developer infrastructure with public trust surfaces on top.</div>
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
-      <div class="step-tag">Free</div>
+      <div class="step-tag">For Humans</div>
       <h3>Browse the certified directory</h3>
-      <p>List active DJD-certified agents with current score tier, confidence, badges, profile metadata, and direct evaluator links.</p>
+      <p>Give customers and counterparties a public page where they can inspect certification status, score context, profile details, and next trust actions.</p>
       <div class="step-code">GET /v1/certification/directory</div>
       <a class="step-link" href="/directory" data-track="path_certified_directory">Open the directory</a>
     </div>
     <div class="step">
       <div class="step-num">2</div>
-      <div class="step-tag">Free</div>
+      <div class="step-tag">For Software</div>
       <h3>Fetch an ERC-8004 score document</h3>
       <p>Return a machine-readable trust document for a wallet, including registration, certification, scoring, and publication context.</p>
       <div class="step-code">GET /v1/score/erc8004?wallet=0x...</div>
@@ -516,7 +516,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
     </div>
     <div class="step">
       <div class="step-num">3</div>
-      <div class="step-tag">Paid</div>
+      <div class="step-tag">For Automation</div>
       <h3>Ask for an evaluator decision</h3>
       <p>Get an approve, review, or reject settlement preview that combines score, certification, risk, staking, and registration signals.</p>
       <div class="step-code">GET /v1/score/evaluator?wallet=0x...</div>
@@ -655,7 +655,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 <div class="sec" id="x402-path">
   <div class="sec-label">Integration</div>
   <div class="sec-title">Start with the x402 gate</div>
-  <div class="sec-desc">This is the narrowest, highest-value integration path: check the payer wallet before your paid Hono route does any work.</div>
+  <div class="sec-desc">If you are a developer, this is the fastest production wedge: check the payer wallet before your paid route does any work. Human teams can use API keys and card billing; autonomous agents can still pay per request with x402.</div>
   <div class="code"><div class="code-l">Hono + x402</div><pre><span class="k">import</span> { <span class="f">agentScoreGate</span> } <span class="k">from</span> <span class="s">'x402-agent-score'</span>
 
 app.<span class="f">use</span>(
@@ -672,6 +672,7 @@ app.<span class="f">post</span>(<span class="s">'/premium/search'</span>, <span 
   <div class="hero-actions" style="justify-content:flex-start;margin-top:22px">
     <a href="https://www.npmjs.com/package/x402-agent-score" class="btn btn-primary" data-track="cta_x402_npm">Install x402-agent-score</a>
     <a href="/docs" class="btn btn-ghost" data-track="cta_docs">Open docs</a>
+    <a href="/pricing" class="btn btn-ghost" data-track="cta_pricing_from_x402">See pricing for teams</a>
     <a href="https://github.com/jacobsd32-cpu/djdagentscore/blob/main/examples/x402-hono.ts" class="btn btn-ghost" data-track="cta_x402_example">See reference example</a>
   </div>
 </div>
@@ -708,7 +709,7 @@ app.<span class="f">post</span>(<span class="s">'/premium/search'</span>, <span 
 <div class="sec" id="api-ref">
   <div class="sec-label">Endpoints</div>
   <div class="sec-title">API reference</div>
-  <div class="sec-desc">Basic lookups are free. Upgrade when you're ready: <a href="/pricing" style="color:var(--accent);text-decoration:underline">monthly plans</a> (credit card) for predictable costs, or x402 micropayments (USDC on Base) for agents that pay per query from their own wallet.</div>
+  <div class="sec-desc">Start with a free wallet lookup during development. When you need production enforcement, move to <a href="/pricing" style="color:var(--accent);text-decoration:underline">monthly API-key plans</a> for predictable billing, or keep x402 micropayments for autonomous agents that pay from their own wallet.</div>
   <div class="api">
     <div class="api-r hdr"><div>Endpoint</div><div style="text-align:right">Price</div><div style="text-align:right">Method</div></div>
     <div class="api-r"><div><div class="api-ep">/v1/score/basic?wallet=</div><div class="api-d">Composite score, tier, confidence, recommendation</div></div><div class="api-p api-f">Free tier</div><div class="api-m">GET</div></div>
@@ -796,7 +797,7 @@ app.<span class="f">post</span>(<span class="s">'/premium/search'</span>, <span 
   <div class="partner-inner">
     <div class="partner-chip">Integration Partner</div>
     <div class="partner-title">Identity attestation powered by<br>Insumer Model</div>
-    <p class="partner-desc">DJD Agent Score integrates with Insumer Model to provide verified identity attestations for AI agent wallets. Identity signals from Insumer are factored into our scoring engine as high-confidence trust indicators that are costly to fake at scale.</p>
+    <p class="partner-desc">DJD Agent Score integrates with Insumer Model to provide verified identity attestations for AI agent wallets. Identity alone is not enough, but it helps developers and counterparties separate serious operators from disposable wallets at scale.</p>
     <a href="https://insumermodel.com" target="_blank" class="partner-card">
       <div class="partner-logo">&#x1D540;</div>
       <div class="partner-info">
@@ -815,8 +816,8 @@ app.<span class="f">post</span>(<span class="s">'/premium/search'</span>, <span 
 <div class="sec" style="padding-top:48px">
   <div class="cta-band">
     <div class="cta-band-copy">
-      <h3>Need a trust launch plan?</h3>
-      <p>We can help you choose score thresholds, wire the x402 middleware, and decide when your service is ready for Certify, evaluator-based settlement rules, or directory distribution.</p>
+      <h3>Need a trust plan for your product?</h3>
+      <p>If you're building an agent marketplace, paid tool, network, or automated workflow, DJD can help you choose score thresholds, public trust surfaces, and the right billing path for your first launch.</p>
     </div>
     <div class="cta-band-actions">
       <a href="mailto:__DJD_SUPPORT_EMAIL__?subject=DJD%20Agent%20Score%20pilot" class="btn btn-primary" data-track="cta_contact">Email for a pilot</a>
@@ -831,7 +832,7 @@ app.<span class="f">post</span>(<span class="s">'/premium/search'</span>, <span 
     <strong>Disclaimer:</strong> DJD Agent Score is experimental. All scores are algorithmically generated from publicly available blockchain data and unverified third-party submissions. Scores are not financial advice, credit assessments, investment recommendations, or guarantees. The scoring model is unvalidated and may produce inaccurate results. This service is not a "consumer report" as defined by the FCRA. By using this service you agree to the <a href="/terms">Terms of Service</a> and acknowledge the <a href="/privacy">Privacy Policy</a>.
   </div>
   <div class="ft-bot">
-    <div class="ft-l">&copy; 2026 DJD Agent Score LLC &middot; Built on Base &middot; <a href="/pricing" style="color:var(--text-dim);text-decoration:underline">Pricing</a> &middot; Identity attestation by <a href="https://insumermodel.com" target="_blank" style="color:var(--text-dim);text-decoration:underline">Insumer Model</a></div>
+    <div class="ft-l">&copy; 2026 DJD Agent Score LLC &middot; Trust infrastructure for agent payments and marketplaces on Base &middot; <a href="/pricing" style="color:var(--text-dim);text-decoration:underline">Pricing</a> &middot; Identity attestation by <a href="https://insumermodel.com" target="_blank" style="color:var(--text-dim);text-decoration:underline">Insumer Model</a></div>
     <div class="ft-links"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/methodology">Methodology</a><a href="/blog">Blog</a><a href="/health">Status</a></div>
   </div>
 </footer>

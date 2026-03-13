@@ -16,5 +16,7 @@ describe('GET /docs', () => {
     expect(body).toContain('DJD Agent Score')
     expect(body).toContain('SwaggerUIBundle')
     expect(body).toContain('/openapi.json')
+    expect(body).toContain('Developer docs for scoring wallets')
+    expect(body).toContain('gating payouts or x402 routes')
   })
 })
