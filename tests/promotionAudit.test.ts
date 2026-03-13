@@ -7,7 +7,7 @@ describe('promotion audit', () => {
       {
         path: 'src/config/public.ts',
         contents:
-          "const DEFAULT_PUBLIC_BASE_URL = 'https://djdagentscore.dev'\nconst DEFAULT_SUPPORT_EMAIL = 'feedback@djdagentscore.dev'\n",
+          "const DEFAULT_PUBLIC_BASE_URL = 'https://djdagentscore.dev'\nconst DEFAULT_SUPPORT_EMAIL = 'drewjacobs32@gmail.com'\n",
       },
     ])
 
@@ -19,7 +19,7 @@ describe('promotion audit', () => {
       {
         path: 'index.html',
         contents:
-          '<meta property="og:url" content="https://djdagentscore.dev/">\n<a href="mailto:feedback@djdagentscore.dev">Email</a>\n',
+          '<meta property="og:url" content="https://djdagentscore.dev/">\n<a href="mailto:drewjacobs32@gmail.com">Email</a>\n',
       },
     ])
 

@@ -7,7 +7,7 @@ describe('renderFlyConfig', () => {
 
 [env]
   PUBLIC_BASE_URL = "https://djdagentscore.dev"
-  PUBLIC_SUPPORT_EMAIL = "feedback@djdagentscore.dev"
+  PUBLIC_SUPPORT_EMAIL = "drewjacobs32@gmail.com"
 `
 
     const rendered = renderFlyConfig(template, {
@@ -18,7 +18,7 @@ describe('renderFlyConfig', () => {
     expect(rendered).toContain("app = 'djd-agent-score-preview'")
     expect(rendered).toContain('PUBLIC_BASE_URL = "https://preview.djdagentscore.test"')
     expect(rendered).toContain('CORS_ORIGINS = "https://preview.djdagentscore.test"')
-    expect(rendered).toContain('PUBLIC_SUPPORT_EMAIL = "feedback@djdagentscore.dev"')
+    expect(rendered).toContain('PUBLIC_SUPPORT_EMAIL = "drewjacobs32@gmail.com"')
   })
 
   it('fails if required fields are missing', () => {

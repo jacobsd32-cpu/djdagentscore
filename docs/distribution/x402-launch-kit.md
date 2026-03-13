@@ -83,5 +83,5 @@ Body outline:
 Always end with one of:
 
 - "Reply if you run paid x402 routes and want to test this."
-- "Email feedback@djdagentscore.dev if you want help choosing an initial threshold."
+- "Email drewjacobs32@gmail.com if you want help choosing an initial threshold."
 - "Start with the reference example: examples/x402-hono.ts."
