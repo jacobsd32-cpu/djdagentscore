@@ -59,9 +59,9 @@ function addColumnIfMissing(table: string, column: string, definition: string): 
   if (!VALID_IDENTIFIER.test(table) || !VALID_IDENTIFIER.test(column)) {
     throw new Error(`Invalid SQL identifier: table=${table}, column=${column}`)
   }
-  const existingTable = db
-    .prepare('SELECT name FROM sqlite_master WHERE type = ? AND name = ?')
-    .get('table', table) as { name: string } | undefined
+  const existingTable = db.prepare('SELECT name FROM sqlite_master WHERE type = ? AND name = ?').get('table', table) as
+    | { name: string }
+    | undefined
   if (!existingTable) {
     return
   }
