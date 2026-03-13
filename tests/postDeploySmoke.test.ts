@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   runPostDeploySmokeCheck,
   validateDetailedHealthPayload,
@@ -6,6 +6,10 @@ import {
 } from '../scripts/post-deploy-smoke.mjs'
 
 describe('post-deploy smoke helpers', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it('accepts valid public health payloads', () => {
     expect(() =>
       validatePublicHealthPayload({
@@ -40,6 +44,7 @@ describe('post-deploy smoke helpers', () => {
   })
 
   it('retries through transient failures and succeeds once health is good', async () => {
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
     let callCount = 0
     const fetchMock = async (_url, init) => {
       callCount += 1
@@ -57,6 +62,12 @@ describe('post-deploy smoke helpers', () => {
             status: 'ok',
             modelVersion: '2.5.0',
             experimentalStatus: true,
+            warnings: [
+              {
+                code: 'github_token_missing',
+                message: 'GITHUB_TOKEN not set — GitHub verification is limited to unauthenticated rate limits.',
+              },
+            ],
             runtime: {
               mode: 'combined',
               apiEnabled: true,
@@ -97,6 +108,11 @@ describe('post-deploy smoke helpers', () => {
     ).resolves.toBeUndefined()
 
     globalThis.fetch = originalFetch
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        '[smoke] Admin health warnings: github_token_missing: GITHUB_TOKEN not set — GitHub verification is limited to unauthenticated rate limits.',
+      ),
+    )
   })
 
   it('rejects a release SHA mismatch when one is expected', () => {
