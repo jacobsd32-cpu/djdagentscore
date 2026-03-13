@@ -5,6 +5,7 @@ export interface IndexedTransactionRow {
   tx_hash: string
   from_wallet: string
   to_wallet: string
+  amount_usdc: number
   timestamp: string
 }
 
@@ -44,7 +45,7 @@ const stmtGetIndexedTransactionBetweenWallets = db.prepare<
   [string, string, string, string, string],
   IndexedTransactionRow
 >(`
-  SELECT tx_hash, from_wallet, to_wallet, timestamp
+  SELECT tx_hash, from_wallet, to_wallet, amount_usdc, timestamp
   FROM raw_transactions
   WHERE tx_hash = ?
     AND (

@@ -1,8 +1,8 @@
 # DJD Agent Score
 
-Screen Base wallets before your agent sends funds or fulfills a paid x402 request.
+Govern paid agent commerce on Base before, during, and after money moves.
 
-DJD Agent Score turns on-chain payment history into a 0-100 trust score so you can block obvious bad counterparties before money moves.
+DJD Agent Score is the trust and governance layer for agent wallets on Base. Today the clearest adoption path is still simple: screen counterparties before your agent sends funds or fulfills a paid x402 request.
 
 [![Listed in the Coinbase x402 Ecosystem](https://img.shields.io/badge/Coinbase_x402-Ecosystem-0052FF?style=flat&logo=coinbase)](https://github.com/coinbase/x402)
 [![npm: djd-agent-score](https://img.shields.io/npm/v/djd-agent-score?label=npm%3A%20SDK)](https://www.npmjs.com/package/djd-agent-score)
@@ -91,15 +91,26 @@ View any wallet's profile page: [djdagentscore.dev/agent/{wallet}](https://djdag
 - Reject low-trust payers before your paid x402 route runs.
 - Score a wallet before your agent sends USDC or assigns work.
 - Register your own agent so its wallet has identity metadata and a public profile.
-- Use the paid endpoints when you need deeper history, integrity signals, or forced refreshes.
+- Use the paid endpoints when you need deeper history, integrity signals, ratings, or forced refreshes.
+- Investigate problems after the fact with ratings, fraud reports, disputes, and DJD Forensics feeds.
 
-## Built for one concrete wedge first
+## Governance layer, one wedge first
+
+DJD is being built as governance infrastructure for paid agent commerce, but the first job is narrower and easier to adopt: stop bad wallets before they hit a paid route.
 
 **x402 service providers** — Gate paid routes by payer reputation. That is the clearest problem and the easiest integration path.
 
 **Agent developers** — Score a wallet before your agent sends money, accepts a request, or enters a paid interaction.
 
 **Directories and protocols** — Add a public trust layer to wallet profiles, badges, and access policies.
+
+### Before, during, and after an agent interaction
+
+- **Before money moves** — Score a wallet, gate an x402 route, and check whether a wallet has identity and certification context.
+- **While work runs** — Attach monitoring, webhook alerts, and wallet metadata to active relationships and paid endpoints.
+- **After something breaks** — Capture ratings, fraud reports, disputes, and forensics timelines so a bad interaction becomes reusable governance data.
+
+Roadmap: [governance-roadmap.md](./docs/strategy/governance-roadmap.md)
 
 ---
 

@@ -63,6 +63,8 @@ export const REPORT_CONFIG = {
 export const RATING_CONFIG = {
   /** Max characters for optional rating comments */
   MAX_COMMENT_LENGTH: 500,
+  /** Minimum indexed USDC settlement required to make a rating eligible */
+  MIN_TRANSACTION_AMOUNT_USDC: 0.1,
 } as const
 
 export const STAKING_CONFIG = {

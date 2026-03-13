@@ -43,7 +43,7 @@ vi.mock('../../src/db.js', () => ({
     testDb
       .prepare(
         `
-          SELECT tx_hash, from_wallet, to_wallet, timestamp
+          SELECT tx_hash, from_wallet, to_wallet, amount_usdc, timestamp
           FROM raw_transactions
           WHERE tx_hash = ?
             AND (
@@ -190,15 +190,21 @@ function makeApp() {
   return app
 }
 
-function seedTransaction(txHash: string, fromWallet: string, toWallet: string, timestamp = '2026-03-12T00:00:00Z') {
+function seedTransaction(
+  txHash: string,
+  fromWallet: string,
+  toWallet: string,
+  timestamp = '2026-03-12T00:00:00Z',
+  amountUsdc = 25,
+) {
   testDb
     .prepare(
       `
         INSERT INTO raw_transactions (tx_hash, block_number, from_wallet, to_wallet, amount_usdc, timestamp)
-        VALUES (?, 1, ?, ?, 25, ?)
+        VALUES (?, 1, ?, ?, ?, ?)
       `,
     )
-    .run(txHash, fromWallet, toWallet, timestamp)
+    .run(txHash, fromWallet, toWallet, amountUsdc, timestamp)
 }
 
 function seedRating(row: {
@@ -283,6 +289,29 @@ describe('ratings routes', () => {
       expect(res.status).toBe(400)
       const body = await res.json()
       expect(body.error.code).toBe('invalid_rating')
+    })
+
+    it('rejects ratings for dust-sized transactions', async () => {
+      seedTransaction(TX_HASH, RATER_WALLET, RATED_WALLET, '2026-03-12T00:00:00Z', 0.01)
+
+      const app = makeApp()
+      const res = await app.request('/v1/rate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-payer-address': RATER_WALLET,
+        },
+        body: JSON.stringify({
+          rated_wallet: RATED_WALLET,
+          tx_hash: TX_HASH,
+          rating: 4,
+        }),
+      })
+
+      expect(res.status).toBe(400)
+      const body = await res.json()
+      expect(body.error.code).toBe('invalid_rating')
+      expect(body.error.details).toEqual({ minimum_amount_usdc: 0.1 })
     })
 
     it('rejects duplicate ratings for the same wallet pair and transaction', async () => {

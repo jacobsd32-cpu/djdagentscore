@@ -158,6 +158,14 @@ export async function submitMutualRating(
   if (!transaction) {
     return invalidRatingError('tx_hash must reference an indexed transaction between rater and rated wallet')
   }
+  if (transaction.amount_usdc < RATING_CONFIG.MIN_TRANSACTION_AMOUNT_USDC) {
+    return invalidRatingError(
+      `tx_hash must reference an indexed transaction worth at least $${RATING_CONFIG.MIN_TRANSACTION_AMOUNT_USDC.toFixed(2)} USDC`,
+      {
+        minimum_amount_usdc: RATING_CONFIG.MIN_TRANSACTION_AMOUNT_USDC,
+      },
+    )
+  }
 
   if (getMutualRatingByTxAndPair(actualRater, ratedWallet, txHash)) {
     return {

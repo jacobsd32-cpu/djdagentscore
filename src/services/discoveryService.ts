@@ -271,7 +271,8 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
         path: '/v1/rate',
         method: 'POST',
         price: ENDPOINT_PRICING['/v1/rate'],
-        description: 'Submit a transaction-backed 1-5 star counterparty rating for a wallet.',
+        description:
+          'Submit a transaction-backed 1-5 star counterparty rating for a wallet after at least $0.10 USDC of indexed settlement.',
         input: {
           body: {
             rated_wallet: { type: 'string' },
