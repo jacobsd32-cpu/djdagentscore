@@ -338,6 +338,7 @@ npm run smoke:deploy
 - Optional GitHub secret: `FLY_PREVIEW_ADMIN_KEY`
 
 If `FLY_PREVIEW_PUBLIC_BASE_URL` is not set, the workflow defaults to `https://<FLY_PREVIEW_APP>.fly.dev`.
+Preview Fly configs inherit `PAY_TO` and other shared env from `fly.toml`, and automatically set `CORS_ORIGINS` to the preview public base URL so fresh preview apps can boot without a separate CORS secret.
 
 The preview app should be provisioned separately from production and should have its own mounted Fly volume named `djd_agent_score_data`, since this service still runs against a single SQLite file.
 

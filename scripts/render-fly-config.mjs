@@ -13,6 +13,7 @@ function replaceSetting(source, pattern, replacement, label) {
 export function renderFlyConfig(template, options) {
   const appName = options.appName?.trim()
   const publicBaseUrl = options.publicBaseUrl?.trim()
+  const corsOrigins = options.corsOrigins?.trim() || publicBaseUrl
 
   if (!appName) {
     throw new Error('appName is required')
@@ -31,6 +32,19 @@ export function renderFlyConfig(template, options) {
     `$1"${publicBaseUrl.replace(/"/g, '\\"')}"`,
     'PUBLIC_BASE_URL',
   )
+  if (/^\s*CORS_ORIGINS\s*=.+$/m.test(rendered)) {
+    rendered = replaceSetting(
+      rendered,
+      /^(\s*CORS_ORIGINS\s*=\s*).+$/m,
+      `$1"${corsOrigins.replace(/"/g, '\\"')}"`,
+      'CORS_ORIGINS',
+    )
+  } else {
+    rendered = rendered.replace(
+      /^(\s*PUBLIC_BASE_URL\s*=\s*.+)$/m,
+      `$1\n  CORS_ORIGINS = "${corsOrigins.replace(/"/g, '\\"')}"`,
+    )
+  }
 
   return rendered
 }
@@ -56,6 +70,12 @@ function parseArgs(argv) {
 
     if (arg === '--template') {
       options.templatePath = next
+      index += 1
+      continue
+    }
+
+    if (arg === '--cors-origins') {
+      options.corsOrigins = next
       index += 1
       continue
     }

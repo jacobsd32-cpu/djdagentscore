@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { renderFlyConfig } from '../scripts/render-fly-config.mjs'
 
 describe('renderFlyConfig', () => {
-  it('replaces the app name and public base URL for preview deploys', () => {
+  it('replaces the app name and preview web config for preview deploys', () => {
     const template = `app = 'djd-agent-score'
 
 [env]
@@ -17,6 +17,7 @@ describe('renderFlyConfig', () => {
 
     expect(rendered).toContain("app = 'djd-agent-score-preview'")
     expect(rendered).toContain('PUBLIC_BASE_URL = "https://preview.djdagentscore.test"')
+    expect(rendered).toContain('CORS_ORIGINS = "https://preview.djdagentscore.test"')
     expect(rendered).toContain('PUBLIC_SUPPORT_EMAIL = "feedback@djdagentscore.dev"')
   })
 

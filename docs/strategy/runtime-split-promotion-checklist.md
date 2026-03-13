@@ -8,6 +8,7 @@ Use this checklist when promoting `codex/runtime-split-entrypoints` toward `main
 - Optionally set `FLY_PREVIEW_PUBLIC_BASE_URL` if the preview app uses a custom domain.
 - Optionally set `FLY_PREVIEW_API_TOKEN` if the default `FLY_API_TOKEN` only has access to the production Fly app.
 - Optionally set `FLY_PREVIEW_ADMIN_KEY` so deploy smoke checks can verify detailed runtime health.
+- Confirm preview config rendering sets `CORS_ORIGINS` to the preview public base URL so new preview apps can boot cleanly.
 - Confirm the preview Fly app has its own mounted SQLite volume named `djd_agent_score_data`.
 - Confirm preview deploys render a dedicated `.fly/preview.toml` rather than overriding the production app name in place.
 - Push to `codex/runtime-split-entrypoints` or run `Fly Preview` manually.
