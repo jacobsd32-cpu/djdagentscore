@@ -17,5 +17,8 @@ describe('GET /reviewer', () => {
     expect(body).toContain('/v1/certification/admin/reviews')
     expect(body).toContain('Issue Certification')
     expect(body).toContain('Enter the admin key')
+    expect(body).toContain('Wallet, name, or description')
+    expect(body).toContain('sessionStorage')
+    expect(body).toContain('djd-reviewer-dashboard')
   })
 })

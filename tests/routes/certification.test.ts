@@ -230,7 +230,7 @@ vi.mock('../../src/db.js', () => ({
         LIMIT 1`,
       )
       .get(wallet),
-  listCertificationReviewRequests: (status: string | null, limit: number) =>
+  listCertificationReviewRequests: (status: string | null, search: string | null, limit: number) =>
     testDb
       .prepare(
         `SELECT
@@ -247,10 +247,24 @@ vi.mock('../../src/db.js', () => ({
         LEFT JOIN agent_registrations reg ON reg.wallet = r.wallet
         LEFT JOIN scores s ON s.wallet = r.wallet
         WHERE (? IS NULL OR r.status = ?)
+          AND (
+            ? IS NULL
+            OR LOWER(r.wallet) LIKE ?
+            OR LOWER(COALESCE(reg.name, '')) LIKE ?
+            OR LOWER(COALESCE(reg.description, '')) LIKE ?
+          )
         ORDER BY r.requested_at DESC, r.id DESC
         LIMIT ?`,
       )
-      .all(status, status, limit),
+      .all(
+        status,
+        status,
+        search,
+        search ? `%${search}%` : null,
+        search ? `%${search}%` : null,
+        search ? `%${search}%` : null,
+        limit,
+      ),
   updateCertificationReviewRequestDecision: (
     id: number,
     status: string,
@@ -652,6 +666,21 @@ describe('Certification routes', () => {
       expect(decisionBody.status).toBe('approved')
       expect(decisionBody.reviewed_by).toBe('ops')
       expect(decisionBody.review_note).toContain('issuance review')
+
+      const filteredQueueRes = await app.request('/v1/certification/admin/reviews?status=approved&search=queue', {
+        headers: { 'x-admin-key': ADMIN_KEY },
+      })
+      expect(filteredQueueRes.status).toBe(200)
+      const filteredQueueBody = (await filteredQueueRes.json()) as {
+        filters: { status: string | null; search: string | null }
+        returned: number
+        requests: Array<{ profile: { name: string | null } }>
+      }
+
+      expect(filteredQueueBody.filters.status).toBe('approved')
+      expect(filteredQueueBody.filters.search).toBe('queue')
+      expect(filteredQueueBody.returned).toBe(1)
+      expect(filteredQueueBody.requests[0]?.profile.name).toBe('Queue Candidate')
     })
 
     it('issues certification from an approved review request', async () => {

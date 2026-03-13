@@ -120,6 +120,10 @@ export function reviewerPageHtml(): string {
           <label for="adminKey">Admin Key</label>
           <input id="adminKey" type="password" placeholder="Enter x-admin-key for reviewer actions" autocomplete="off">
         </div>
+        <div class="field">
+          <label for="searchFilter">Search</label>
+          <input id="searchFilter" type="search" placeholder="Wallet, name, or description" autocomplete="off">
+        </div>
         <div class="field" style="max-width:170px">
           <label for="statusFilter">Status</label>
           <select id="statusFilter">
@@ -144,6 +148,7 @@ export function reviewerPageHtml(): string {
         <button class="btn btn-primary" id="loadBtn" onclick="loadQueue()">Load Review Queue</button>
         <button class="btn btn-secondary" onclick="clearDashboard()">Clear</button>
       </div>
+      <div class="note">This dashboard keeps the admin key and queue filters in <code>sessionStorage</code> for the current tab only.</div>
       <div class="status" id="statusMsg"></div>
       <div class="error" id="errorMsg"></div>
     </div>
@@ -158,6 +163,8 @@ export function reviewerPageHtml(): string {
 
 <script>
 const REVIEWS_API='/v1/certification/admin/reviews';
+const REVIEWER_STORAGE_KEY='djd-reviewer-dashboard';
+const DEFAULT_LIMIT='24';
 
 function esc(value){
   return String(value)
@@ -216,13 +223,68 @@ function getAdminKey(){
   return document.getElementById('adminKey').value.trim();
 }
 
+function getSearchFilter(){
+  return document.getElementById('searchFilter').value.trim();
+}
+
+function getDashboardState(){
+  return {
+    adminKey: document.getElementById('adminKey').value,
+    search: document.getElementById('searchFilter').value,
+    status: document.getElementById('statusFilter').value,
+    limit: document.getElementById('limitFilter').value || DEFAULT_LIMIT
+  };
+}
+
+function persistDashboardState(){
+  try{
+    window.sessionStorage.setItem(REVIEWER_STORAGE_KEY, JSON.stringify(getDashboardState()));
+  }catch{
+    // Session persistence is best-effort only.
+  }
+}
+
+function restoreDashboardState(){
+  try{
+    const rawState=window.sessionStorage.getItem(REVIEWER_STORAGE_KEY);
+    if(!rawState) return false;
+    const state=JSON.parse(rawState);
+    if(!state || typeof state !== 'object') return false;
+
+    if(typeof state.adminKey === 'string') document.getElementById('adminKey').value=state.adminKey;
+    if(typeof state.search === 'string') document.getElementById('searchFilter').value=state.search;
+    if(typeof state.status === 'string') document.getElementById('statusFilter').value=state.status;
+    if(typeof state.limit === 'string' && state.limit) document.getElementById('limitFilter').value=state.limit;
+    return Boolean(typeof state.adminKey === 'string' && state.adminKey.trim());
+  }catch{
+    return false;
+  }
+}
+
+function clearStoredDashboardState(){
+  try{
+    window.sessionStorage.removeItem(REVIEWER_STORAGE_KEY);
+  }catch{
+    // Session persistence is best-effort only.
+  }
+}
+
 function getQueueParams(){
   const params=new URLSearchParams();
   const status=document.getElementById('statusFilter').value;
+  const search=getSearchFilter();
   const limit=document.getElementById('limitFilter').value;
   if(status) params.set('status', status);
+  if(search) params.set('search', search);
   if(limit) params.set('limit', limit);
   return params;
+}
+
+function buildQueueMeta(body){
+  const parts=['Showing ' + body.returned + ' review request(s)'];
+  if(body.filters && body.filters.status) parts.push(labelForStatus(body.filters.status));
+  if(body.filters && body.filters.search) parts.push('matching "' + body.filters.search + '"');
+  return parts.join(' · ');
 }
 
 function noteBlock(label, value){
@@ -272,6 +334,8 @@ async function loadQueue(){
     return;
   }
 
+  persistDashboardState();
+
   const button=document.getElementById('loadBtn');
   button.disabled=true;
   button.textContent='Loading...';
@@ -285,7 +349,7 @@ async function loadQueue(){
       throw new Error(body && body.error && body.error.message ? body.error.message : 'Unable to load review queue');
     }
 
-    document.getElementById('queueMeta').textContent='Showing ' + body.returned + ' review request(s)';
+    document.getElementById('queueMeta').textContent=buildQueueMeta(body);
     document.getElementById('queue').innerHTML=body.returned
       ? body.requests.map(renderRequest).join('')
       : '<div class="card empty">No review requests matched the current filter.</div>';
@@ -304,6 +368,7 @@ async function decision(id, status){
     showError('Enter the admin key before submitting reviewer actions.');
     return;
   }
+  persistDashboardState();
   const note=window.prompt('Optional reviewer note for ' + labelForStatus(status).toLowerCase() + ':', '');
   if(note === null && status !== 'approved'){
     return;
@@ -339,6 +404,7 @@ async function issueRequest(id){
     showError('Enter the admin key before issuing certifications.');
     return;
   }
+  persistDashboardState();
   if(!window.confirm('Issue a certification from this approved review request?')){
     return;
   }
@@ -363,11 +429,37 @@ function clearDashboard(){
   document.getElementById('queue').innerHTML='';
   document.getElementById('queueMeta').textContent='Queue idle';
   document.getElementById('adminKey').value='';
+  document.getElementById('searchFilter').value='';
+  document.getElementById('statusFilter').value='';
+  document.getElementById('limitFilter').value=DEFAULT_LIMIT;
+  clearStoredDashboardState();
 }
 
-document.getElementById('adminKey').addEventListener('keydown', function(event){
-  if(event.key === 'Enter') loadQueue();
-});
+function attachPersistenceListeners(){
+  ['adminKey','searchFilter'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', persistDashboardState);
+  });
+  ['statusFilter','limitFilter'].forEach(function(id){
+    document.getElementById(id).addEventListener('change', persistDashboardState);
+  });
+}
+
+function attachLoadShortcuts(){
+  ['adminKey','searchFilter'].forEach(function(id){
+    document.getElementById(id).addEventListener('keydown', function(event){
+      if(event.key === 'Enter') loadQueue();
+    });
+  });
+}
+
+function initDashboard(){
+  const restoredAdminKey=restoreDashboardState();
+  attachPersistenceListeners();
+  attachLoadShortcuts();
+  if(restoredAdminKey) loadQueue();
+}
+
+initDashboard();
 </script>
 </body>
 </html>`
