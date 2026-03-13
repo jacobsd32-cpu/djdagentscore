@@ -71,6 +71,20 @@ function addColumnIfMissing(table: string, column: string, definition: string): 
   }
 }
 
+function hasUniqueIndexOnColumns(table: string, columns: string[]): boolean {
+  if (!VALID_IDENTIFIER.test(table) || columns.some((column) => !VALID_IDENTIFIER.test(column))) {
+    throw new Error(`Invalid SQL identifier: table=${table}, columns=${columns.join(',')}`)
+  }
+
+  const indexes = db.prepare(`PRAGMA index_list(${table})`).all() as Array<{ name: string; unique: number }>
+
+  return indexes.some((index) => {
+    if (index.unique !== 1 || !VALID_IDENTIFIER.test(index.name)) return false
+    const indexColumns = db.prepare(`PRAGMA index_info(${index.name})`).all() as Array<{ name: string }>
+    return indexColumns.length === columns.length && indexColumns.every((column, idx) => column.name === columns[idx])
+  })
+}
+
 addColumnIfMissing('scores', 'confidence', 'REAL DEFAULT 0.0')
 addColumnIfMissing('scores', 'recommendation', "TEXT DEFAULT 'insufficient_history'")
 addColumnIfMissing('scores', 'model_version', "TEXT DEFAULT '1.0.0'")
@@ -408,6 +422,16 @@ db.exec(`
     updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `)
+
+if (!hasUniqueIndexOnColumns('cluster_assignments', ['wallet'])) {
+  db.exec(`
+    DELETE FROM cluster_assignments
+    WHERE id NOT IN (
+      SELECT MAX(id) FROM cluster_assignments GROUP BY wallet
+    );
+  `)
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_cluster_assignments_wallet_unique ON cluster_assignments(wallet)')
+}
 
 // ── P1: USDC Transfer Index ───────────────────────────────────────────────
 db.exec(`

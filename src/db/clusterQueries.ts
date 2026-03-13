@@ -25,7 +25,7 @@ const stmtGetClusterAssignmentByWallet = db.prepare<[string], ClusterAssignmentR
   LIMIT 1
 `)
 
-const stmtUpsertClusterAssignment = db.prepare(`
+const stmtInsertClusterAssignment = db.prepare(`
   INSERT INTO cluster_assignments (
     wallet,
     cluster_id,
@@ -39,12 +39,25 @@ const stmtUpsertClusterAssignment = db.prepare(`
     @confidence,
     @assigned_at
   )
-  ON CONFLICT(wallet) DO UPDATE SET
-    cluster_id = excluded.cluster_id,
-    cluster_name = excluded.cluster_name,
-    confidence = excluded.confidence,
-    assigned_at = excluded.assigned_at
 `)
+
+const stmtUpdateClusterAssignment = db.prepare(`
+  UPDATE cluster_assignments
+  SET
+    cluster_id = @cluster_id,
+    cluster_name = @cluster_name,
+    confidence = @confidence,
+    assigned_at = @assigned_at
+  WHERE wallet = @wallet
+`)
+
+const txUpsertClusterAssignment = db.transaction(
+  (input: { wallet: string; cluster_id: string; cluster_name: string; confidence: number; assigned_at: string }) => {
+    const result = stmtUpdateClusterAssignment.run(input)
+    if (result.changes > 0) return
+    stmtInsertClusterAssignment.run(input)
+  },
+)
 
 export function getClusterAssignmentByWallet(wallet: string): ClusterAssignmentRow | undefined {
   return stmtGetClusterAssignmentByWallet.get(wallet)
@@ -57,7 +70,7 @@ export function upsertClusterAssignment(input: {
   confidence: number
   assigned_at: string
 }): void {
-  stmtUpsertClusterAssignment.run(input)
+  txUpsertClusterAssignment(input)
 }
 
 export function listClusterMembers(
