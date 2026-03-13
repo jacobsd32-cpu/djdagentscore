@@ -17,7 +17,7 @@ describe('GET /pricing', () => {
     expect(body).toContain('Certify workflows')
     expect(body).toContain('certified directory')
     expect(body).toContain('ERC-8183 evaluator preview endpoint')
-    expect(body).toContain('/v1/certification/directory')
+    expect(body).toContain('/directory')
     expect(body).toContain('/explorer')
   })
 })

@@ -634,6 +634,43 @@ db.exec(`
     WHERE is_active = 1;
 `)
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS certification_review_requests (
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    wallet               TEXT NOT NULL,
+    requested_by_wallet  TEXT NOT NULL,
+    requested_tier       TEXT NOT NULL,
+    requested_score      INTEGER NOT NULL,
+    requested_confidence REAL,
+    score_expires_at     TEXT,
+    request_note         TEXT,
+    status               TEXT NOT NULL DEFAULT 'pending',
+    requested_at         TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at           TEXT NOT NULL DEFAULT (datetime('now')),
+    reviewed_at          TEXT,
+    reviewed_by          TEXT,
+    review_note          TEXT
+  );
+`)
+
+addColumnIfMissing('certification_review_requests', 'requested_by_wallet', 'TEXT NOT NULL DEFAULT ""')
+addColumnIfMissing('certification_review_requests', 'requested_tier', 'TEXT NOT NULL DEFAULT "Trusted"')
+addColumnIfMissing('certification_review_requests', 'requested_score', 'INTEGER NOT NULL DEFAULT 0')
+addColumnIfMissing('certification_review_requests', 'requested_confidence', 'REAL')
+addColumnIfMissing('certification_review_requests', 'score_expires_at', 'TEXT')
+addColumnIfMissing('certification_review_requests', 'request_note', 'TEXT')
+addColumnIfMissing('certification_review_requests', 'status', 'TEXT NOT NULL DEFAULT "pending"')
+addColumnIfMissing('certification_review_requests', 'requested_at', "TEXT NOT NULL DEFAULT (datetime('now'))")
+addColumnIfMissing('certification_review_requests', 'updated_at', "TEXT NOT NULL DEFAULT (datetime('now'))")
+addColumnIfMissing('certification_review_requests', 'reviewed_at', 'TEXT')
+addColumnIfMissing('certification_review_requests', 'reviewed_by', 'TEXT')
+addColumnIfMissing('certification_review_requests', 'review_note', 'TEXT')
+
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_cert_review_wallet ON certification_review_requests(wallet, requested_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_cert_review_status ON certification_review_requests(status, requested_at DESC);
+`)
+
 // ── ERC-8004 Reputation Publications ────────────────────────────────────────
 db.exec(`
   CREATE TABLE IF NOT EXISTS reputation_publications (

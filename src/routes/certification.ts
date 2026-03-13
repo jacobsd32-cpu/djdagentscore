@@ -3,6 +3,8 @@
  *
  * Public (free):
  *   GET  /readiness    — check whether a wallet can apply for certification
+ *   GET  /review       — inspect the latest certification review request for a wallet
+ *   POST /review       — submit a certification review request
  *   GET  /directory     — browse active certifications
  *   GET  /:wallet       — check certification status
  *   GET  /badge/:wallet — SVG badge (green if certified, gray if not)
@@ -24,9 +26,14 @@ import {
   getCertificationRevenue,
   getCertificationBadgeView,
   getCertificationDirectoryView,
+  issueCertificationFromReviewRequest,
   getCertificationReadinessView,
+  getCertificationReviewStatusView,
   getCertificationStatusView,
+  listCertificationReviewRequestViews,
+  reviewCertificationRequestDecision,
   listCertificationRecords,
+  submitCertificationReviewRequest,
   revokeCertificationRecord,
 } from '../services/certificationService.js'
 import { getPayerWallet } from '../utils/paymentUtils.js'
@@ -50,12 +57,36 @@ certification.get('/directory', (c) => {
   const outcome = getCertificationDirectoryView({
     limit: c.req.query('limit'),
     tier: c.req.query('tier'),
+    search: c.req.query('search'),
+    sort: c.req.query('sort'),
   })
   if (!outcome.ok) {
     return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
   }
 
   return c.json(outcome.data)
+})
+
+certification.get('/review', (c) => {
+  const outcome = getCertificationReviewStatusView(c.req.query('wallet'))
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
+  }
+
+  return c.json(outcome.data)
+})
+
+certification.post('/review', async (c) => {
+  const body = await c.req.json<{ wallet?: string; note?: string }>().catch(() => null)
+  const outcome = submitCertificationReviewRequest({
+    wallet: body?.wallet,
+    note: body?.note,
+  })
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
+  }
+
+  return c.json(outcome.data, outcome.status ?? 201)
 })
 
 // ── Public: Check certification status ──────────────────────────────────────
@@ -113,6 +144,48 @@ certification.post('/apply', (c) => {
 certification.get('/admin/all', adminAuth, (c) => {
   const certifications = listCertificationRecords()
   return c.json({ certifications, count: certifications.length })
+})
+
+certification.get('/admin/reviews', adminAuth, (c) => {
+  const outcome = listCertificationReviewRequestViews({
+    status: c.req.query('status'),
+    limit: c.req.query('limit'),
+  })
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
+  }
+
+  return c.json(outcome.data)
+})
+
+certification.post('/admin/reviews/:id/decision', adminAuth, async (c) => {
+  const id = Number(c.req.param('id'))
+  const body = await c.req
+    .json<{ decision?: string; note?: string; reviewed_by?: string }>()
+    .catch(() => null)
+
+  const outcome = reviewCertificationRequestDecision({
+    id,
+    decision: body?.decision,
+    note: body?.note,
+    reviewedBy: body?.reviewed_by,
+  })
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
+  }
+
+  return c.json(outcome.data)
+})
+
+certification.post('/admin/reviews/:id/issue', adminAuth, (c) => {
+  const outcome = issueCertificationFromReviewRequest({
+    id: Number(c.req.param('id')),
+  })
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
+  }
+
+  return c.json(outcome.data, outcome.status ?? 201)
 })
 
 // ── Admin: Revoke a certification ───────────────────────────────────────────

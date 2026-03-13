@@ -33,6 +33,7 @@ import certificationRoute from './routes/certification.js'
 import certifyRoute from './routes/certify.js'
 import clusterRoute from './routes/cluster.js'
 import dataRoute from './routes/data.js'
+import directoryRoute from './routes/directory.js'
 import docsRoute from './routes/docs.js'
 import economyRoute from './routes/economy.js'
 import explorerRoute from './routes/explorer.js'
@@ -50,6 +51,7 @@ import pricingRoute from './routes/pricing.js'
 import ratingsRoute from './routes/ratings.js'
 import registerRoute from './routes/register.js'
 import reportRoute from './routes/report.js'
+import reviewerRoute from './routes/reviewer.js'
 import scoreRoute from './routes/score.js'
 import stakeRoute from './routes/stake.js'
 import stripeWebhookRoute from './routes/stripeWebhook.js'
@@ -117,6 +119,7 @@ app.route('/v1/analytics', analyticsRoute)
 app.route('/v1/agent/register', registerRoute)
 app.route('/v1/badge', badgeRoute)
 app.route('/explorer', explorerRoute)
+app.route('/directory', directoryRoute)
 app.route('/certify', certifyRoute)
 app.route('/blog', blogRoute)
 app.route('/agent', agentRoute)
@@ -126,6 +129,7 @@ app.route('/docs', docsRoute)
 app.route('/metrics', metricsRoute)
 app.route('/billing', billingRoute)
 app.route('/portal', portalRoute)
+app.route('/reviewer', reviewerRoute)
 app.route('/pricing', pricingRoute)
 app.route('/methodology', methodologyRoute)
 app.route('/.well-known/x402', wellKnownRoute)

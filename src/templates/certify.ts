@@ -2,8 +2,9 @@ import { buildPublicUrl } from '../config/public.js'
 
 export function certifyPageHtml(): string {
   const certifyUrl = buildPublicUrl('/certify')
-  const directoryUrl = buildPublicUrl('/v1/certification/directory')
+  const directoryUrl = buildPublicUrl('/directory')
   const readinessUrl = buildPublicUrl('/v1/certification/readiness')
+  const reviewUrl = buildPublicUrl('/v1/certification/review')
   const pricingUrl = buildPublicUrl('/pricing')
   const docsUrl = buildPublicUrl('/docs')
   const explorerUrl = buildPublicUrl('/explorer')
@@ -108,6 +109,14 @@ nav{max-width:1080px;margin:0 auto;padding:0 32px;height:64px;display:flex;align
 .readiness-links{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 .readiness-link{display:inline-flex;align-items:center;gap:6px;padding:10px 12px;border-radius:10px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:12px;text-decoration:none}
 .readiness-link:hover{border-color:var(--border-hi);color:var(--accent);text-decoration:none}
+.readiness-action-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.readiness-action-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 14px;border-radius:10px;background:var(--accent);border:none;color:var(--bg);font-size:12px;font-weight:700;cursor:pointer}
+.readiness-action-btn:disabled{opacity:.45;cursor:not-allowed}
+.readiness-review{margin-top:14px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:16px}
+.readiness-review-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.readiness-review-title{font-size:14px;font-weight:700}
+.readiness-review-note{font-size:12px;color:var(--text-dim);line-height:1.7}
+.readiness-review-meta{margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);line-height:1.8}
 .readiness-code{margin-top:14px;background:#08101d;border:1px solid var(--border);border-radius:12px;padding:16px;overflow:auto}
 .readiness-code-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
 .readiness-code pre{font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;color:var(--text-dim);white-space:pre-wrap}
@@ -270,6 +279,14 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:72px}
       </div>
       <div class="endpoint-row">
         <div>
+          <div class="endpoint-path">/v1/certification/review</div>
+          <div class="endpoint-desc">Submit a review request or inspect the latest reviewer status for a wallet before the final certification purchase.</div>
+        </div>
+        <div class="endpoint-price price-free">Free</div>
+        <div class="endpoint-method">GET / POST</div>
+      </div>
+      <div class="endpoint-row">
+        <div>
           <div class="endpoint-path">/v1/certification/:wallet</div>
           <div class="endpoint-desc">Read certification status for a wallet, including links to related trust surfaces.</div>
         </div>
@@ -336,6 +353,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:72px}
 </div>
 <script>
 const CERT_READINESS_URL='${readinessUrl}';
+const CERT_REVIEW_URL='${reviewUrl}';
 const CERT_APPLY_URL='${buildPublicUrl('/v1/certification/apply')}';
 
 function certEsc(value){
@@ -347,7 +365,9 @@ function certEsc(value){
 }
 
 function certStatusClass(status){
-  return status==='eligible'||status==='already_certified'?'readiness-status readiness-status-ok':'readiness-status readiness-status-warn';
+  return status==='eligible'||status==='already_certified'||status==='review_approved'
+    ?'readiness-status readiness-status-ok'
+    :'readiness-status readiness-status-warn';
 }
 
 function certStatusLabel(status){
@@ -357,8 +377,102 @@ function certStatusLabel(status){
     not_registered:'REGISTER FIRST',
     score_missing:'SCORE REQUIRED',
     score_expired:'REFRESH SCORE',
-    score_too_low:'SCORE TOO LOW'
+    score_too_low:'SCORE TOO LOW',
+    review_pending:'REVIEW PENDING',
+    review_approved:'REVIEW APPROVED',
+    review_needs_info:'NEEDS INFO',
+    review_rejected:'REVIEW REJECTED'
   })[status]||String(status||'').replace(/_/g,' ').toUpperCase();
+}
+
+function certReviewStatusLabel(status){
+  return ({
+    pending:'REVIEW PENDING',
+    approved:'REVIEW APPROVED',
+    needs_info:'NEEDS INFO',
+    rejected:'REVIEW REJECTED'
+  })[status]||String(status||'').replace(/_/g,' ').toUpperCase();
+}
+
+function certReviewStatusClass(status){
+  return status==='approved'?'readiness-status readiness-status-ok':'readiness-status readiness-status-warn';
+}
+
+function renderCertReview(review){
+  var shell=document.getElementById('reviewRequestPanel');
+  if(!shell)return;
+  if(!review){
+    shell.innerHTML='';
+    return;
+  }
+
+  var name=review.profile&&review.profile.name?review.profile.name:review.wallet;
+  var reviewNote=review.review_note?'<div class="readiness-review-note"><strong>Reviewer note:</strong> '+certEsc(review.review_note)+'</div>':'';
+  var requestNote=review.request_note?'<div class="readiness-review-note"><strong>Request note:</strong> '+certEsc(review.request_note)+'</div>':'';
+  shell.innerHTML=
+    '<div class="readiness-review">'+
+      '<div class="readiness-review-head">'+
+        '<div class="readiness-review-title">Review packet for '+certEsc(name)+'</div>'+
+        '<div class="'+certReviewStatusClass(review.status)+'">'+certEsc(certReviewStatusLabel(review.status))+'</div>'+
+      '</div>'+
+      '<div class="readiness-review-note">'+certEsc(review.message||'Review status available.')+'</div>'+
+      requestNote+
+      reviewNote+
+      '<div class="readiness-review-meta">'+
+        'Requested '+certEsc(new Date(review.requested_at).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}))+
+        (review.reviewed_at?' &middot; Reviewed '+certEsc(new Date(review.reviewed_at).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'})):'')+
+      '</div>'+
+    '</div>';
+}
+
+async function loadCertificationReview(wallet){
+  try{
+    var resp=await fetch(CERT_REVIEW_URL+'?wallet='+encodeURIComponent(wallet));
+    if(resp.status===404){
+      renderCertReview(null);
+      return;
+    }
+    var data=await resp.json();
+    if(!resp.ok){
+      throw new Error(data&&data.error&&data.error.message?data.error.message:'Review lookup failed');
+    }
+    renderCertReview(data);
+  }catch(_err){
+    renderCertReview(null);
+  }
+}
+
+async function submitCertificationReview(wallet){
+  var button=document.getElementById('certReviewBtn');
+  if(button){
+    button.disabled=true;
+    button.textContent='Submitting...';
+  }
+  try{
+    var resp=await fetch(CERT_REVIEW_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({wallet:wallet})
+    });
+    var data=await resp.json();
+    if(!resp.ok){
+      throw new Error(data&&data.error&&data.error.message?data.error.message:'Review request failed');
+    }
+    renderCertReview(data);
+  }catch(err){
+    renderCertReview({
+      wallet:wallet,
+      profile:{name:null},
+      status:'needs_info',
+      message:err&&err.message?err.message:'Review request failed',
+      requested_at:new Date().toISOString(),
+      reviewed_at:null
+    });
+  }
+  if(button){
+    button.disabled=false;
+    button.textContent='Request review packet';
+  }
 }
 
 function renderCertReadiness(data){
@@ -370,14 +484,27 @@ function renderCertReadiness(data){
   var scoreValue=data.requirements&&data.requirements.score&&data.requirements.score.current_score!=null?data.requirements.score.current_score:'—';
   var tierValue=data.requirements&&data.requirements.score&&data.requirements.score.current_tier?data.requirements.score.current_tier:'—';
   var expiryValue=data.requirements&&data.requirements.score&&data.requirements.score.expires_at?new Date(data.requirements.score.expires_at).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}):'—';
+  var reviewValue=data.requirements&&data.requirements.review&&data.requirements.review.status?certReviewStatusLabel(data.requirements.review.status):'NONE';
   var codeBlock=data.can_apply
     ? '<div class="readiness-code"><div class="readiness-code-label">Apply via x402</div><pre>curl -X POST '+certEsc(CERT_APPLY_URL)+' \\\n  -H "X-PAYMENT: &lt;x402 payment proof&gt;"</pre></div>'
     : '';
+  var showReviewAction=!data.requirements.review||!data.requirements.review.exists||data.requirements.review.status==='needs_info'||data.requirements.review.status==='rejected';
+  var reviewActionLabel=data.requirements.review&&data.requirements.review.exists?'Resubmit review packet':'Request review packet';
+  var reviewAction=showReviewAction
+    ? '<div class="readiness-action-row"><button type="button" class="readiness-action-btn" id="certReviewBtn" onclick="submitCertificationReview(&quot;'+certEsc(data.wallet)+'&quot;)">'+reviewActionLabel+'</button></div>'
+    : '';
+  var title=data.status==='review_pending'
+    ? 'This wallet is waiting on reviewer action'
+    : data.status==='review_approved'
+      ? 'This wallet is approved for certification'
+      : data.can_apply
+        ? 'This wallet can apply now'
+        : 'This wallet is not ready yet';
 
   result.innerHTML=
     '<div class="readiness-panel">'+
       '<div class="readiness-head">'+
-        '<div class="readiness-title">'+(data.can_apply?'This wallet can apply now':'This wallet is not ready yet')+'</div>'+
+        '<div class="readiness-title">'+title+'</div>'+
         '<div class="'+certStatusClass(data.status)+'">'+certEsc(certStatusLabel(data.status))+'</div>'+
       '</div>'+
       '<div class="readiness-wallet">'+certEsc(data.wallet)+'</div>'+
@@ -385,11 +512,15 @@ function renderCertReadiness(data){
         '<div class="readiness-metric"><div class="readiness-metric-label">Registration</div><div class="readiness-metric-value">'+(data.requirements.registration.met?'Complete':'Missing')+'</div></div>'+
         '<div class="readiness-metric"><div class="readiness-metric-label">Current Score</div><div class="readiness-metric-value">'+certEsc(scoreValue)+' <span class="mono" style="font-size:11px;color:var(--text-muted)">'+certEsc(tierValue)+'</span></div></div>'+
         '<div class="readiness-metric"><div class="readiness-metric-label">Score Expiry</div><div class="readiness-metric-value">'+certEsc(expiryValue)+'</div></div>'+
+        '<div class="readiness-metric"><div class="readiness-metric-label">Review</div><div class="readiness-metric-value">'+certEsc(reviewValue)+'</div></div>'+
       '</div>'+
       (blockers?'<ul class="readiness-list">'+blockers+'</ul>':'<div class="readiness-empty">No blockers. This wallet meets the visible prerequisites for certification.</div>')+
       '<div class="readiness-links">'+nextSteps+'</div>'+
+      reviewAction+
+      '<div id="reviewRequestPanel"></div>'+
       codeBlock+
     '</div>';
+  loadCertificationReview(data.wallet);
 }
 
 async function checkCertReadiness(pushState){

@@ -25,7 +25,7 @@ export function pricingPageHtml(plans: PricingPlan[]): string {
   const growth = plans.find((p) => p.id === 'growth')
   const scale = plans.find((p) => p.id === 'scale')
   const pricingUrl = buildPublicUrl('/pricing')
-  const certifiedDirectoryUrl = buildPublicUrl('/v1/certification/directory')
+  const certifiedDirectoryUrl = buildPublicUrl('/directory')
   const explorerUrl = buildPublicUrl('/explorer')
 
   return `<!DOCTYPE html>

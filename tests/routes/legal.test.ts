@@ -18,6 +18,7 @@ describe('GET /', () => {
     expect(body).toContain('DJD is evolving from a score API into trust infrastructure for the agent economy')
     expect(body).toContain('Certification profile')
     expect(body).toContain('Certify readiness')
+    expect(body).toContain('/directory')
     expect(body).toContain('ERC-8004 document')
     expect(body).toContain('/v1/certification/directory')
     expect(body).toContain('/v1/score/erc8004?wallet=')
@@ -43,6 +44,7 @@ describe('GET /', () => {
     const robotsRes = await app.request('/robots.txt')
     expect(robotsRes.status).toBe(200)
     const robotsBody = await robotsRes.text()
+    expect(robotsBody).toContain('Allow: /directory')
     expect(robotsBody).toContain('Sitemap: https://preview.djdagentscore.test/openapi.json')
 
     const agentRes = await app.request('/.well-known/agent.json')

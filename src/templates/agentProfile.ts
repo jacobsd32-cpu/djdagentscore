@@ -82,7 +82,7 @@ export function renderAgentPage(
   const certificationStatusUrl = `${safeOrigin}/v1/certification/${wallet}`
   const standardsUrl = `${safeOrigin}/v1/score/erc8004?wallet=${wallet}`
   const evaluatorUrl = `${safeOrigin}/v1/score/evaluator?wallet=${wallet}`
-  const directoryUrl = `${safeOrigin}/v1/certification/directory`
+  const directoryUrl = `${safeOrigin}/directory`
   const certifyUrl = `${safeOrigin}/certify?wallet=${wallet}`
   const pageUrl = `${safeOrigin}/agent/${wallet}`
   const s = score?.composite_score ?? 0
