@@ -119,6 +119,139 @@ export function getEconomyMetrics(periodType: string, limit: number): EconomyMet
     .all(periodType, limit)
 }
 
+export interface EconomySurvivalSummaryRow {
+  total_wallets: number
+  active_7d: number
+  active_30d: number
+  dormant_30d: number
+  avg_days_since_last_seen: number | null
+}
+
+export interface EconomySurvivalCohortRow {
+  horizon_days: number
+  eligible_wallets: number
+  surviving_wallets: number
+}
+
+export interface EconomyTierSurvivalRow {
+  tier: string
+  wallet_count: number
+  active_30d: number
+}
+
+export interface EconomyAtRiskWalletRow {
+  wallet: string
+  current_score: number | null
+  current_tier: string | null
+  first_seen: string | null
+  last_seen: string | null
+  days_since_last_seen: number | null
+  score_change_30d: number | null
+}
+
+export function getEconomySurvivalSummary(): EconomySurvivalSummaryRow {
+  const row = db
+    .prepare<[], EconomySurvivalSummaryRow>(`
+      SELECT
+        COUNT(*) as total_wallets,
+        COALESCE(SUM(CASE WHEN datetime(last_seen) >= datetime('now', '-7 days') THEN 1 ELSE 0 END), 0) as active_7d,
+        COALESCE(SUM(CASE WHEN datetime(last_seen) >= datetime('now', '-30 days') THEN 1 ELSE 0 END), 0) as active_30d,
+        COALESCE(SUM(CASE WHEN datetime(last_seen) < datetime('now', '-30 days') THEN 1 ELSE 0 END), 0) as dormant_30d,
+        ROUND(AVG(julianday('now') - julianday(last_seen)), 1) as avg_days_since_last_seen
+      FROM wallet_index
+    `)
+    .get()
+
+  return (
+    row ?? {
+      total_wallets: 0,
+      active_7d: 0,
+      active_30d: 0,
+      dormant_30d: 0,
+      avg_days_since_last_seen: null,
+    }
+  )
+}
+
+export function getEconomySurvivalCohort(horizonDays: number): EconomySurvivalCohortRow {
+  const modifier = `-${Math.max(1, horizonDays)} days`
+  const row = db
+    .prepare<[number, string, string], EconomySurvivalCohortRow>(`
+      SELECT
+        ? as horizon_days,
+        COUNT(*) as eligible_wallets,
+        COALESCE(SUM(CASE WHEN datetime(last_seen) >= datetime('now', ?) THEN 1 ELSE 0 END), 0) as surviving_wallets
+      FROM wallet_index
+      WHERE datetime(first_seen) <= datetime('now', ?)
+    `)
+    .get(horizonDays, modifier, modifier)
+
+  return (
+    row ?? {
+      horizon_days: horizonDays,
+      eligible_wallets: 0,
+      surviving_wallets: 0,
+    }
+  )
+}
+
+export function listEconomyTierSurvival(): EconomyTierSurvivalRow[] {
+  return db
+    .prepare<[], EconomyTierSurvivalRow>(`
+      SELECT
+        COALESCE(s.tier, 'Unverified') as tier,
+        COUNT(*) as wallet_count,
+        COALESCE(SUM(CASE WHEN datetime(wi.last_seen) >= datetime('now', '-30 days') THEN 1 ELSE 0 END), 0) as active_30d
+      FROM wallet_index wi
+      LEFT JOIN scores s ON s.wallet = wi.wallet
+      GROUP BY COALESCE(s.tier, 'Unverified')
+      ORDER BY wallet_count DESC, tier ASC
+    `)
+    .all()
+}
+
+export function listEconomyAtRiskWallets(limit: number): EconomyAtRiskWalletRow[] {
+  return db
+    .prepare<[number], EconomyAtRiskWalletRow>(`
+      WITH recent_decay AS (
+        SELECT
+          wallet,
+          MAX(CASE WHEN rn_desc = 1 THEN composite_score END) as latest_score,
+          MAX(CASE WHEN rn_asc = 1 THEN composite_score END) as earliest_score
+        FROM (
+          SELECT
+            wallet,
+            composite_score,
+            recorded_at,
+            ROW_NUMBER() OVER (PARTITION BY wallet ORDER BY recorded_at DESC) as rn_desc,
+            ROW_NUMBER() OVER (PARTITION BY wallet ORDER BY recorded_at ASC) as rn_asc
+          FROM score_decay
+          WHERE datetime(recorded_at) >= datetime('now', '-30 days')
+        ) decay_ranked
+        GROUP BY wallet
+      )
+      SELECT
+        wi.wallet,
+        s.composite_score as current_score,
+        s.tier as current_tier,
+        wi.first_seen,
+        wi.last_seen,
+        ROUND(julianday('now') - julianday(wi.last_seen), 1) as days_since_last_seen,
+        COALESCE(recent_decay.latest_score - recent_decay.earliest_score, 0) as score_change_30d
+      FROM wallet_index wi
+      LEFT JOIN recent_decay ON recent_decay.wallet = wi.wallet
+      LEFT JOIN scores s ON s.wallet = wi.wallet
+      WHERE datetime(wi.last_seen) < datetime('now', '-7 days')
+         OR COALESCE(recent_decay.latest_score - recent_decay.earliest_score, 0) <= -10
+      ORDER BY
+        CASE WHEN datetime(wi.last_seen) < datetime('now', '-30 days') THEN 0 ELSE 1 END,
+        score_change_30d ASC,
+        wi.last_seen ASC
+      LIMIT ?
+    `)
+    .all(limit)
+}
+
 export interface EcosystemStats {
   totalWalletsScored: number
   totalWalletsIndexed: number
@@ -308,6 +441,12 @@ export interface ReputationPublication {
   published_at: string
 }
 
+const stmtGetPublication = db.prepare<[string], ReputationPublication>(`
+  SELECT wallet, composite_score, model_version, tx_hash, published_at
+  FROM reputation_publications
+  WHERE wallet = ?
+`)
+
 const stmtUpsertPublication = db.prepare(`
   INSERT INTO reputation_publications (wallet, composite_score, model_version, tx_hash, published_at)
   VALUES (@wallet, @composite_score, @model_version, @tx_hash, @published_at)
@@ -331,6 +470,10 @@ export function upsertPublication(pub: {
     tx_hash: pub.tx_hash,
     published_at: new Date().toISOString(),
   })
+}
+
+export function getReputationPublication(wallet: string): ReputationPublication | undefined {
+  return stmtGetPublication.get(wallet)
 }
 
 export function getScoresNeedingPublication(minConfidence: number, scoreDelta: number, limit: number): ScoreRow[] {

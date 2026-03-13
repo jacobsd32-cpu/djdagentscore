@@ -226,6 +226,9 @@ The scoring engine indexes x402 settlements on-chain using the EIP-3009 `Authori
 | Endpoint | Method | Description |
 |---|---|---|
 | `/v1/score/basic?wallet=0x…` | GET | Score, tier, confidence. 10 free calls/day. |
+| `/v1/score/erc8004?wallet=0x…` | GET | ERC-8004-compatible reputation document with score, identity, certification, and publication status. |
+| `/v1/certification/readiness?wallet=0x…` | GET | Check if a wallet can apply for certification, see blockers, and get the next step before paying. |
+| `/v1/certification/directory` | GET | Public directory of active certifications with score context and evaluator/standards links. |
 | `/v1/agent/register` | POST | Register your wallet. +10 identity bonus. |
 | `/v1/score/compute` | POST | Queue background score computation. Returns jobId immediately. |
 | `/v1/score/job/:jobId` | GET | Poll async job status (pending → complete). |
@@ -240,6 +243,7 @@ The scoring engine indexes x402 settlements on-chain using the EIP-3009 `Authori
 | Endpoint | Method | Price | Description |
 |---|---|---|---|
 | `/v1/score/full?wallet=0x…` | GET | $0.10 | Per-dimension scores, raw data, history, fraud flags |
+| `/v1/score/evaluator?wallet=0x…` | GET | $0.35 | ERC-8183 evaluator prototype using score, certification, risk, and market signals |
 | `/v1/score/refresh?wallet=0x…` | GET | $0.25 | Force live recalculation (bypasses 1hr cache) |
 | `/v1/score/history?wallet=0x…` | GET | $0.15 | Historical score data with trend analysis |
 | `/v1/report` | POST | $0.02 | Submit fraud/misconduct report against a wallet |
@@ -323,17 +327,54 @@ Current production note:
 - The Fly deployment should remain on the combined runtime until storage changes.
 - This app still uses SQLite on a Fly volume, and that storage model blocks a safe API/worker machine split against the same database file.
 
+### Deploy smoke checks
+
+The deploy workflow now verifies both that `/health` is live and that the responding app reports the expected runtime mode and release SHA.
+
+```bash
+DJD_HEALTHCHECK_URL=https://djdagentscore.dev/health \
+DJD_EXPECT_RUNTIME_MODE=combined \
+DJD_EXPECT_RELEASE_SHA=<git_sha> \
+DJD_ADMIN_KEY=<admin_key> \
+npm run smoke:deploy
+```
+
+### Preview deploy lane
+
+`codex/runtime-split-entrypoints` can now deploy to a non-production Fly preview app through `.github/workflows/fly-preview.yml`.
+
+- Required GitHub variable: `FLY_PREVIEW_APP`
+- Optional GitHub variable: `FLY_PREVIEW_PUBLIC_BASE_URL`
+- Optional GitHub secret: `FLY_PREVIEW_API_TOKEN` (use this when your existing `FLY_API_TOKEN` is scoped only to the production app)
+- Optional GitHub secret: `FLY_PREVIEW_ADMIN_KEY`
+
+If `FLY_PREVIEW_PUBLIC_BASE_URL` is not set, the workflow defaults to `https://<FLY_PREVIEW_APP>.fly.dev`.
+Preview Fly configs inherit `PAY_TO` and other shared env from `fly.toml`, and automatically set `CORS_ORIGINS` to the preview public base URL so fresh preview apps can boot without a separate CORS secret.
+Preview deploys use Fly's `immediate` strategy because the preview app is a single-machine SQLite service with one attached volume; in-place updates are more reliable here than rolling replacement.
+
+The preview app should be provisioned separately from production and should have its own mounted Fly volume named `djd_agent_score_data`, since this service still runs against a single SQLite file.
+
+Use `npm run audit:promotion` to catch preview-unsafe hardcoded production URLs in `src/` and `index.html` before promotion.
+Use `npm run render:fly-config -- --app <preview-app> --public-base-url <preview-url> --output .fly/preview.toml` to render a preview-safe Fly config from `fly.toml` without mutating the production config in the repo.
+
 ### Environment variables
 
 | Variable | Default | Description |
 |---|---|---|
 | `PORT` | `3000` | HTTP port |
+| `DJD_RUNTIME_MODE` | `combined` | Which built entrypoint to boot: `combined`, `api`, or `worker` |
+| `DJD_RELEASE_SHA` | unset | Release commit baked into the container image and exposed via `/health` |
+| `DJD_BUILD_TIMESTAMP` | unset | UTC build timestamp baked into the container image and exposed via `/health` |
 | `PAY_TO` | `0x3E4Ef1f774857C69E33ddDC471e110C7Ac7bB528` | USDC recipient for x402 payments |
 | `FACILITATOR_URL` | `https://x402.org/facilitator` | x402 facilitator endpoint |
 | `BASE_RPC_URL` | `https://base-mainnet.public.blastapi.io` | Base RPC (BlastAPI recommended) |
 | `ENABLE_BLOCKCHAIN_INDEXER` | `true` | Enable x402 settlement indexing in worker/combined runtime |
 | `ENABLE_USDC_INDEXER` | `true` | Enable USDC transfer indexing in worker/combined runtime |
 | `ENABLE_HOURLY_REFRESH` | `true` | Enable hourly score refresh in worker/combined runtime |
+| `DJD_HEALTHCHECK_URL` | `https://djdagentscore.dev/health` | Health endpoint used by `npm run smoke:deploy` |
+| `DJD_EXPECT_RUNTIME_MODE` | `combined` | Expected runtime mode for deploy smoke verification |
+| `DJD_EXPECT_RELEASE_SHA` | unset | Expected release SHA for deploy smoke verification |
+| `DJD_ADMIN_KEY` | unset | Optional admin key so deploy smoke can verify detailed runtime health |
 
 ---
 
@@ -347,7 +388,7 @@ Current production note:
 
 **RPC provider:** Default is BlastAPI public Base endpoint. For heavy indexing, use a dedicated provider via `BASE_RPC_URL`. Avoid `publicnode.com` (rejects 10k-block `eth_getLogs` ranges).
 
-**ERC-8004:** [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) (AI Agent Registry) check is disabled until a registry contract deploys on Base.
+**ERC-8004:** [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) (AI Agent Registry) compatibility is available at `/v1/score/erc8004`, and the on-chain publication job writes high-confidence DJD scores into the reputation registry when configured.
 
 **Score caching:** 1 hour cache. Background refresh for up to 50 expired scores per batch. Force recalculation with `/v1/score/refresh` ($0.25). Admin flush endpoint expires all cached scores to trigger ecosystem-wide re-scoring after model updates.
 

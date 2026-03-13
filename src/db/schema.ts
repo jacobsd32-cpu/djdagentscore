@@ -59,6 +59,12 @@ function addColumnIfMissing(table: string, column: string, definition: string): 
   if (!VALID_IDENTIFIER.test(table) || !VALID_IDENTIFIER.test(column)) {
     throw new Error(`Invalid SQL identifier: table=${table}, column=${column}`)
   }
+  const existingTable = db.prepare('SELECT name FROM sqlite_master WHERE type = ? AND name = ?').get('table', table) as
+    | { name: string }
+    | undefined
+  if (!existingTable) {
+    return
+  }
   const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>
   if (!cols.find((c) => c.name === column)) {
     db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
@@ -246,6 +252,29 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_mutual_ratings_tx
     ON mutual_ratings(tx_hash);
 
+  CREATE TABLE IF NOT EXISTS creator_stakes (
+    id              TEXT PRIMARY KEY,
+    creator_wallet  TEXT NOT NULL,
+    agent_wallet    TEXT NOT NULL,
+    stake_amount    REAL NOT NULL,
+    fee_amount      REAL NOT NULL DEFAULT 0,
+    stake_tx_hash   TEXT NOT NULL UNIQUE,
+    fee_tx_hash     TEXT NOT NULL UNIQUE,
+    status          TEXT NOT NULL DEFAULT 'active',
+    score_boost     INTEGER NOT NULL DEFAULT 0,
+    staked_at       TEXT NOT NULL,
+    return_eligible INTEGER NOT NULL DEFAULT 1,
+    slashed_at      TEXT,
+    slash_report_id TEXT REFERENCES fraud_reports(id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_creator_stakes_agent_status
+    ON creator_stakes(agent_wallet, status, staked_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_creator_stakes_creator_status
+    ON creator_stakes(creator_wallet, status, staked_at DESC);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_creator_stakes_active_pair
+    ON creator_stakes(creator_wallet, agent_wallet)
+    WHERE status = 'active';
+
   -- Analytics
   CREATE TABLE IF NOT EXISTS query_log (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -316,7 +345,12 @@ db.exec(`
     outcome_type          TEXT,
     outcome_at            TEXT,
     days_to_outcome       INTEGER,
-    outcome_value         REAL
+    outcome_value         REAL,
+    reliability_at_query  INTEGER,
+    viability_at_query    INTEGER,
+    identity_at_query     INTEGER,
+    capability_at_query   INTEGER,
+    behavior_at_query     INTEGER
   );
   CREATE INDEX IF NOT EXISTS idx_outcomes_score  ON score_outcomes(score_at_query, outcome_type);
   CREATE INDEX IF NOT EXISTS idx_outcomes_model  ON score_outcomes(model_version,  outcome_type);
@@ -351,6 +385,17 @@ db.exec(`
     SELECT MAX(id) FROM economy_metrics GROUP BY period_type, period_start
   );
   CREATE UNIQUE INDEX IF NOT EXISTS idx_economy_metrics_unique ON economy_metrics(period_type, period_start);
+
+  CREATE TABLE IF NOT EXISTS cluster_assignments (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    wallet       TEXT NOT NULL UNIQUE,
+    cluster_id   TEXT NOT NULL,
+    cluster_name TEXT NOT NULL,
+    confidence   REAL NOT NULL DEFAULT 0,
+    assigned_at  TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_cluster_assignments_cluster ON cluster_assignments(cluster_id, confidence DESC);
+  CREATE INDEX IF NOT EXISTS idx_cluster_assignments_wallet ON cluster_assignments(wallet);
 
   -- Agent self-registration (bootstraps identity scoring before x402 volume exists)
   CREATE TABLE IF NOT EXISTS agent_registrations (

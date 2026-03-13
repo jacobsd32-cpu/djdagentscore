@@ -34,6 +34,7 @@ const { testDb } = vi.hoisted(() => {
       description TEXT,
       github_url TEXT,
       website_url TEXT,
+      github_verified INTEGER NOT NULL DEFAULT 0,
       registered_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -78,6 +79,38 @@ vi.mock('../../src/db.js', () => ({
     return testDb.prepare('SELECT * FROM certifications WHERE id = ?').get(Number(result.lastInsertRowid))
   },
   listCertifications: () => testDb.prepare('SELECT * FROM certifications ORDER BY granted_at DESC').all(),
+  listActiveCertificationDirectory: (limit: number, tier?: string | null) =>
+    testDb
+      .prepare(
+        `SELECT
+           c.id,
+           c.wallet,
+           c.tier,
+           c.score_at_certification,
+           c.granted_at,
+           c.expires_at,
+           c.is_active,
+           c.tx_hash,
+           c.revoked_at,
+           c.revocation_reason,
+           s.composite_score AS current_score,
+           s.tier AS current_tier,
+           s.confidence AS current_confidence,
+           r.name,
+           r.description,
+           r.github_url,
+           r.website_url,
+           COALESCE(r.github_verified, 0) AS github_verified
+         FROM certifications c
+         LEFT JOIN scores s ON s.wallet = c.wallet
+         LEFT JOIN agent_registrations r ON r.wallet = c.wallet
+         WHERE c.is_active = 1
+           AND c.expires_at > datetime('now')
+           AND (? IS NULL OR c.tier = ?)
+         ORDER BY COALESCE(s.composite_score, c.score_at_certification) DESC, c.granted_at DESC
+         LIMIT ?`,
+      )
+      .all(tier ?? null, tier ?? null, limit),
   revokeCertification: (id: number, reason: string) =>
     testDb
       .prepare(
@@ -204,6 +237,72 @@ describe('Certification routes', () => {
     process.env.ADMIN_KEY = ADMIN_KEY
   })
 
+  describe('GET /v1/certification/readiness', () => {
+    it('returns can_apply true for an eligible wallet', async () => {
+      seedGoodScore(VALID_WALLET_LOWER)
+      seedRegistration(VALID_WALLET_LOWER)
+
+      const app = createApp()
+      const res = await app.request(`/v1/certification/readiness?wallet=${VALID_WALLET}`)
+
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as {
+        can_apply: boolean
+        status: string
+        payment: { amount_usdc: number }
+        requirements: { registration: { met: boolean }; score: { met: boolean; current_score: number | null } }
+      }
+
+      expect(body.can_apply).toBe(true)
+      expect(body.status).toBe('eligible')
+      expect(body.payment.amount_usdc).toBe(99)
+      expect(body.requirements.registration.met).toBe(true)
+      expect(body.requirements.score.met).toBe(true)
+      expect(body.requirements.score.current_score).toBe(82)
+    })
+
+    it('returns not_registered when registration is missing', async () => {
+      seedGoodScore(VALID_WALLET_LOWER)
+
+      const app = createApp()
+      const res = await app.request(`/v1/certification/readiness?wallet=${VALID_WALLET}`)
+
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as {
+        can_apply: boolean
+        status: string
+        blockers: Array<{ code: string }>
+      }
+
+      expect(body.can_apply).toBe(false)
+      expect(body.status).toBe('not_registered')
+      expect(body.blockers[0]?.code).toBe('cert_not_registered')
+    })
+
+    it('returns already_certified when the wallet is already certified', async () => {
+      seedGoodScore(VALID_WALLET_LOWER)
+      seedRegistration(VALID_WALLET_LOWER)
+      seedCertification(VALID_WALLET_LOWER)
+
+      const app = createApp()
+      const res = await app.request(`/v1/certification/readiness?wallet=${VALID_WALLET}`)
+
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as {
+        can_apply: boolean
+        status: string
+        requirements: { certification: { active: boolean } }
+        links: { certification_status: string }
+      }
+
+      expect(body.can_apply).toBe(false)
+      expect(body.status).toBe('already_certified')
+      expect(body.requirements.certification.active).toBe(true)
+      expect(body.links.certification_status).toContain(`/v1/certification/${VALID_WALLET_LOWER}`)
+      expect(body.links.certify_overview).toContain(`/certify?wallet=${VALID_WALLET_LOWER}`)
+    })
+  })
+
   // ── POST /apply ───────────────────────────────────────────────────────────
 
   describe('POST /v1/certification/apply', () => {
@@ -226,6 +325,9 @@ describe('Certification routes', () => {
       expect(body.message).toContain('1 year')
       expect(body.granted_at).toBeDefined()
       expect(body.expires_at).toBeDefined()
+      expect((body.links as Record<string, string>).standards_document).toContain(
+        `/v1/score/erc8004?wallet=${VALID_WALLET_LOWER}`,
+      )
     })
 
     it('rejects with cert_score_too_low when score < 75', async () => {
@@ -323,6 +425,12 @@ describe('Certification routes', () => {
       expect(body.is_valid).toBe(true)
       expect(body.granted_at).toBeDefined()
       expect(body.expires_at).toBeDefined()
+      expect((body.links as Record<string, string>).evaluator_preview).toContain(
+        `/v1/score/evaluator?wallet=${VALID_WALLET_LOWER}`,
+      )
+      expect((body.links as Record<string, string>).certify_readiness).toContain(
+        `/certify?wallet=${VALID_WALLET_LOWER}`,
+      )
     })
 
     it('returns 404 cert_not_found for uncertified wallet', async () => {
@@ -332,6 +440,52 @@ describe('Certification routes', () => {
       expect(res.status).toBe(404)
       const body = (await res.json()) as { error: { code: string } }
       expect(body.error.code).toBe('cert_not_found')
+    })
+  })
+
+  describe('GET /v1/certification/directory', () => {
+    it('returns a public directory of active certifications', async () => {
+      seedGoodScore(VALID_WALLET_LOWER)
+      seedRegistration(VALID_WALLET_LOWER)
+      seedCertification(VALID_WALLET_LOWER)
+
+      const secondWallet = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'
+      seedGoodScore(secondWallet)
+      seedRegistration(secondWallet)
+      testDb
+        .prepare(`
+          INSERT INTO certifications (wallet, tier, score_at_certification, expires_at)
+          VALUES (?, 'Elite', 95, datetime('now', '+1 year'))
+        `)
+        .run(secondWallet)
+      testDb
+        .prepare(`UPDATE scores SET composite_score = 95, tier = 'Elite', confidence = 0.93 WHERE wallet = ?`)
+        .run(secondWallet)
+
+      const app = createApp()
+      const res = await app.request('/v1/certification/directory?limit=10')
+
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as {
+        returned: number
+        certifications: Array<{
+          wallet: string
+          certification: { tier: string }
+          current_score: { score: number | null; tier: string | null }
+          profile: { github_verified: boolean }
+          links: { standards_document: string; certify_readiness: string }
+        }>
+      }
+
+      expect(body.returned).toBe(2)
+      expect(body.certifications[0]?.wallet).toBe(secondWallet)
+      expect(body.certifications[0]?.certification.tier).toBe('Elite')
+      expect(body.certifications[0]?.current_score.score).toBe(95)
+      expect(body.certifications[1]?.profile.github_verified).toBe(false)
+      expect(body.certifications[1]?.links.standards_document).toContain(
+        `/v1/score/erc8004?wallet=${VALID_WALLET_LOWER}`,
+      )
+      expect(body.certifications[1]?.links.certify_readiness).toContain(`/certify?wallet=${VALID_WALLET_LOWER}`)
     })
   })
 

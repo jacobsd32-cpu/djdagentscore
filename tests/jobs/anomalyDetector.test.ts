@@ -1,3 +1,4 @@
+import type { Database as DatabaseType } from 'better-sqlite3'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { queueWebhookEventMock } = vi.hoisted(() => ({
@@ -19,7 +20,7 @@ vi.mock('../../src/logger.js', () => ({
 import { runAnomalyDetector } from '../../src/jobs/anomalyDetector.js'
 
 describe('runAnomalyDetector', () => {
-  let db: any
+  let db: DatabaseType
 
   beforeEach(() => {
     const Database = require('better-sqlite3')

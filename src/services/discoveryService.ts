@@ -164,11 +164,80 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
         output: { example: { wallet: '0x…', score: 78, tier: 'Established', recommendation: 'transact' } },
       },
       {
+        path: '/v1/score/erc8004',
+        method: 'GET',
+        price: 0,
+        description:
+          'Free ERC-8004-compatible reputation document that packages score, identity registration, certification, and publication status.',
+        input: { query: { wallet: { type: 'string', required: true, description: 'Ethereum wallet address' } } },
+        output: {
+          example: {
+            wallet: '0x…',
+            agent_id: '123456789',
+            standard: 'erc-8004-compatible',
+            reputation: { composite_score: 78, tier: 'Established', confidence: 0.82 },
+            certification: { active: true, tier: 'Trusted' },
+          },
+        },
+      },
+      {
+        path: '/v1/certification/readiness',
+        method: 'GET',
+        price: 0,
+        description:
+          'Free certification readiness check that tells a wallet whether it can apply, what is blocking it, and what to do next.',
+        input: { query: { wallet: { type: 'string', required: true, description: 'Ethereum wallet address' } } },
+        output: {
+          example: {
+            wallet: '0x…',
+            can_apply: true,
+            status: 'eligible',
+            payment: { protocol: 'x402', amount_usdc: 99 },
+          },
+        },
+      },
+      {
+        path: '/v1/certification/directory',
+        method: 'GET',
+        price: 0,
+        description:
+          'Public directory of active DJD certifications with current score context, profile metadata, and links to standards and evaluator views.',
+        input: {
+          query: {
+            limit: { type: 'integer' },
+            tier: { type: 'string' },
+          },
+        },
+      },
+      {
         path: '/v1/score/full',
         method: 'GET',
         price: ENDPOINT_PRICING['/v1/score/full'],
         description: 'Full score with 6-dimension breakdown, sybil/gaming flags, confidence, and explainability.',
         input: { query: { wallet: { type: 'string', required: true } } },
+      },
+      {
+        path: '/v1/score/evaluator',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/score/evaluator'],
+        description:
+          'ERC-8183 evaluator prototype that returns an approve, review, or reject recommendation for settlement readiness.',
+        input: { query: { wallet: { type: 'string', required: true } } },
+      },
+      {
+        path: '/v1/score/risk',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/score/risk'],
+        description: 'Risk prediction view combining fraud pressure, sybil/gaming flags, ratings, and intent outcomes.',
+        input: { query: { wallet: { type: 'string', required: true } } },
+      },
+      {
+        path: '/v1/cluster',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/cluster'],
+        description:
+          'Cluster analysis for a wallet using graph structure, risk signals, and persisted cluster assignments.',
+        input: { query: { wallet: { type: 'string', required: true }, limit: { type: 'integer' } } },
       },
       {
         path: '/v1/score/refresh',
@@ -214,6 +283,21 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
         },
       },
       {
+        path: '/v1/stake',
+        method: 'POST',
+        price: 0,
+        fee_model: '1% of stake amount, validated from an on-chain USDC transfer to PAY_TO',
+        description:
+          'Register a creator-to-agent USDC stake after validating both the stake transfer and the separate 1% DJD fee transfer on-chain.',
+        input: {
+          body: {
+            agent_wallet: { type: 'string' },
+            stake_tx_hash: { type: 'string' },
+            fee_tx_hash: { type: 'string' },
+          },
+        },
+      },
+      {
         path: '/v1/data/fraud/blacklist',
         method: 'GET',
         price: ENDPOINT_PRICING['/v1/data/fraud/blacklist'],
@@ -247,6 +331,18 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
         },
       },
       {
+        path: '/v1/data/intent',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/data/intent'],
+        description: 'Transaction-intent conversion data for a wallet based on paid lookups and follow-up deals.',
+        input: {
+          query: {
+            wallet: { type: 'string', required: true },
+            limit: { type: 'integer' },
+          },
+        },
+      },
+      {
         path: '/v1/data/ratings',
         method: 'GET',
         price: ENDPOINT_PRICING['/v1/data/ratings'],
@@ -254,6 +350,41 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
         input: {
           query: {
             wallet: { type: 'string', required: true },
+            limit: { type: 'integer' },
+          },
+        },
+      },
+      {
+        path: '/v1/data/economy/survival',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/data/economy/survival'],
+        description: 'Economy survival analytics showing cohort retention, activity survival, and at-risk wallets.',
+        input: {
+          query: {
+            limit: { type: 'integer' },
+          },
+        },
+      },
+      {
+        path: '/v1/data/economy/summary',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/data/economy/summary'],
+        description: 'Economy summary metrics by period from the aggregated ecosystem warehouse.',
+        input: {
+          query: {
+            period: { type: 'string' },
+            limit: { type: 'integer' },
+          },
+        },
+      },
+      {
+        path: '/v1/data/economy/volume',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/data/economy/volume'],
+        description: 'Economy volume time series with transaction counts and total USDC flow by period.',
+        input: {
+          query: {
+            period: { type: 'string' },
             limit: { type: 'integer' },
           },
         },

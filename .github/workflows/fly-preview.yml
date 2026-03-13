@@ -1,0 +1,129 @@
+name: Fly Preview
+
+env:
+  FLYCTL_VERSION: "0.3.229"
+
+on:
+  push:
+    branches:
+      - codex/runtime-split-entrypoints
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Lint, Typecheck & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          token: ${{ secrets.GH_PAT }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            packages/djd-agent-score-client/package-lock.json
+            packages/djd-agent-score-mcp/package-lock.json
+            packages/x402-agent-score/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run audit:promotion
+      - run: npm test
+
+  package-test:
+    name: Verify package surfaces
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - path: packages/djd-agent-score-client
+            bootstrap: ""
+            install: npm ci
+            verify: npm run typecheck && npm run build && npm pack --dry-run
+          - path: packages/djd-agent-score-mcp
+            bootstrap: npm ci --prefix packages/djd-agent-score-client
+            install: npm ci
+            verify: npm run typecheck && npm test && npm run build && npm pack --dry-run
+          - path: packages/x402-agent-score
+            bootstrap: ""
+            install: npm ci
+            verify: npm run typecheck && npm test && npm run build && npm pack --dry-run
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          token: ${{ secrets.GH_PAT }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            packages/djd-agent-score-client/package-lock.json
+            packages/djd-agent-score-mcp/package-lock.json
+            packages/x402-agent-score/package-lock.json
+      - if: ${{ matrix.bootstrap != '' }}
+        run: ${{ matrix.bootstrap }}
+      - run: ${{ matrix.install }}
+        working-directory: ${{ matrix.path }}
+      - run: ${{ matrix.verify }}
+        working-directory: ${{ matrix.path }}
+
+  deploy-preview:
+    name: Deploy preview app
+    if: ${{ vars.FLY_PREVIEW_APP != '' }}
+    needs:
+      - test
+      - package-test
+    runs-on: ubuntu-latest
+    concurrency:
+      group: preview-deploy-${{ github.ref_name }}
+      cancel-in-progress: true
+    env:
+      FLY_PREVIEW_APP: ${{ vars.FLY_PREVIEW_APP }}
+      FLY_PREVIEW_PUBLIC_BASE_URL: ${{ vars.FLY_PREVIEW_PUBLIC_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          token: ${{ secrets.GH_PAT }}
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+        with:
+          version: ${{ env.FLYCTL_VERSION }}
+      - name: Prepare preview metadata
+        run: |
+          echo "DJD_BUILD_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+          if [ -n "$FLY_PREVIEW_PUBLIC_BASE_URL" ]; then
+            PREVIEW_URL="${FLY_PREVIEW_PUBLIC_BASE_URL%/}"
+          else
+            PREVIEW_URL="https://${FLY_PREVIEW_APP}.fly.dev"
+          fi
+          echo "DJD_PREVIEW_PUBLIC_BASE_URL=$PREVIEW_URL" >> "$GITHUB_ENV"
+          echo "DJD_HEALTHCHECK_URL=$PREVIEW_URL/health" >> "$GITHUB_ENV"
+      - name: Render preview Fly config
+        run: |
+          node scripts/render-fly-config.mjs \
+            --app "$FLY_PREVIEW_APP" \
+            --public-base-url "$DJD_PREVIEW_PUBLIC_BASE_URL" \
+            --output .fly/preview.toml
+      - name: Deploy preview app
+        run: |
+          flyctl deploy \
+            --remote-only \
+            --strategy immediate \
+            --config .fly/preview.toml \
+            --build-arg DJD_RELEASE_SHA="${GITHUB_SHA}" \
+            --build-arg DJD_BUILD_TIMESTAMP="${DJD_BUILD_TIMESTAMP}"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_PREVIEW_API_TOKEN != '' && secrets.FLY_PREVIEW_API_TOKEN || secrets.FLY_API_TOKEN }}
+      - name: Post-deploy smoke check
+        run: node scripts/post-deploy-smoke.mjs
+        env:
+          DJD_HEALTHCHECK_URL: ${{ env.DJD_HEALTHCHECK_URL }}
+          DJD_EXPECT_RUNTIME_MODE: combined
+          DJD_EXPECT_RELEASE_SHA: ${{ github.sha }}
+          DJD_ADMIN_KEY: ${{ secrets.FLY_PREVIEW_ADMIN_KEY }}

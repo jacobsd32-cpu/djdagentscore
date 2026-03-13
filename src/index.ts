@@ -6,6 +6,8 @@ import { db } from './db.js'
 import { log } from './logger.js'
 import { startWorkerRuntime } from './runtime/worker.js'
 
+process.env.DJD_RUNTIME_MODE ??= 'combined'
+
 let server: ReturnType<typeof serve> | null = null
 let shuttingDown = false
 let workerRuntime: ReturnType<typeof startWorkerRuntime> | null = null
@@ -42,6 +44,7 @@ server = serve({ fetch: app.fetch, port: PORT, hostname: '0.0.0.0' }, (info) => 
   log.info('server', `DJD Agent Score API running on http://localhost:${info.port}`)
   log.info('server', `payTo: ${PAY_TO}`)
   log.info('server', `facilitator: ${FACILITATOR_URL}`)
+  log.info('server', `Runtime mode: ${process.env.DJD_RUNTIME_MODE}`)
   log.info('server', 'Combined runtime active (API + worker)')
   workerRuntime = startWorkerRuntime({
     closeDbOnShutdown: false,

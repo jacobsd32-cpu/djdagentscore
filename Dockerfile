@@ -25,7 +25,13 @@ RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
 COPY openapi.json ./
 COPY index.html ./
+COPY runtime-entrypoint.mjs ./
+
+ARG DJD_RELEASE_SHA=
+ARG DJD_BUILD_TIMESTAMP=
+ENV DJD_RELEASE_SHA=${DJD_RELEASE_SHA}
+ENV DJD_BUILD_TIMESTAMP=${DJD_BUILD_TIMESTAMP}
 
 EXPOSE 3000
 
-CMD ["node", "--max-old-space-size=1536", "dist/index.js"]
+CMD ["node", "--max-old-space-size=1536", "runtime-entrypoint.mjs"]

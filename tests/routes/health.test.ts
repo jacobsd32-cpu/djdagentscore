@@ -58,6 +58,9 @@ describe('GET /health', () => {
     state.countFraudReports.mockReturnValue(0)
     state.uptimeSeconds.mockReturnValue(123)
     process.env.ADMIN_KEY = 'test-admin-key-that-is-long-enough-for-validation'
+    delete process.env.DJD_RUNTIME_MODE
+    delete process.env.DJD_RELEASE_SHA
+    delete process.env.DJD_BUILD_TIMESTAMP
 
     const { resetHealthPayloadCache } = await import('../../src/services/opsService.js')
     resetHealthPayloadCache()
@@ -80,6 +83,7 @@ describe('GET /health', () => {
     expect(body.database).toBeUndefined()
     expect(body.indexer).toBeUndefined()
     expect(body.jobs).toBeUndefined()
+    expect(body.release).toBeUndefined()
     expect(state.countCachedScores).not.toHaveBeenCalled()
   })
 
@@ -98,9 +102,15 @@ describe('GET /health', () => {
     expect(body.modelVersion).toBe(MODEL_VERSION)
     expect(body.modelVersion).toBe('2.5.0')
     expect(body.uptime).toBe(123)
+    expect(body.runtime).toEqual({
+      mode: 'combined',
+      apiEnabled: true,
+      workerEnabled: true,
+    })
     expect(body.database).toBeDefined()
     expect(body.indexer).toBeDefined()
     expect(body.jobs).toBeDefined()
+    expect(body.release).toBeUndefined()
     expect(state.countCachedScores).toHaveBeenCalledTimes(1)
   })
 
@@ -125,5 +135,37 @@ describe('GET /health', () => {
     expect(secondBody.uptime).toBe(456)
     expect(secondBody.database).toBeUndefined()
     expect(state.countCachedScores).not.toHaveBeenCalled()
+  })
+
+  it('includes release metadata when build identifiers are present', async () => {
+    process.env.DJD_RELEASE_SHA = 'ABCDEF1234567890'
+    process.env.DJD_BUILD_TIMESTAMP = '2026-03-13T02:30:00Z'
+
+    const { resetHealthPayloadCache } = await import('../../src/services/opsService.js')
+    resetHealthPayloadCache()
+
+    const { Hono } = await import('hono')
+    const { default: healthRoute } = await import('../../src/routes/health.js')
+
+    const app = new Hono()
+    app.route('/health', healthRoute)
+
+    const publicRes = await app.request('/health')
+    const publicBody = await publicRes.json()
+    expect(publicBody.release).toEqual({
+      sha: 'abcdef1234567890',
+      shaShort: 'abcdef1',
+      builtAt: '2026-03-13T02:30:00Z',
+    })
+
+    const adminRes = await app.request('/health', {
+      headers: { 'x-admin-key': process.env.ADMIN_KEY as string },
+    })
+    const adminBody = await adminRes.json()
+    expect(adminBody.release).toEqual({
+      sha: 'abcdef1234567890',
+      shaShort: 'abcdef1',
+      builtAt: '2026-03-13T02:30:00Z',
+    })
   })
 })

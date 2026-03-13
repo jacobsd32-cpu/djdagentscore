@@ -5,6 +5,8 @@ import { JOB_CONFIG } from './config/constants.js'
 import { db } from './db.js'
 import { log } from './logger.js'
 
+process.env.DJD_RUNTIME_MODE ??= 'api'
+
 let server: ReturnType<typeof serve> | null = null
 let shuttingDown = false
 
@@ -38,6 +40,7 @@ server = serve({ fetch: app.fetch, port: PORT, hostname: '0.0.0.0' }, (info) => 
   log.info('server', `DJD Agent Score API running on http://localhost:${info.port}`)
   log.info('server', `payTo: ${PAY_TO}`)
   log.info('server', `facilitator: ${FACILITATOR_URL}`)
+  log.info('server', `Runtime mode: ${process.env.DJD_RUNTIME_MODE}`)
 })
 
 export default app

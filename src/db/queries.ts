@@ -7,6 +7,7 @@
 
 export * from './analyticsQueries.js'
 export * from './certificationQueries.js'
+export * from './clusterQueries.js'
 export * from './dataQueries.js'
 export * from './directoryQueries.js'
 export * from './evidenceQueries.js'
@@ -17,3 +18,4 @@ export * from './monitoringQueries.js'
 export * from './platformQueries.js'
 export * from './ratingsQueries.js'
 export * from './reputationQueries.js'
+export * from './stakingQueries.js'

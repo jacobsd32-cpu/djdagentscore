@@ -13,15 +13,15 @@ const pageHtml = `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Scoring Methodology — DJD Agent Score</title>
-<meta name="description" content="How DJD Agent Score calculates trust scores: five on-chain dimensions, sybil detection, gaming penalties, and adaptive calibration. Fully transparent methodology.">
+<meta name="description" content="How DJD Agent Score turns on-chain activity into trust signals: five scoring dimensions, sybil detection, gaming penalties, and adaptive calibration.">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Scoring Methodology — DJD Agent Score">
-<meta property="og:description" content="How we score wallets: five on-chain dimensions, sybil detection, gaming penalties, and adaptive calibration.">
+<meta property="og:description" content="How DJD turns on-chain activity into trust signals with five scoring dimensions, sybil detection, gaming penalties, and adaptive calibration.">
 <meta property="og:url" content="${METHODOLOGY_URL}">
 <meta property="og:site_name" content="DJD Agent Score">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Scoring Methodology — DJD Agent Score">
-<meta name="twitter:description" content="How we score wallets: five on-chain dimensions, sybil detection, gaming penalties, and adaptive calibration.">
+<meta name="twitter:description" content="How DJD turns on-chain activity into trust signals with five scoring dimensions, sybil detection, gaming penalties, and adaptive calibration.">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -133,7 +133,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
 
   <h1>Scoring Methodology</h1>
   <p class="lead">
-    DJD Agent Score produces a 0&ndash;100 trust score for any wallet on Base L2. Every score is derived entirely from on-chain data &mdash; no opinions, no manual review, no black boxes. This page explains exactly how it works.
+    DJD Agent Score produces a 0&ndash;100 trust score for any wallet on Base L2 and feeds the broader trust surfaces built on top of it. Every score is derived entirely from on-chain data &mdash; no opinions, no manual review, no black boxes. This page explains exactly how it works.
   </p>
 
   <div class="prose">

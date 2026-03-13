@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DJD Agent Score — Governance Layer for Paid Agent Commerce</title>
-<meta name="description" content="Govern paid agent commerce on Base. Screen wallets before money moves, gate paid x402 routes, and add ratings, monitoring, and forensics when you need more accountability.">
+<title>DJD Agent Score — Trust Infrastructure for the Agent Economy</title>
+<meta name="description" content="Score, certify, and evaluate agent wallets before money moves. DJD turns on-chain activity into trust surfaces, directories, and settlement-ready policy signals on Base.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="DJD Agent Score — Governance Layer for Paid Agent Commerce">
-<meta property="og:description" content="Govern paid agent commerce on Base. Screen wallets before money moves, gate paid x402 routes, and add ratings, monitoring, and forensics when you need more accountability.">
-<meta property="og:url" content="https://djdagentscore.dev/">
+<meta property="og:title" content="DJD Agent Score — Trust Infrastructure for the Agent Economy">
+<meta property="og:description" content="Score, certify, and evaluate agent wallets before money moves. DJD turns on-chain activity into trust surfaces, directories, and settlement-ready policy signals on Base.">
+<meta property="og:url" content="__DJD_PUBLIC_BASE_URL__/">
 <meta property="og:site_name" content="DJD Agent Score">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="DJD Agent Score — Governance Layer for Paid Agent Commerce">
-<meta name="twitter:description" content="Govern paid agent commerce on Base. Screen wallets before money moves, gate paid x402 routes, and add ratings, monitoring, and forensics when you need more accountability.">
+<meta name="twitter:title" content="DJD Agent Score — Trust Infrastructure for the Agent Economy">
+<meta name="twitter:description" content="Score, certify, and evaluate agent wallets before money moves. DJD turns on-chain activity into trust surfaces, directories, and settlement-ready policy signals on Base.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -135,6 +135,22 @@ nav{max-width:1080px;margin:0 auto;padding:0 32px;height:64px;display:flex;align
 .step-link{display:inline-flex;align-items:center;gap:8px;color:var(--accent);font-size:13px;font-weight:600;text-decoration:none}
 .step-link:hover{text-decoration:none;color:var(--text)}
 
+/* ── Certified Preview ── */
+.cert-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:32px}
+.cert-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;flex-direction:column;gap:14px;min-height:250px}
+.cert-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.cert-card-name{font-size:16px;font-weight:700;line-height:1.35}
+.cert-card-wallet{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);word-break:break-all;margin-top:6px}
+.cert-card-tier{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--green);background:var(--green-dim);border-radius:999px;padding:4px 8px;white-space:nowrap}
+.cert-card-score{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text-dim)}
+.cert-card-score strong{font-size:22px;color:var(--text)}
+.cert-card-desc{font-size:13px;color:var(--text-dim);line-height:1.7;flex:1}
+.cert-card-links{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cert-card-link{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);text-decoration:none;font-size:12px}
+.cert-card-link:hover{border-color:var(--border-hi);color:var(--accent);text-decoration:none}
+.cert-card-link span{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent)}
+.cert-empty{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:26px;text-align:center;font-size:13px;color:var(--text-muted)}
+
 /* ── CTA Band ── */
 .cta-band{background:linear-gradient(135deg,rgba(99,102,241,0.12),rgba(52,211,153,0.06));border:1px solid var(--border-hi);border-radius:var(--radius);padding:36px;display:flex;align-items:center;justify-content:space-between;gap:24px;margin-top:32px}
 .cta-band-copy h3{font-family:'Instrument Serif',serif;font-size:clamp(28px,3vw,36px);font-weight:400;letter-spacing:-.4px;margin-bottom:10px}
@@ -165,6 +181,12 @@ nav{max-width:1080px;margin:0 auto;padding:0 32px;height:64px;display:flex;align
 .rc-proceed{color:var(--green);background:var(--green-dim)}.rc-caution{color:var(--yellow);background:var(--yellow-dim)}.rc-insufficient{color:var(--text-muted);background:rgba(71,85,105,0.18)}.rc-high-risk{color:var(--red);background:var(--red-dim)}.rc-flagged{color:var(--red);background:var(--red-dim)}
 .sc-bar{margin-top:16px}.sc-bar-bg{height:4px;background:var(--bg2);border-radius:2px;overflow:hidden}.sc-bar-fill{height:100%;border-radius:2px;transition:width .6s ease}
 .sc-wallet{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);word-break:break-all;padding-top:14px;border-top:1px solid var(--border);margin-top:16px}
+.sc-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.sc-link{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text);text-decoration:none;transition:all .2s}
+.sc-link:hover{border-color:var(--border-hi);transform:translateY(-1px)}
+.sc-link-label{font-size:12px;font-weight:700}
+.sc-link-meta{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px}
+.sc-link-arrow{font-family:'JetBrains Mono',monospace;font-size:16px;color:var(--accent)}
 .sc-disc{font-size:10px;color:var(--text-muted);margin-top:12px;line-height:1.5;padding-top:12px;border-top:1px solid var(--border)}.sc-disc a{color:var(--text-muted);text-decoration:underline}
 .err{color:var(--red);font-family:'JetBrains Mono',monospace;font-size:11px;margin-top:10px;display:none}.err.vis{display:block}
 
@@ -261,12 +283,15 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
   .stats{grid-template-columns:repeat(2,1fr)}
   .steps{grid-template-columns:1fr}
   .exp-cards{grid-template-columns:1fr}
+  .cert-grid{grid-template-columns:1fr}
+  .cert-card-links{grid-template-columns:1fr}
   .dims{grid-template-columns:1fr}
   .lu-wrap{flex-direction:column}
   .lb-r{grid-template-columns:34px 1fr 65px}.lb-t{display:none}
   .api-r{grid-template-columns:1fr 80px}.api-m{display:none}
   .sc-hdr{flex-direction:column;align-items:flex-start;gap:10px}
   .sc-meta{text-align:left}
+  .sc-links{grid-template-columns:1fr}
   .ft-bot{flex-direction:column;gap:12px;text-align:center}
   .tiers{flex-direction:column}
   .hero-actions{flex-direction:column;align-items:center}
@@ -284,6 +309,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
   <a class="logo" href="/"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAIAAAAiOjnJAAAE4UlEQVR42u3dzXEbORAGUBx9cwbKYC+OxDm4yvlvBLsJ2NL8oIHuxlN9R5GaAV59PZwSyfHt23eR6RmWQMASsAQsEbAELAFLBKxt+fX7X4sA1j0xc2NJB0ZrAhZMkIFVytNRwgZPhIHVzVNjYYMnwsA6glQPXgMpvMDaTOrHj594NYQVjWZW8CoDKzOjLdTAykVqsadoYWDtVDWRxcfHP9mQgbWa1AM0s7JeGFgrVK2XNMVZM1ujDalUmN4g68FrNFCV39MDYdVtjdKqynm6K6yerdGPVAlPt4RV5DXKqepHKo7XobAmqmpA6gqvQrZGFVWHkIrgdRCsKaoak/qSV35bQ1GprvKwFNU51TUKqTqW1Oe8ctoaCVUpqujqagKLqgNt5YKF1LKxWB4WVWfaGlSxVQzWY1WsvOe13dagiq0ysKhiaycsqvLYKgCLKrbmw6KKrfmwqGJrGyyqkttKB4sqtubDMgQNxG2wqDqqtAZVbEXYGlSxFWELLLDywaKKrT2wqKpuawOsu3VlUxPaiiutoa6UViJYVLEFlhSBRRVb+2HZwh5X8eGw1JXS2g/L5h1bWkNdgRVha6grtrLDUlftSysElrpSWtdtgSW5YVF1iK3JsNQVWLdsDZftEnEJP8xBiZiGwxyUiGk4zEGJmIbDHJSIaTjMQYmYhmBJSlhUmYZgSRpY5iBYz2yNTjca/rv5M/eZo4+h1k2H0WkOgpVnGoIFFlhggQUWWGCBBRZYYIEFFlhggQUWWGCBBRZYYFV/M8XcRxV6MwVYYIEFFlhggQWWgCVggQXWNlhsUfUQltICy4eCCFgCFlhg+QxSmaxqGyyl5SWhz3mXdXMQLMkKiy1zECzJBMs0BMs3rMr+Gw2+E1qi5qBvsZeQORgCiy1zcBospWUOPoRlGoJ1XdVMWGypK7AkEyyX8C7br1OZCUtpqasVsNhqVleBsJSWukoBi60z6+oJLKWlrlLAYuvAunoIiy2qwJJSsNiiahssV/ENrtk3wFJa6mobLLZKq9oGiy2qwAKrFCy2qIqCxRZVO2GxVUVVIlhKS11FwWKLqp2w2Go/BOfDYouqKFhsURUFiy2qNsNiK4mqMrDYOlxVICy2TlYVC+uNLbwek8qgKhwWW2eqWgGLrQNVpYP1R1t4XSF1S1UTWGydpmodrLu2jMWI8bdM1VJYU2ydzOt9US1TtRrWLFun8frbIqRVtQGW6updVJthqa6uRbUf1gNb5/CaRWqXqs2w5trqweuTsyukaj+sZ7Za8ppLaq+qFLCCeFUR9vkpVCSVC9ZjW1/yyinsy2N+vBpJdjMRrDe2rvDKIOzKQb5ZhDxbmQvWe14Xha1EdvF4Xp51tk3MCOu9reu8Ipzd/dPvTzbhDuYFNYvXA2Gf45v4bFPOLu3epYY1y1YEso2Y8qsqACuC17ph048//5bVgBXEK4ha6HFW2axKsBbw+hLfxr9ea5vqwdrOC6nOsA7hVXdrasNqzKv6pnSA1UlYm71oBauusH5b0BNWFWGNV745rJzCTljwU2BtR3baIp8IawE1SwrWPX8WASwBS8ASAUvAErBEwJI9+R8Q1gw8vPId5wAAAABJRU5ErkJggg==" alt="DJD" />DJD<span> Agent Score</span></a>
   <div class="nav-links">
     <a href="/explorer" data-track="cta_explorer">Explorer</a>
+    <a href="/certify" data-track="cta_certify">Certify</a>
     <a href="/methodology" data-track="cta_methodology">Methodology</a>
     <a href="/blog" data-track="cta_blog">Blog</a>
     <a href="/pricing" data-track="cta_pricing">Pricing</a>
@@ -304,17 +330,18 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 
 <!-- HERO -->
 <div class="hero">
-  <div class="hero-chip"><span class="dot"></span> Governance layer for paid agent commerce</div>
-  <h1>Govern agent commerce <em>before money moves.</em></h1>
-  <p class="hero-sub">Start with the practical wedge: screen counterparties before your agent sends funds or your paid x402 route runs. Then add ratings, monitoring, certification, and forensics as you need more accountability.</p>
+  <div class="hero-chip"><span class="dot"></span> Live on Base &middot; Score + Certify + evaluator surfaces</div>
+  <h1>Score, certify, and evaluate <em>agent wallets before money moves.</em></h1>
+  <p class="hero-sub">DJD is evolving from a score API into trust infrastructure for the agent economy: free wallet scoring, public certification, standards-ready documents, evaluator previews, and x402 gating in one stack. Start with the score, then layer on directory distribution and settlement policy.</p>
   <div class="hero-actions">
-    <a href="#lookup" class="btn btn-primary" data-track="cta_try_api">Try the API</a>
+    <a href="#lookup" class="btn btn-primary" data-track="cta_try_api">Try the live lookup</a>
+    <a href="/v1/certification/directory" class="btn btn-ghost" data-track="cta_certified_directory">Browse certified agents</a>
     <a href="#x402-path" class="btn btn-ghost" data-track="path_x402">See the x402 path</a>
   </div>
   <div class="hero-proof">
-    <span>Before: score and gate</span>
-    <span>During: certify and monitor</span>
-    <span>After: rate and investigate</span>
+    <span>No signup for basic lookups</span>
+    <span>Certified directory and badges</span>
+    <span>ERC-8004 + evaluator surfaces</span>
     <span>Live chain data on Base</span>
   </div>
 </div>
@@ -433,15 +460,15 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 <!-- HOW IT WORKS -->
 <div class="sec">
   <div class="sec-label">Start Here</div>
-  <div class="sec-title">Pick the first win that matches your stack</div>
-  <div class="sec-desc">Most teams should start with one of these three paths. They all get you to a production decision quickly.</div>
+  <div class="sec-title">Pick the first trust workflow that matches your stack</div>
+  <div class="sec-desc">Most teams should start with one of these three paths. Each one gets you from raw wallet uncertainty to a concrete trust decision quickly.</div>
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
       <div class="step-tag">Fastest Test</div>
       <h3>Score a wallet before payout</h3>
       <p>Use the free basic score endpoint to decide whether a counterparty gets the job, the funds, or another verification step.</p>
-      <div class="step-code">curl "https://djdagentscore.dev/v1/score/basic?wallet=0x..."</div>
+      <div class="step-code">curl "__DJD_PUBLIC_BASE_URL__/v1/score/basic?wallet=0x..."</div>
       <a class="step-link" href="#lookup" data-track="path_lookup">Run a free lookup</a>
     </div>
     <div class="step">
@@ -465,32 +492,35 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 
 <div class="divider"></div>
 
-<!-- GOVERNANCE LIFECYCLE -->
-<div class="sec">
-  <div class="sec-label">Governance Layer</div>
-  <div class="sec-title">Before, during, and after a paid agent interaction</div>
-  <div class="sec-desc">The first wedge is x402 trust gating, but the shipped platform already covers more of the accountability loop than a score alone.</div>
+<!-- TRUST SURFACES -->
+<div class="sec" id="trust-surfaces">
+  <div class="sec-label">Now Live</div>
+  <div class="sec-title">Turn raw signals into trust products</div>
+  <div class="sec-desc">Phase 2 layers public and machine-readable trust surfaces on top of the scoring engine, so counterparties can inspect credibility instead of guessing at it.</div>
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
-      <div class="step-tag">Before</div>
-      <h3>Screen and qualify counterparties</h3>
-      <p>Use wallet scores, trust tiers, identity context, and certification status before your agent sends funds or accepts a paid request.</p>
-      <div class="step-code">/v1/score/basic · /v1/score/full · x402-agent-score</div>
+      <div class="step-tag">Free</div>
+      <h3>Browse the certified directory</h3>
+      <p>List active DJD-certified agents with current score tier, confidence, badges, profile metadata, and direct evaluator links.</p>
+      <div class="step-code">GET /v1/certification/directory</div>
+      <a class="step-link" href="/v1/certification/directory" data-track="path_certified_directory">Open the directory</a>
     </div>
     <div class="step">
       <div class="step-num">2</div>
-      <div class="step-tag">During</div>
-      <h3>Monitor live agent relationships</h3>
-      <p>Attach webhooks and monitoring policies to active wallets so risky changes or anomalies can trigger review before damage compounds.</p>
-      <div class="step-code">/v1/monitor/* · /v1/webhooks/*</div>
+      <div class="step-tag">Free</div>
+      <h3>Fetch an ERC-8004 score document</h3>
+      <p>Return a machine-readable trust document for a wallet, including registration, certification, scoring, and publication context.</p>
+      <div class="step-code">GET /v1/score/erc8004?wallet=0x...</div>
+      <a class="step-link" href="/docs" data-track="path_erc8004_docs">See the standards docs</a>
     </div>
     <div class="step">
       <div class="step-num">3</div>
-      <div class="step-tag">After</div>
-      <h3>Capture evidence when something breaks</h3>
-      <p>Turn failed interactions into governance data with ratings, fraud reports, disputes, and forensics timelines that other operators can learn from.</p>
-      <div class="step-code">/v1/rate · /v1/report · /v1/forensics/*</div>
+      <div class="step-tag">Paid</div>
+      <h3>Ask for an evaluator decision</h3>
+      <p>Get an approve, review, or reject settlement preview that combines score, certification, risk, staking, and registration signals.</p>
+      <div class="step-code">GET /v1/score/evaluator?wallet=0x...</div>
+      <a class="step-link" href="/pricing" data-track="path_evaluator_pricing">See evaluator pricing</a>
     </div>
   </div>
 </div>
@@ -528,6 +558,43 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
             <input id="rBadgeCode" type="text" readonly style="width:100%;background:var(--bg);border:1px solid var(--border-hi);border-radius:6px;padding:8px 64px 8px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);outline:none" value="">
             <button onclick="copyBadge()" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:var(--bg3);color:var(--text-dim);border:none;border-radius:5px;padding:4px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer" id="copyBtn">copy</button>
           </div>
+        </div>
+        <div class="sc-links">
+          <a class="sc-link" id="rCertLink" href="#" data-track="lookup_certification_link">
+            <div>
+              <div class="sc-link-label">Certification profile</div>
+              <div class="sc-link-meta">GET /v1/certification/{wallet}</div>
+            </div>
+            <div class="sc-link-arrow">&rarr;</div>
+          </a>
+          <a class="sc-link" id="rProfileLink" href="#" data-track="lookup_profile_link">
+            <div>
+              <div class="sc-link-label">Agent profile</div>
+              <div class="sc-link-meta">GET /agent/{wallet}</div>
+            </div>
+            <div class="sc-link-arrow">&rarr;</div>
+          </a>
+          <a class="sc-link" id="rStandardsLink" href="#" data-track="lookup_standards_link">
+            <div>
+              <div class="sc-link-label">ERC-8004 document</div>
+              <div class="sc-link-meta">GET /v1/score/erc8004</div>
+            </div>
+            <div class="sc-link-arrow">&rarr;</div>
+          </a>
+        <a class="sc-link" id="rEvalLink" href="#" data-track="lookup_evaluator_link">
+          <div>
+            <div class="sc-link-label">Evaluator preview</div>
+            <div class="sc-link-meta">GET /v1/score/evaluator</div>
+          </div>
+          <div class="sc-link-arrow">&rarr;</div>
+        </a>
+          <a class="sc-link" id="rReadyLink" href="#" data-track="lookup_certify_readiness_link">
+            <div>
+              <div class="sc-link-label">Certify readiness</div>
+              <div class="sc-link-meta">/certify?wallet=</div>
+            </div>
+            <div class="sc-link-arrow">&rarr;</div>
+          </a>
         </div>
         <div class="sc-disc">This score is algorithmically generated from public blockchain data and unverified third-party submissions. It is not verified, audited, or guaranteed. Not a consumer report under the FCRA. <a href="/terms">Terms</a></div>
       </div>
@@ -613,7 +680,7 @@ app.<span class="f">post</span>(<span class="s">'/premium/search'</span>, <span 
   <div class="sec-label">Identity</div>
   <div class="sec-title">Register your agent in one request</div>
   <div class="sec-desc">If you are running a real service, publish the wallet metadata so people evaluating you can see a profile instead of a bare address.</div>
-  <div class="code"><div class="code-l">curl</div><pre>curl -X POST https://djdagentscore.dev/v1/agent/register \
+  <div class="code"><div class="code-l">curl</div><pre>curl -X POST __DJD_PUBLIC_BASE_URL__/v1/agent/register \
   -H <span class="s">'Content-Type: application/json'</span> \
   -d '{
     "wallet": "0xYourAgentWallet",
@@ -623,6 +690,20 @@ app.<span class="f">post</span>(<span class="s">'/premium/search'</span>, <span 
   }'</pre></div>
 </div>
 
+<div class="divider"></div>
+
+<!-- CERTIFIED PREVIEW -->
+<div class="sec" id="certified-preview">
+  <div class="sec-label">Certified</div>
+  <div class="sec-title">See who's already certified</div>
+  <div class="sec-desc">A live sample from the public certified directory. Each listing links straight into the wallet's profile, standards document, and evaluator path.</div>
+  <div class="cert-grid" id="certGrid">
+    <div class="cert-empty">Loading certified agents...</div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
 <!-- API ENDPOINTS -->
 <div class="sec" id="api-ref">
   <div class="sec-label">Endpoints</div>
@@ -631,8 +712,12 @@ app.<span class="f">post</span>(<span class="s">'/premium/search'</span>, <span 
   <div class="api">
     <div class="api-r hdr"><div>Endpoint</div><div style="text-align:right">Price</div><div style="text-align:right">Method</div></div>
     <div class="api-r"><div><div class="api-ep">/v1/score/basic?wallet=</div><div class="api-d">Composite score, tier, confidence, recommendation</div></div><div class="api-p api-f">Free tier</div><div class="api-m">GET</div></div>
+    <div class="api-r"><div><div class="api-ep">/v1/score/erc8004?wallet=</div><div class="api-d">ERC-8004-compatible score document with certification and publication status</div></div><div class="api-p api-f">Free</div><div class="api-m">GET</div></div>
     <div class="api-r"><div><div class="api-ep">/v1/score/full?wallet=</div><div class="api-d">Full dimension breakdown, integrity flags, data quality</div></div><div class="api-p">$0.10</div><div class="api-m">GET</div></div>
+    <div class="api-r"><div><div class="api-ep">/v1/score/evaluator?wallet=</div><div class="api-d">ERC-8183-style evaluator preview with approve/review/reject output</div></div><div class="api-p">$0.35</div><div class="api-m">GET</div></div>
     <div class="api-r"><div><div class="api-ep">/v1/score/refresh?wallet=</div><div class="api-d">Force re-score with latest chain data</div></div><div class="api-p">$0.25</div><div class="api-m">GET</div></div>
+    <div class="api-r"><div><div class="api-ep">/v1/certification/directory</div><div class="api-d">Browse active certifications, score tiers, profile metadata, and trust links</div></div><div class="api-p api-f">Free</div><div class="api-m">GET</div></div>
+    <div class="api-r"><div><div class="api-ep">POST /v1/certification/apply</div><div class="api-d">Apply for DJD certification with x402 settlement</div></div><div class="api-p">$99</div><div class="api-m">POST</div></div>
     <div class="api-r"><div><div class="api-ep">POST /v1/report</div><div class="api-d">Submit fraud report with evidence</div></div><div class="api-p">$0.02</div><div class="api-m">POST</div></div>
     <div class="api-r"><div><div class="api-ep">/v1/data/fraud/blacklist</div><div class="api-d">Check if wallet has active fraud reports</div></div><div class="api-p">$0.05</div><div class="api-m">GET</div></div>
     <div class="api-r"><div><div class="api-ep">/v1/badge/{wallet}.svg</div><div class="api-d">Embeddable SVG score badge</div></div><div class="api-p api-f">Free</div><div class="api-m">GET</div></div>
@@ -670,9 +755,9 @@ app.<span class="f">post</span>(<span class="s">'/premium/search'</span>, <span 
 
 <!-- FEEDBACK -->
 <div class="sec" id="feedback">
-  <div class="sec-label">Improve the Model</div>
+  <div class="sec-label">Shape the Trust Stack</div>
   <div class="sec-title">Submit feedback</div>
-  <div class="sec-desc">Your feedback directly influences how we tune the model and prioritize new features.</div>
+  <div class="sec-desc">Your feedback influences how we tune the score, refine certification criteria, and prioritize new trust surfaces.</div>
   <div class="fb">
     <div class="fb-row">
       <label>Feedback Type</label>
@@ -701,7 +786,7 @@ app.<span class="f">post</span>(<span class="s">'/premium/search'</span>, <span 
       <input type="text" id="fbContact" placeholder="Email, wallet, or X handle for follow-up">
     </div>
     <button class="fb-submit" onclick="submitFeedback()">Open Email to Submit</button>
-    <div style="color:var(--text-muted);font-size:11px;text-align:center;margin-top:6px">Opens your email client to send feedback to feedback@djdagentscore.dev</div>
+    <div style="color:var(--text-muted);font-size:11px;text-align:center;margin-top:6px">Opens your email client to send feedback to __DJD_SUPPORT_EMAIL__</div>
     <div class="fb-msg" id="fbMsg"></div>
   </div>
 </div>
@@ -730,11 +815,11 @@ app.<span class="f">post</span>(<span class="s">'/premium/search'</span>, <span 
 <div class="sec" style="padding-top:48px">
   <div class="cta-band">
     <div class="cta-band-copy">
-      <h3>Need a design-partner setup path?</h3>
-      <p>We can help you set a starting threshold, wire the x402 middleware, and define what counts as a false positive before you put it in front of users.</p>
+      <h3>Need a trust launch plan?</h3>
+      <p>We can help you choose score thresholds, wire the x402 middleware, and decide when your service is ready for Certify, evaluator-based settlement rules, or directory distribution.</p>
     </div>
     <div class="cta-band-actions">
-      <a href="mailto:feedback@djdagentscore.dev?subject=DJD%20Agent%20Score%20pilot" class="btn btn-primary" data-track="cta_contact">Email for a pilot</a>
+      <a href="mailto:__DJD_SUPPORT_EMAIL__?subject=DJD%20Agent%20Score%20pilot" class="btn btn-primary" data-track="cta_contact">Email for a pilot</a>
       <a href="/pricing" class="btn btn-ghost" data-track="cta_pricing">See pricing</a>
     </div>
   </div>
@@ -854,10 +939,70 @@ async function loadLB(retries){
     t.appendChild(row)});
   }catch(e){if(retries>0){setTimeout(function(){loadLB(retries-1)},3000)}else{document.getElementById('lbE').textContent='Could not load leaderboard.'}}}
 
+async function loadCertified(retries){
+  if(retries===undefined)retries=2;
+  try{
+    var r=await fetch(A+'/v1/certification/directory?limit=3');
+    if(!r.ok)throw new Error(r.status);
+    var d=await r.json();
+    var grid=document.getElementById('certGrid');
+    grid.innerHTML='';
+    if(!d.certifications||!d.certifications.length){
+      grid.appendChild(mkEl('div','cert-empty','No certified agents are listed yet.'));
+      return;
+    }
+    d.certifications.forEach(function(entry){
+      var card=mkEl('div','cert-card');
+      var top=mkEl('div','cert-card-top');
+      var left=mkEl('div');
+      left.appendChild(mkEl('div','cert-card-name',entry.profile&&entry.profile.name?entry.profile.name:(entry.wallet.slice(0,8)+'...'+entry.wallet.slice(-6))));
+      left.appendChild(mkEl('div','cert-card-wallet',entry.wallet));
+      top.appendChild(left);
+      top.appendChild(mkEl('div','cert-card-tier',(entry.certification&&entry.certification.tier)||'Certified'));
+      card.appendChild(top);
+
+      var scoreLine=mkEl('div','cert-card-score');
+      scoreLine.innerHTML='Score <strong>'+(entry.current_score&&entry.current_score.score!=null?entry.current_score.score:entry.certification.score_at_certification)+'</strong> · '+((entry.current_score&&entry.current_score.tier)||entry.certification.tier);
+      card.appendChild(scoreLine);
+
+      card.appendChild(mkEl('div','cert-card-desc',(entry.profile&&entry.profile.description)||'Certified agent with public trust surfaces, standards links, and evaluator-ready profile context.'));
+
+      var links=mkEl('div','cert-card-links');
+      [
+        {label:'Profile',href:entry.links.agent_profile,event:'certified_preview_profile'},
+        {label:'Certify',href:entry.links.certify_readiness,event:'certified_preview_certify'},
+        {label:'ERC-8004',href:entry.links.standards_document,event:'certified_preview_standards'},
+        {label:'Evaluator',href:entry.links.evaluator_preview,event:'certified_preview_evaluator'},
+        {label:'Status',href:A+'/v1/certification/'+entry.wallet,event:'certified_preview_status'}
+      ].forEach(function(link){
+        var a=mkEl('a','cert-card-link');
+        a.href=link.href;
+        a.innerHTML='<span>'+link.label+'</span><span>&rarr;</span>';
+        a.addEventListener('click',function(){
+          track(link.event,{wallet:entry.wallet,metadata:{href:link.href}});
+        });
+        links.appendChild(a);
+      });
+      card.appendChild(links);
+      grid.appendChild(card);
+    });
+  }catch(e){
+    if(retries>0){setTimeout(function(){loadCertified(retries-1)},3000)}
+    else{document.getElementById('certGrid').innerHTML='<div class="cert-empty">Could not load certified agents.</div>';}
+  }
+}
+
 /* ── Score Lookup ── */
 var sCol=function(s){return s>=90?'var(--accent)':s>=75?'var(--green)':s>=50?'var(--yellow)':s>=25?'var(--orange)':'var(--text-muted)'};
 var tCls=function(t){return 'stt-'+(t||'unverified').toLowerCase()};
 var rCls=function(r){return({proceed:'rc-proceed',proceed_with_caution:'rc-caution',insufficient_history:'rc-insufficient',high_risk:'rc-high-risk',flagged_for_review:'rc-flagged'})[r]||'rc-insufficient'};
+function setLookupLinks(wallet){
+  document.getElementById('rCertLink').href=A+'/v1/certification/'+wallet;
+  document.getElementById('rProfileLink').href=A+'/agent/'+wallet;
+  document.getElementById('rStandardsLink').href=A+'/v1/score/erc8004?wallet='+wallet;
+  document.getElementById('rEvalLink').href=A+'/v1/score/evaluator?wallet='+wallet;
+  document.getElementById('rReadyLink').href=A+'/certify?wallet='+wallet;
+}
 
 async function doScore(pushState){
   if(pushState===undefined)pushState=true;
@@ -879,6 +1024,7 @@ async function doScore(pushState){
   document.getElementById('rW').textContent=w;r.classList.add('vis');
   var badgeUrl=A+'/v1/badge/'+w+'.svg';
   var mdEmbed='![DJD Score]('+badgeUrl+')';
+  setLookupLinks(w);
   document.getElementById('rBadgeImg').src=badgeUrl;
   document.getElementById('rBadgeCode').value=mdEmbed;
   document.getElementById('rBadge').style.display='block';
@@ -907,9 +1053,9 @@ function submitFeedback(){
   var entry={type:type,wallet:wallet,details:details,contact:contact,ts:new Date().toISOString()};
   var subject=encodeURIComponent('[DJD Feedback] '+type);
   var body=encodeURIComponent('Type: '+type+'\nWallet: '+(wallet||'N/A')+'\nContact: '+(contact||'N/A')+'\nTimestamp: '+entry.ts+'\n\nDetails:\n'+details);
-  window.open('mailto:feedback@djdagentscore.dev?subject='+subject+'&body='+body,'_blank');
+  window.open('mailto:__DJD_SUPPORT_EMAIL__?subject='+subject+'&body='+body,'_blank');
   track('feedback_submit',{wallet:wallet||null,metadata:{type:type,hasContact:!!contact}});
-  msg.textContent='Feedback recorded. A compose window should open. If not, email feedback@djdagentscore.dev directly.';
+  msg.textContent='Feedback recorded. A compose window should open. If not, email __DJD_SUPPORT_EMAIL__ directly.';
   msg.className='fb-msg vis ok';
   document.getElementById('fbType').value='';document.getElementById('fbWallet').value='';
   document.getElementById('fbDetails').value='';document.getElementById('fbContact').value='';
@@ -963,7 +1109,7 @@ document.getElementById('wI').addEventListener('keydown',function(e){if(e.key===
 switchScenario(0);
 track('landing_view');
 /* Defer API calls so first paint isn't blocked */
-requestAnimationFrame(function(){setTimeout(function(){loadStats();loadLB()},100)});
+requestAnimationFrame(function(){setTimeout(function(){loadStats();loadLB();loadCertified()},100)});
 setInterval(loadStats,30000);
 
 var qw=new URLSearchParams(location.search).get('wallet');

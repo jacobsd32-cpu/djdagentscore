@@ -1,5 +1,7 @@
 import { Hono, type Context } from 'hono'
 import { errorResponse, ErrorCodes } from '../errors.js'
+import { getEvaluatorPreview } from '../services/evaluatorService.js'
+import { getRiskScore } from '../services/riskService.js'
 import {
   getBasicScore,
   getBatchScores,
@@ -8,6 +10,7 @@ import {
   queueScoreComputation,
   refreshScore,
 } from '../services/scoreService.js'
+import { getErc8004CompatibleScoreView } from '../services/standardsService.js'
 
 const score = new Hono()
 
@@ -21,9 +24,39 @@ score.get('/basic', async (c) => {
   return c.json(outcome.data)
 })
 
+// GET /v1/score/erc8004?wallet=0x...
+score.get('/erc8004', async (c) => {
+  const outcome = await getErc8004CompatibleScoreView(c.req.query('wallet'))
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
+  }
+
+  return c.json(outcome.data)
+})
+
 // GET /v1/score/full?wallet=0x...
 score.get('/full', async (c) => {
   const outcome = await getFullScore(c.req.query('wallet'))
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
+  }
+
+  return c.json(outcome.data)
+})
+
+// GET /v1/score/evaluator?wallet=0x...
+score.get('/evaluator', async (c) => {
+  const outcome = await getEvaluatorPreview(c.req.query('wallet'))
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
+  }
+
+  return c.json(outcome.data)
+})
+
+// GET /v1/score/risk?wallet=0x...
+score.get('/risk', async (c) => {
+  const outcome = await getRiskScore(c.req.query('wallet'))
   if (!outcome.ok) {
     return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
   }

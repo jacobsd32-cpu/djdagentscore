@@ -19,6 +19,39 @@ const stmtListCertifications = db.prepare<[], CertificationRow>(`
   SELECT * FROM certifications ORDER BY granted_at DESC
 `)
 
+const stmtListActiveCertificationDirectory = db.prepare<
+  [string | null, string | null, number],
+  CertificationDirectoryRow
+>(`
+  SELECT
+    c.id,
+    c.wallet,
+    c.tier,
+    c.score_at_certification,
+    c.granted_at,
+    c.expires_at,
+    c.is_active,
+    c.tx_hash,
+    c.revoked_at,
+    c.revocation_reason,
+    s.composite_score AS current_score,
+    s.tier AS current_tier,
+    s.confidence AS current_confidence,
+    r.name,
+    r.description,
+    r.github_url,
+    r.website_url,
+    COALESCE(r.github_verified, 0) AS github_verified
+  FROM certifications c
+  LEFT JOIN scores s ON LOWER(s.wallet) = c.wallet
+  LEFT JOIN agent_registrations r ON r.wallet = c.wallet
+  WHERE c.is_active = 1
+    AND c.expires_at > datetime('now')
+    AND (? IS NULL OR c.tier = ?)
+  ORDER BY COALESCE(s.composite_score, c.score_at_certification) DESC, c.granted_at DESC
+  LIMIT ?
+`)
+
 const stmtRevokeCertification = db.prepare(`
   UPDATE certifications
   SET is_active = 0, revoked_at = datetime('now'), revocation_reason = ?
@@ -81,6 +114,17 @@ export interface CertificationRevenueSummary {
   by_month: CertificationRevenueByMonthRow[]
 }
 
+export interface CertificationDirectoryRow extends CertificationRow {
+  current_score: number | null
+  current_tier: string | null
+  current_confidence: number | null
+  name: string | null
+  description: string | null
+  github_url: string | null
+  website_url: string | null
+  github_verified: number
+}
+
 export function getActiveCertification(wallet: string): CertificationRow | undefined {
   return stmtGetActiveCertification.get(wallet)
 }
@@ -92,6 +136,10 @@ export function insertCertification(wallet: string, tier: string, scoreAtCertifi
 
 export function listCertifications(): CertificationRow[] {
   return stmtListCertifications.all()
+}
+
+export function listActiveCertificationDirectory(limit: number, tier?: string | null): CertificationDirectoryRow[] {
+  return stmtListActiveCertificationDirectory.all(tier ?? null, tier ?? null, limit)
 }
 
 export function revokeCertification(id: number, reason: string): boolean {

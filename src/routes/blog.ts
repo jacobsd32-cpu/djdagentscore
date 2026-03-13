@@ -149,7 +149,7 @@ const blogPostHead = (title: string, description: string, slug: string, extraCss
 
 const listingHtml = `${blogHead(
   'Blog',
-  'Insights on AI agent reputation, sybil detection, and trust infrastructure for the autonomous agent economy.',
+  'Insights on wallet scoring, sybil detection, standards, and trust infrastructure for the autonomous agent economy.',
 )}
 .blog-hero{max-width:1080px;margin:0 auto;padding:120px 32px 60px;text-align:center}
 .blog-hero .chip{display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:var(--accent);background:var(--accent-dim);border:1px solid var(--border-hi);padding:6px 16px;border-radius:100px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:24px}
@@ -177,7 +177,7 @@ ${blogNav}
 <div class="blog-hero">
   <div class="chip">Insights</div>
   <h1>Building trust infrastructure<br>in the open</h1>
-  <p>Research, analysis, and updates from the DJD Agent Score team on sybil detection, on-chain reputation, and the agent economy.</p>
+  <p>Research, analysis, and updates from the DJD Agent Score team on wallet scoring, sybil detection, standards, and the agent economy.</p>
 </div>
 
 <div class="posts">
@@ -707,7 +707,7 @@ Filter: address = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
       <a href="/#api-ref" class="btn">Get Your API Key (Free)</a>
     </div>
 
-    <p class="article-footer">DJD Agent Score analyzes on-chain behavioral patterns to assign reputation scores to AI agent wallets. Scores are published to the ERC-8004 Reputation Registry on Base mainnet.</p>
+    <p class="article-footer">DJD Agent Score analyzes on-chain behavioral patterns to assign trust scores to AI agent wallets and package them into broader trust surfaces. Scores are published to the ERC-8004 Reputation Registry on Base mainnet.</p>
 
   </div>
 </article>
@@ -799,7 +799,7 @@ if (result.dataSource === 'cached') {
       <a href="/#api-ref" class="btn">Get Your API Key (Free)</a>
     </div>
 
-    <p class="article-footer">DJD Agent Score analyzes on-chain behavioral patterns to assign reputation scores to AI agent wallets. Scores are published to the ERC-8004 Reputation Registry on Base mainnet.</p>
+    <p class="article-footer">DJD Agent Score analyzes on-chain behavioral patterns to assign trust scores to AI agent wallets and package them into broader trust surfaces. Scores are published to the ERC-8004 Reputation Registry on Base mainnet.</p>
 
   </div>
 </article>
@@ -856,7 +856,7 @@ const rssXml = `<?xml version="1.0" encoding="UTF-8"?>
 <channel>
   <title>DJD Agent Score Blog</title>
   <link>${BLOG_URL}</link>
-  <description>Insights on AI agent reputation, sybil detection, and trust infrastructure for the autonomous agent economy.</description>
+  <description>Insights on wallet scoring, sybil detection, standards, and trust infrastructure for the autonomous agent economy.</description>
   <language>en-us</language>
   <lastBuildDate>${blogPosts[0].date}</lastBuildDate>
   <atom:link href="${BLOG_RSS_URL}" rel="self" type="application/rss+xml"/>

@@ -39,10 +39,30 @@ describe('GET /.well-known/x402', () => {
     expect(body.service.openapi).toBe('https://api.example.test/openapi.json')
     expect(body.service.version).toBeTruthy()
     expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/score/basic' && endpoint.price === 0)).toBe(true)
+    expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/score/erc8004' && endpoint.price === 0)).toBe(true)
+    expect(
+      body.endpoints.some((endpoint) => endpoint.path === '/v1/certification/directory' && endpoint.price === 0),
+    ).toBe(true)
+    expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/score/evaluator' && endpoint.price === 0.35)).toBe(
+      true,
+    )
+    expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/score/risk' && endpoint.price === 0.5)).toBe(true)
+    expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/cluster' && endpoint.price === 0.15)).toBe(true)
     expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/rate' && endpoint.price === 0.01)).toBe(true)
+    expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/stake' && endpoint.price === 0)).toBe(true)
     expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/data/decay' && endpoint.price === 0.15)).toBe(true)
     expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/data/graph' && endpoint.price === 0.2)).toBe(true)
+    expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/data/intent' && endpoint.price === 0.25)).toBe(true)
     expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/data/ratings' && endpoint.price === 0.1)).toBe(true)
+    expect(
+      body.endpoints.some((endpoint) => endpoint.path === '/v1/data/economy/summary' && endpoint.price === 0.1),
+    ).toBe(true)
+    expect(
+      body.endpoints.some((endpoint) => endpoint.path === '/v1/data/economy/volume' && endpoint.price === 0.1),
+    ).toBe(true)
+    expect(
+      body.endpoints.some((endpoint) => endpoint.path === '/v1/data/economy/survival' && endpoint.price === 0.15),
+    ).toBe(true)
     expect(body.integration.quickstart).toContain('https://api.example.test/v1/score/basic')
   })
 })

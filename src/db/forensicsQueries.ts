@@ -139,6 +139,14 @@ export interface FraudReasonCountRow {
   count: number
 }
 
+export interface FraudPatternRow {
+  pattern_name: string
+  occurrences: number
+  risk_weight: number
+  first_detected: string | null
+  last_detected: string | null
+}
+
 export interface ForensicsWatchlistRow {
   wallet: string
   current_score: number | null
@@ -453,6 +461,25 @@ export function countDistinctReportersByTarget(
 
 export function getFraudReasonBreakdown(wallet: string): FraudReasonCountRow[] {
   return stmtFraudReasonBreakdownByTarget.all(wallet)
+}
+
+export function listFraudPatternsByNames(names: string[]): FraudPatternRow[] {
+  if (names.length === 0) return []
+
+  const normalizedNames = [...new Set(names.map((name) => name.trim().toLowerCase()).filter(Boolean))]
+  if (normalizedNames.length === 0) return []
+
+  const placeholders = normalizedNames.map(() => '?').join(', ')
+  return db
+    .prepare<string[], FraudPatternRow>(
+      `
+        SELECT pattern_name, occurrences, risk_weight, first_detected, last_detected
+        FROM fraud_patterns
+        WHERE LOWER(pattern_name) IN (${placeholders})
+        ORDER BY risk_weight DESC, occurrences DESC, pattern_name ASC
+      `,
+    )
+    .all(...normalizedNames)
 }
 
 export function getFraudDisputeByReportId(reportId: string): FraudDisputeRow | undefined {

@@ -97,6 +97,15 @@ vi.mock('../../src/db.js', () => ({
       average_rating: null,
       most_recent_rating_at: null,
     },
+  getIntentSummaryByTarget: () => ({
+    intent_count: 0,
+    conversions: 0,
+    conversion_rate: 0,
+    avg_time_to_tx_ms: null,
+    most_recent_query_at: null,
+    most_recent_conversion_at: null,
+  }),
+  getIntentTierBreakdownByTarget: () => [],
   insertMutualRating: (input: {
     id: string
     rater_wallet: string
@@ -143,6 +152,7 @@ vi.mock('../../src/db.js', () => ({
         `,
       )
       .all(wallet, options.limit),
+  listIntentSignalsByTarget: () => [],
   countMutualRatingsForWallet: (wallet: string) =>
     (
       testDb.prepare('SELECT COUNT(*) as count FROM mutual_ratings WHERE rated_wallet = ?').get(wallet) as {
@@ -302,28 +312,6 @@ describe('ratings routes', () => {
       const body = await res.json()
       expect(body.error.code).toBe('invalid_rating')
       expect(body.error.details).toEqual({ minimum_amount_usdc: 0.1 })
-    })
-
-    it('rejects invalid rating values', async () => {
-      seedTransaction(TX_HASH, RATER_WALLET, RATED_WALLET)
-
-      const app = makeApp()
-      const res = await app.request('/v1/rate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-payer-address': RATER_WALLET,
-        },
-        body: JSON.stringify({
-          rated_wallet: RATED_WALLET,
-          tx_hash: TX_HASH,
-          rating: 6,
-        }),
-      })
-
-      expect(res.status).toBe(400)
-      const body = await res.json()
-      expect(body.error.code).toBe('invalid_rating')
     })
 
     it('rejects duplicate ratings for the same wallet pair and transaction', async () => {

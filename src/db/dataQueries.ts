@@ -30,6 +30,33 @@ export interface RelationshipCounterpartyRow {
   last_interaction: string
 }
 
+export interface IntentSummaryRow {
+  intent_count: number
+  conversions: number
+  conversion_rate: number
+  avg_time_to_tx_ms: number | null
+  most_recent_query_at: string | null
+  most_recent_conversion_at: string | null
+}
+
+export interface IntentSignalRow {
+  requester_wallet: string
+  query_timestamp: string
+  followed_by_tx: number
+  tx_hash: string | null
+  tx_timestamp: string | null
+  time_to_tx_ms: number | null
+  endpoint: string | null
+  tier_requested: string | null
+  price_paid: number | null
+}
+
+export interface IntentTierBreakdownRow {
+  tier_requested: string
+  count: number
+  conversions: number
+}
+
 export function listScoreDecay(
   wallet: string,
   options: {
@@ -139,4 +166,104 @@ export function listRelationshipCounterparties(
       `,
     )
     .all(wallet, wallet, wallet, wallet, wallet, wallet, wallet, options.limit)
+}
+
+export function getIntentSummaryByTarget(wallet: string): IntentSummaryRow {
+  const row = db
+    .prepare<[string], IntentSummaryRow>(
+      `
+        SELECT
+          COUNT(*) as intent_count,
+          COALESCE(SUM(followed_by_tx), 0) as conversions,
+          ROUND(
+            CASE
+              WHEN COUNT(*) = 0 THEN 0
+              ELSE (COALESCE(SUM(followed_by_tx), 0) * 100.0) / COUNT(*)
+            END,
+            1
+          ) as conversion_rate,
+          ROUND(AVG(CASE WHEN followed_by_tx = 1 THEN time_to_tx_ms END), 0) as avg_time_to_tx_ms,
+          MAX(query_timestamp) as most_recent_query_at,
+          MAX(CASE WHEN followed_by_tx = 1 THEN tx_timestamp END) as most_recent_conversion_at
+        FROM intent_signals
+        WHERE target_wallet = ?
+      `,
+    )
+    .get(wallet)
+
+  return (
+    row ?? {
+      intent_count: 0,
+      conversions: 0,
+      conversion_rate: 0,
+      avg_time_to_tx_ms: null,
+      most_recent_query_at: null,
+      most_recent_conversion_at: null,
+    }
+  )
+}
+
+export function listIntentSignalsByTarget(
+  wallet: string,
+  options: {
+    limit: number
+  },
+): IntentSignalRow[] {
+  return db
+    .prepare<[string, number], IntentSignalRow>(
+      `
+        SELECT
+          i.requester_wallet,
+          i.query_timestamp,
+          i.followed_by_tx,
+          i.tx_hash,
+          i.tx_timestamp,
+          i.time_to_tx_ms,
+          ql.endpoint,
+          ql.tier_requested,
+          ql.price_paid
+        FROM intent_signals i
+        LEFT JOIN query_log ql
+          ON ql.id = (
+            SELECT ql2.id
+            FROM query_log ql2
+            WHERE ql2.requester_wallet = i.requester_wallet
+              AND ql2.target_wallet = i.target_wallet
+              AND ql2.timestamp = i.query_timestamp
+            ORDER BY ql2.id DESC
+            LIMIT 1
+          )
+        WHERE i.target_wallet = ?
+        ORDER BY i.query_timestamp DESC
+        LIMIT ?
+      `,
+    )
+    .all(wallet, options.limit)
+}
+
+export function getIntentTierBreakdownByTarget(wallet: string): IntentTierBreakdownRow[] {
+  return db
+    .prepare<[string], IntentTierBreakdownRow>(
+      `
+        SELECT
+          COALESCE(ql.tier_requested, 'unknown') as tier_requested,
+          COUNT(*) as count,
+          COALESCE(SUM(i.followed_by_tx), 0) as conversions
+        FROM intent_signals i
+        LEFT JOIN query_log ql
+          ON ql.id = (
+            SELECT ql2.id
+            FROM query_log ql2
+            WHERE ql2.requester_wallet = i.requester_wallet
+              AND ql2.target_wallet = i.target_wallet
+              AND ql2.timestamp = i.query_timestamp
+            ORDER BY ql2.id DESC
+            LIMIT 1
+          )
+        WHERE i.target_wallet = ?
+        GROUP BY COALESCE(ql.tier_requested, 'unknown')
+        ORDER BY count DESC, tier_requested ASC
+      `,
+    )
+    .all(wallet)
 }

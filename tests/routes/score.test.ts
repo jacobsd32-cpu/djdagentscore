@@ -34,6 +34,19 @@ const state = vi.hoisted(() => ({
   submitJob: vi.fn(() => '123e4567-e89b-42d3-a456-426614174000'),
   getJob: vi.fn(),
   getOrCalculateScore: vi.fn(),
+  getScore: vi.fn(),
+  getRegistration: vi.fn(),
+  getActiveCertification: vi.fn(),
+  getReputationPublication: vi.fn(),
+  countFraudReportsByTarget: vi.fn(),
+  countDistinctReportersByTarget: vi.fn(),
+  sumFraudPenaltyByTarget: vi.fn(),
+  countFraudDisputesByTarget: vi.fn(),
+  getFraudReasonBreakdown: vi.fn(),
+  getRatingsSummaryForWallet: vi.fn(),
+  getIntentSummaryByTarget: vi.fn(),
+  getCreatorStakeSummary: vi.fn(),
+  listFraudPatternsByNames: vi.fn(),
 }))
 
 const VALID_WALLET = state.validWallet
@@ -48,12 +61,77 @@ vi.mock('../../src/jobs/scoreQueue.js', () => ({
   getJob: state.getJob,
 }))
 
+vi.mock('../../src/db.js', () => ({
+  getScore: (...args: unknown[]) => state.getScore(...args),
+  getRegistration: (...args: unknown[]) => state.getRegistration(...args),
+  getActiveCertification: (...args: unknown[]) => state.getActiveCertification(...args),
+  getReputationPublication: (...args: unknown[]) => state.getReputationPublication(...args),
+  countFraudReportsByTarget: (...args: unknown[]) => state.countFraudReportsByTarget(...args),
+  countDistinctReportersByTarget: (...args: unknown[]) => state.countDistinctReportersByTarget(...args),
+  sumFraudPenaltyByTarget: (...args: unknown[]) => state.sumFraudPenaltyByTarget(...args),
+  countFraudDisputesByTarget: (...args: unknown[]) => state.countFraudDisputesByTarget(...args),
+  getFraudReasonBreakdown: (...args: unknown[]) => state.getFraudReasonBreakdown(...args),
+  getRatingsSummaryForWallet: (...args: unknown[]) => state.getRatingsSummaryForWallet(...args),
+  getIntentSummaryByTarget: (...args: unknown[]) => state.getIntentSummaryByTarget(...args),
+  getCreatorStakeSummary: (...args: unknown[]) => state.getCreatorStakeSummary(...args),
+  listFraudPatternsByNames: (...args: unknown[]) => state.listFraudPatternsByNames(...args),
+}))
+
 describe('score routes', () => {
   beforeEach(() => {
     state.getOrCalculateScore.mockReset()
     state.submitJob.mockClear()
     state.getJob.mockReset()
     state.getOrCalculateScore.mockResolvedValue({ ...state.scoreResult })
+    state.getScore.mockReset()
+    state.getRegistration.mockReset()
+    state.getActiveCertification.mockReset()
+    state.getReputationPublication.mockReset()
+    state.countFraudReportsByTarget.mockReset()
+    state.countDistinctReportersByTarget.mockReset()
+    state.sumFraudPenaltyByTarget.mockReset()
+    state.countFraudDisputesByTarget.mockReset()
+    state.getFraudReasonBreakdown.mockReset()
+    state.getRatingsSummaryForWallet.mockReset()
+    state.getIntentSummaryByTarget.mockReset()
+    state.getCreatorStakeSummary.mockReset()
+    state.listFraudPatternsByNames.mockReset()
+
+    state.getScore.mockReturnValue({
+      sybil_indicators: '[]',
+      gaming_indicators: '[]',
+    })
+    state.getRegistration.mockReturnValue(undefined)
+    state.getActiveCertification.mockReturnValue(undefined)
+    state.getReputationPublication.mockReturnValue(undefined)
+    state.countFraudReportsByTarget.mockReturnValue(0)
+    state.countDistinctReportersByTarget.mockReturnValue(0)
+    state.sumFraudPenaltyByTarget.mockReturnValue(0)
+    state.countFraudDisputesByTarget.mockReturnValue(0)
+    state.getFraudReasonBreakdown.mockReturnValue([])
+    state.getRatingsSummaryForWallet.mockReturnValue({
+      rating_count: 0,
+      unique_raters: 0,
+      average_rating: null,
+      most_recent_rating_at: null,
+    })
+    state.getIntentSummaryByTarget.mockReturnValue({
+      intent_count: 0,
+      conversions: 0,
+      conversion_rate: 0,
+      avg_time_to_tx_ms: null,
+      most_recent_query_at: null,
+      most_recent_conversion_at: null,
+    })
+    state.getCreatorStakeSummary.mockReturnValue({
+      active_stake_count: 0,
+      active_staked_amount: 0,
+      active_score_boost: 0,
+      slashed_stake_count: 0,
+      slashed_staked_amount: 0,
+      most_recent_stake_at: null,
+    })
+    state.listFraudPatternsByNames.mockReturnValue([])
   })
 
   it('returns a basic score response', async () => {
@@ -97,6 +175,207 @@ describe('score routes', () => {
     const body = await res.json()
     expect(body.wallet).toBe(VALID_WALLET)
     expect(body.dimensions).toBeDefined()
+  })
+
+  it('returns an ERC-8004-compatible score document', async () => {
+    state.getRegistration.mockReturnValueOnce({
+      wallet: VALID_WALLET,
+      name: 'DJD Agent',
+      description: 'A certified x402 endpoint',
+      github_url: 'https://github.com/example/djd-agent',
+      website_url: 'https://agent.example.test',
+      registered_at: '2026-03-10T00:00:00.000Z',
+      updated_at: '2026-03-12T00:00:00.000Z',
+      github_verified: 1,
+      github_stars: 42,
+      github_pushed_at: '2026-03-11T00:00:00.000Z',
+      github_verified_at: '2026-03-11T00:00:00.000Z',
+    })
+    state.getActiveCertification.mockReturnValueOnce({
+      id: 1,
+      wallet: VALID_WALLET,
+      tier: 'Trusted',
+      score_at_certification: 82,
+      granted_at: '2026-03-12T00:00:00.000Z',
+      expires_at: '2027-03-12T00:00:00.000Z',
+      is_active: 1,
+      tx_hash: '0xfeedface',
+      revoked_at: null,
+      revocation_reason: null,
+    })
+    state.getReputationPublication.mockReturnValueOnce({
+      wallet: VALID_WALLET,
+      composite_score: 82,
+      model_version: '2.0.0',
+      tx_hash: '0xbead',
+      published_at: '2026-03-12T01:00:00.000Z',
+    })
+
+    const { Hono } = await import('hono')
+    const { default: scoreRoute } = await import('../../src/routes/score.js')
+
+    const app = new Hono()
+    app.route('/v1/score', scoreRoute)
+
+    const res = await app.request(`/v1/score/erc8004?wallet=${VALID_WALLET}`)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.standard).toBe('erc-8004-compatible')
+    expect(body.wallet).toBe(VALID_WALLET)
+    expect(body.agent_id).toBe(BigInt(VALID_WALLET).toString())
+    expect(body.provider.model_version).toBe('2.0.0')
+    expect(body.reputation.composite_score).toBe(82)
+    expect(body.identity.registered).toBe(true)
+    expect(body.identity.github_verified).toBe(true)
+    expect(body.certification.active).toBe(true)
+    expect(body.certification.tier).toBe('Trusted')
+    expect(body.publication.published).toBe(true)
+    expect(body.publication.registry).toBe('erc-8004')
+    expect(body.links.certification_status).toContain(`/v1/certification/${VALID_WALLET}`)
+  })
+
+  it('returns an ERC-8183 evaluator preview', async () => {
+    state.getRegistration.mockReturnValueOnce({
+      wallet: VALID_WALLET,
+      name: 'DJD Agent',
+      description: 'A certified x402 endpoint',
+      github_url: 'https://github.com/example/djd-agent',
+      website_url: 'https://agent.example.test',
+      registered_at: '2026-03-10T00:00:00.000Z',
+      updated_at: '2026-03-12T00:00:00.000Z',
+      github_verified: 1,
+      github_stars: 42,
+      github_pushed_at: '2026-03-11T00:00:00.000Z',
+      github_verified_at: '2026-03-11T00:00:00.000Z',
+    })
+    state.getActiveCertification.mockReturnValueOnce({
+      id: 1,
+      wallet: VALID_WALLET,
+      tier: 'Trusted',
+      score_at_certification: 82,
+      granted_at: '2026-03-12T00:00:00.000Z',
+      expires_at: '2027-03-12T00:00:00.000Z',
+      is_active: 1,
+      tx_hash: '0xfeedface',
+      revoked_at: null,
+      revocation_reason: null,
+    })
+
+    const { Hono } = await import('hono')
+    const { default: scoreRoute } = await import('../../src/routes/score.js')
+
+    const app = new Hono()
+    app.route('/v1/score', scoreRoute)
+
+    const res = await app.request(`/v1/score/evaluator?wallet=${VALID_WALLET}`)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.standard).toBe('erc-8183-evaluator-prototype')
+    expect(body.wallet).toBe(VALID_WALLET)
+    expect(body.decision).toBe('approve')
+    expect(body.certification.active).toBe(true)
+    expect(body.risk.risk_level).toBe('clear')
+    expect(body.market_signals.active_creator_stakes).toBe(0)
+    expect(
+      body.checks.some(
+        (check: { key: string; status: string }) => check.key === 'risk_guardrail' && check.status === 'pass',
+      ),
+    ).toBe(true)
+    expect(body.links.standards_document).toContain(`/v1/score/erc8004?wallet=${VALID_WALLET}`)
+  })
+
+  it('returns a composite risk profile', async () => {
+    state.getOrCalculateScore.mockResolvedValueOnce({
+      ...state.scoreResult,
+      score: 34,
+      tier: 'Emerging',
+      confidence: 0.81,
+      recommendation: 'flagged_for_review',
+      sybilFlag: true,
+      gamingIndicators: ['rapid_score_refresh'],
+    })
+    state.getScore.mockReturnValueOnce({
+      sybil_indicators: JSON.stringify(['tight_cluster', 'funded_by_top_partner']),
+      gaming_indicators: JSON.stringify(['rapid_score_refresh']),
+    })
+    state.countFraudReportsByTarget.mockReturnValueOnce(3)
+    state.countDistinctReportersByTarget.mockReturnValueOnce(2)
+    state.sumFraudPenaltyByTarget.mockReturnValueOnce(15)
+    state.countFraudDisputesByTarget.mockReturnValueOnce(1).mockReturnValueOnce(2)
+    state.getFraudReasonBreakdown.mockReturnValueOnce([
+      { reason: 'payment_fraud', count: 2 },
+      { reason: 'impersonation', count: 1 },
+    ])
+    state.getRatingsSummaryForWallet.mockReturnValueOnce({
+      rating_count: 4,
+      unique_raters: 3,
+      average_rating: 2.25,
+      most_recent_rating_at: '2026-03-12T02:00:00.000Z',
+    })
+    state.getIntentSummaryByTarget.mockReturnValueOnce({
+      intent_count: 6,
+      conversions: 0,
+      conversion_rate: 0,
+      avg_time_to_tx_ms: null,
+      most_recent_query_at: '2026-03-12T01:00:00.000Z',
+      most_recent_conversion_at: null,
+    })
+    state.getCreatorStakeSummary.mockReturnValueOnce({
+      active_stake_count: 2,
+      active_staked_amount: 150,
+      active_score_boost: 3,
+      slashed_stake_count: 0,
+      slashed_staked_amount: 0,
+      most_recent_stake_at: '2026-03-12T03:00:00.000Z',
+    })
+    state.listFraudPatternsByNames.mockReturnValueOnce([
+      {
+        pattern_name: 'payment_fraud',
+        risk_weight: 2.5,
+        occurrences: 18,
+        first_detected: '2026-02-01T00:00:00.000Z',
+        last_detected: '2026-03-12T00:00:00.000Z',
+      },
+      {
+        pattern_name: 'tight_cluster',
+        risk_weight: 1.8,
+        occurrences: 9,
+        first_detected: '2026-02-10T00:00:00.000Z',
+        last_detected: '2026-03-12T00:00:00.000Z',
+      },
+    ])
+
+    const { Hono } = await import('hono')
+    const { default: scoreRoute } = await import('../../src/routes/score.js')
+
+    const app = new Hono()
+    app.route('/v1/score', scoreRoute)
+
+    const res = await app.request(`/v1/score/risk?wallet=${VALID_WALLET}`)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.wallet).toBe(VALID_WALLET)
+    expect(body.risk_level).toBe('critical')
+    expect(body.action).toBe('block')
+    expect(body.summary.report_count).toBe(3)
+    expect(body.summary.sybil_flagged).toBe(true)
+    expect(body.summary.active_creator_stakes).toBe(2)
+    expect(body.summary.active_score_boost).toBe(3)
+    expect(body.factors.some((factor: { key: string }) => factor.key === 'fraud_reports')).toBe(true)
+    expect(body.matched_patterns[0].pattern_name).toBe('payment_fraud')
+  })
+
+  it('returns 400 for an invalid wallet on risk score', async () => {
+    const { Hono } = await import('hono')
+    const { default: scoreRoute } = await import('../../src/routes/score.js')
+
+    const app = new Hono()
+    app.route('/v1/score', scoreRoute)
+
+    const res = await app.request('/v1/score/risk?wallet=bad-wallet')
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error.code).toBe('invalid_wallet')
   })
 
   it('refreshes a score via POST', async () => {

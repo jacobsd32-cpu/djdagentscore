@@ -1,3 +1,4 @@
+import type { CertificationRow } from '../db.js'
 import { scoreToTier } from '../db.js'
 import type { AgentRegistrationRow, ScoreHistoryRow, ScoreRow } from '../types.js'
 
@@ -71,11 +72,18 @@ export function renderAgentPage(
   score: ScoreRow | undefined,
   history: ScoreHistoryRow[],
   reg: AgentRegistrationRow | undefined,
+  certification: CertificationRow | undefined,
   origin: string,
 ): string {
   // Force HTTPS in URLs — behind Fly.io's proxy, origin can report http://
   const safeOrigin = origin.replace(/^http:/, 'https:')
   const badgeUrl = `${safeOrigin}/v1/badge/${wallet}.svg`
+  const certificationBadgeUrl = `${safeOrigin}/v1/certification/badge/${wallet}`
+  const certificationStatusUrl = `${safeOrigin}/v1/certification/${wallet}`
+  const standardsUrl = `${safeOrigin}/v1/score/erc8004?wallet=${wallet}`
+  const evaluatorUrl = `${safeOrigin}/v1/score/evaluator?wallet=${wallet}`
+  const directoryUrl = `${safeOrigin}/v1/certification/directory`
+  const certifyUrl = `${safeOrigin}/certify?wallet=${wallet}`
   const pageUrl = `${safeOrigin}/agent/${wallet}`
   const s = score?.composite_score ?? 0
   const tier = score?.tier ?? 'Unverified'
@@ -88,12 +96,22 @@ export function renderAgentPage(
   const cap = score?.capability_score ?? 0
   const sybil = score ? (score.sybil_flag ?? 0) === 1 : false
   const calcAt = score?.calculated_at ?? ''
+  const hasFreshScore = !!score && (!score.expires_at || score.expires_at > new Date().toISOString())
+  const certifyReadiness = certification
+    ? 'certified'
+    : !reg
+      ? 'register'
+      : !hasFreshScore
+        ? 'refresh'
+        : s < 75
+          ? 'score'
+          : 'eligible'
 
   const displayName = reg?.name ?? fmtWallet(wallet)
   const ogTitle = `${esc(displayName)} — ${s} · ${esc(tier)} | DJD Agent Score`
   const ogDesc = reg?.description
     ? esc(reg.description)
-    : `On-chain reputation score for ${fmtWallet(wallet)}: ${s}/100 (${tier})`
+    : `DJD trust profile for ${fmtWallet(wallet)}: score ${s}/100 (${tier}), with certification, standards, and evaluator context when available.`
 
   const isRegistered = !!reg
 
@@ -185,6 +203,25 @@ nav{padding:16px 0;display:flex;align-items:center;justify-content:space-between
 .hist-date{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)}
 .no-data{font-size:12.5px;color:var(--text-muted);padding:8px 0}
 
+.cert-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.cert-title{font-size:16px;font-weight:700}
+.cert-pill{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;padding:3px 8px;border-radius:999px}
+.cert-pill-active{color:var(--green);background:var(--green-dim)}
+.cert-pill-ready{color:var(--accent);background:var(--accent-dim)}
+.cert-pill-warn{color:var(--yellow);background:var(--yellow-dim)}
+.cert-copy{font-size:12.5px;color:var(--text-dim);line-height:1.7;margin-bottom:14px}
+.cert-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.cert-metric{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px}
+.cert-metric-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.cert-metric-value{font-size:13px;font-weight:600}
+.surface-links{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.surface-link{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);text-decoration:none}
+.surface-link:hover{border-color:var(--border-hi);color:var(--accent);text-decoration:none}
+.surface-link-copy{display:flex;flex-direction:column;gap:3px}
+.surface-link-title{font-size:12px;font-weight:600}
+.surface-link-meta{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px}
+.surface-link-arrow{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--accent)}
+
 .badge-preview{margin-bottom:12px}
 .badge-preview img{height:20px;display:block}
 .embed-input-wrap{position:relative}
@@ -197,6 +234,8 @@ nav{padding:16px 0;display:flex;align-items:center;justify-content:space-between
 .unscored-d{font-size:13.5px;color:var(--text-dim);margin-bottom:20px;line-height:1.65}
 .btn-score{display:inline-block;background:var(--accent);color:var(--bg);border-radius:7px;padding:11px 24px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;text-decoration:none}
 .btn-score:hover{background:#06b6d4;text-decoration:none}
+
+@media(max-width:560px){.cert-meta,.surface-links{grid-template-columns:1fr}}
 
 footer{border-top:1px solid var(--border);padding:24px 0 36px;margin-top:40px}
 .ft-disc{font-size:10.5px;color:var(--text-muted);line-height:1.7;max-width:680px;margin-bottom:14px}
@@ -308,6 +347,139 @@ ${
       <div class="embed-input-wrap">
         <input class="embed-input" id="shareUrl" type="text" readonly value="${esc(pageUrl)}">
         <button class="copy-btn" onclick="copyShare()">copy</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-label">DJD Certify</div>
+      ${
+        certification
+          ? `
+      <div class="cert-head">
+        <div class="cert-title">Certified through DJD</div>
+        <div class="cert-pill cert-pill-active">ACTIVE</div>
+      </div>
+      <div class="cert-copy">This wallet has an active DJD certification, so counterparties can inspect certification status, badge surfaces, standards output, and evaluator context from one profile.</div>
+      <div class="cert-meta">
+        <div class="cert-metric">
+          <div class="cert-metric-label">Certified Tier</div>
+          <div class="cert-metric-value">${esc(certification.tier)}</div>
+        </div>
+        <div class="cert-metric">
+          <div class="cert-metric-label">Score At Certification</div>
+          <div class="cert-metric-value">${certification.score_at_certification}</div>
+        </div>
+        <div class="cert-metric">
+          <div class="cert-metric-label">Granted</div>
+          <div class="cert-metric-value">${fmtDate(certification.granted_at)}</div>
+        </div>
+        <div class="cert-metric">
+          <div class="cert-metric-label">Expires</div>
+          <div class="cert-metric-value">${fmtDate(certification.expires_at)}</div>
+        </div>
+      </div>
+      <div class="surface-links">
+        <a class="surface-link" href="${esc(certificationStatusUrl)}">
+          <div class="surface-link-copy">
+            <div class="surface-link-title">Certification status</div>
+            <div class="surface-link-meta">JSON status</div>
+          </div>
+          <div class="surface-link-arrow">→</div>
+        </a>
+        <a class="surface-link" href="${esc(certificationBadgeUrl)}">
+          <div class="surface-link-copy">
+            <div class="surface-link-title">Certification badge</div>
+            <div class="surface-link-meta">SVG badge</div>
+          </div>
+          <div class="surface-link-arrow">→</div>
+        </a>
+        <a class="surface-link" href="${esc(certifyUrl)}">
+          <div class="surface-link-copy">
+            <div class="surface-link-title">Certify page</div>
+            <div class="surface-link-meta">Wallet context</div>
+          </div>
+          <div class="surface-link-arrow">→</div>
+        </a>
+      </div>`
+          : `
+      <div class="cert-head">
+        <div class="cert-title">Certification path</div>
+        <div class="cert-pill ${
+          certifyReadiness === 'eligible'
+            ? 'cert-pill-ready'
+            : certifyReadiness === 'score' || certifyReadiness === 'refresh'
+              ? 'cert-pill-warn'
+              : 'cert-pill-ready'
+        }">${
+          certifyReadiness === 'eligible'
+            ? 'READY'
+            : certifyReadiness === 'register'
+              ? 'REGISTER FIRST'
+              : certifyReadiness === 'refresh'
+                ? 'REFRESH SCORE'
+                : 'SCORE 75+'
+        }</div>
+      </div>
+      <div class="cert-copy">${
+        certifyReadiness === 'eligible'
+          ? 'This wallet meets the visible prerequisites for DJD certification: registration plus a fresh score of 75 or higher. The next step is the one-time x402 certification purchase.'
+          : certifyReadiness === 'register'
+            ? 'Certification starts with identity context. Register the agent first so counterparties can inspect project metadata instead of a bare wallet address.'
+            : certifyReadiness === 'refresh'
+              ? 'Certification requires a fresh score snapshot. Re-score this wallet before applying so the certification decision is based on current data.'
+              : 'DJD certification currently requires a composite score of 75 or higher. Improve the trust profile, then apply once the wallet is in the Trusted band.'
+      }</div>
+      <div class="surface-links">
+        <a class="surface-link" href="${esc(certifyUrl)}">
+          <div class="surface-link-copy">
+            <div class="surface-link-title">Certify readiness</div>
+            <div class="surface-link-meta">Wallet context</div>
+          </div>
+          <div class="surface-link-arrow">→</div>
+        </a>
+        <a class="surface-link" href="${esc(directoryUrl)}">
+          <div class="surface-link-copy">
+            <div class="surface-link-title">Certified directory</div>
+            <div class="surface-link-meta">Public listings</div>
+          </div>
+          <div class="surface-link-arrow">→</div>
+        </a>
+      </div>`
+      }
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-label">Trust Surfaces</div>
+      <div class="cert-copy">Use this wallet's machine-readable trust outputs for settlement policy, partner review, or directory publishing.</div>
+      <div class="surface-links">
+        <a class="surface-link" href="${esc(standardsUrl)}">
+          <div class="surface-link-copy">
+            <div class="surface-link-title">ERC-8004 document</div>
+            <div class="surface-link-meta">Standards</div>
+          </div>
+          <div class="surface-link-arrow">→</div>
+        </a>
+        <a class="surface-link" href="${esc(evaluatorUrl)}">
+          <div class="surface-link-copy">
+            <div class="surface-link-title">Evaluator preview</div>
+            <div class="surface-link-meta">Settlement decision</div>
+          </div>
+          <div class="surface-link-arrow">→</div>
+        </a>
+        <a class="surface-link" href="${esc(directoryUrl)}">
+          <div class="surface-link-copy">
+            <div class="surface-link-title">Certified directory</div>
+            <div class="surface-link-meta">Browse peers</div>
+          </div>
+          <div class="surface-link-arrow">→</div>
+        </a>
+        <a class="surface-link" href="${esc(certifyUrl)}">
+          <div class="surface-link-copy">
+            <div class="surface-link-title">Certify readiness</div>
+            <div class="surface-link-meta">Wallet context</div>
+          </div>
+          <div class="surface-link-arrow">→</div>
+        </a>
       </div>
     </div>
 

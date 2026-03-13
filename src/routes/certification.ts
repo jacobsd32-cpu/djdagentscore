@@ -2,6 +2,8 @@
  * Certified Agent Badge — Phase B monetization
  *
  * Public (free):
+ *   GET  /readiness    — check whether a wallet can apply for certification
+ *   GET  /directory     — browse active certifications
  *   GET  /:wallet       — check certification status
  *   GET  /badge/:wallet — SVG badge (green if certified, gray if not)
  *
@@ -21,6 +23,8 @@ import {
   applyForCertificationByPayer,
   getCertificationRevenue,
   getCertificationBadgeView,
+  getCertificationDirectoryView,
+  getCertificationReadinessView,
   getCertificationStatusView,
   listCertificationRecords,
   revokeCertificationRecord,
@@ -30,6 +34,29 @@ import { getPayerWallet } from '../utils/paymentUtils.js'
 // ---------- Router ----------
 
 const certification = new Hono<AppEnv>()
+
+// ── Public: Certified directory ─────────────────────────────────────────────
+
+certification.get('/readiness', (c) => {
+  const outcome = getCertificationReadinessView(c.req.query('wallet'))
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
+  }
+
+  return c.json(outcome.data)
+})
+
+certification.get('/directory', (c) => {
+  const outcome = getCertificationDirectoryView({
+    limit: c.req.query('limit'),
+    tier: c.req.query('tier'),
+  })
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
+  }
+
+  return c.json(outcome.data)
+})
 
 // ── Public: Check certification status ──────────────────────────────────────
 

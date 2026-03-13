@@ -21,8 +21,9 @@ src/
 │   └── env.ts                      # Environment helpers and runtime toggles
 ├── db/
 │   ├── connection.ts               # SQLite connection (DELETE journal mode)
-│   ├── schema.ts                   # 33-table schema, migrations, indexes
-│   ├── dataQueries.ts              # Score-decay and relationship-graph read models for DJD data products
+│   ├── schema.ts                   # Schema, migrations, and indexes
+│   ├── clusterQueries.ts           # Persisted cluster assignments and cluster-member lookups
+│   ├── dataQueries.ts              # Score-decay, relationship-graph, and intent-conversion read models for DJD data products
 │   ├── certificationQueries.ts     # DJD Certify persistence and certification revenue rollups
 │   ├── directoryQueries.ts         # Public leaderboard and trust-directory read models
 │   ├── forensicsQueries.ts         # Fraud report/dispute persistence, active-report filtering, and forensics read models
@@ -30,6 +31,7 @@ src/
 │   ├── monitoringQueries.ts        # Managed monitoring-subscription persistence over webhook delivery
 │   ├── reputationQueries.ts        # Scores, tier thresholds, and score-write persistence
 │   ├── ratingsQueries.ts           # Mutual counterparty ratings persistence, transaction validation, and sentiment rollups
+│   ├── stakingQueries.ts           # Creator-stake validation, stake/slash persistence, and score-boost rollups
 │   ├── evidenceQueries.ts          # Query logs, indexer state, transfer evidence, webhook persistence
 │   ├── platformQueries.ts          # API key persistence and developer platform records
 │   ├── analyticsQueries.ts         # Revenue, explorer, economy, publication queries
@@ -55,15 +57,18 @@ src/
 │   ├── analyticsService.ts         # Public observatory-lite APIs for economy metrics and explorer data
 │   ├── billingService.ts           # Billing checkout, success-page, and customer-portal workflows
 │   ├── certificationService.ts     # Certification rules and workflow orchestration
-│   ├── dataProductService.ts       # DJD data-product endpoints for score-decay curves and relationship-graph reads
+│   ├── dataProductService.ts       # DJD data-product endpoints for decay curves, relationship graphs, and intent-conversion reads
 │   ├── discoveryService.ts         # Public docs, OpenAPI, and x402 manifest assembly
 │   ├── directoryService.ts         # Public trust-surface APIs for leaderboard and score badges
 │   ├── evidenceService.ts          # Fraud report/dispute intake plus DJD Forensics wallet/corpus views and score-history APIs
 │   ├── monitoringService.ts        # Managed score/anomaly/Forensics monitoring subscriptions built on wallet-scoped webhooks
 │   ├── opsService.ts               # Health and Prometheus metrics payload assembly with runtime-safe caching
 │   ├── portalService.ts            # Developer portal usage and analytics lookup
-│   ├── registrationService.ts      # Agent registration and GitHub identity workflow
 │   ├── ratingsService.ts           # Transaction-backed mutual-rating intake and ratings data-product views
+│   ├── registrationService.ts      # Agent registration and GitHub identity workflow
+│   ├── stakingService.ts           # Creator staking intake, on-chain fee validation, and score-boost workflow
+│   ├── riskService.ts              # Risk prediction overlays built from fraud, integrity, ratings, and intent signals
+│   ├── clusterService.ts           # Cluster analysis overlays built from graph, risk, and cluster-assignment state
 │   ├── scoreService.ts             # Score request orchestration for sync, batch, and async job APIs
 │   ├── stripeWebhookService.ts     # Stripe signature verification and webhook event handling
 │   ├── webhookQueueService.ts      # Worker-side webhook queueing, wallet-scoped delivery, retry policy, and live Forensics/anomaly events
@@ -79,14 +84,16 @@ src/
 ├── routes/
 │   ├── register.ts                 # POST /v1/agent/register
 │   ├── score.ts                    # GET /v1/score/*
+│   ├── cluster.ts                  # GET /v1/cluster
 │   ├── history.ts                  # GET /v1/score/history (paid)
 │   ├── report.ts                   # POST /v1/report
 │   ├── ratings.ts                  # POST /v1/rate
+│   ├── stake.ts                    # POST /v1/stake
 │   ├── monitoring.ts               # /v1/monitor/* managed monitoring subscriptions and presets
 │   ├── forensics.ts                # /v1/forensics/* (summary, dispute intake, feed, watchlist, reports, merged timeline)
 │   ├── leaderboard.ts              # GET /v1/leaderboard
 │   ├── badge.ts                    # GET /v1/badge/*.svg
-│   ├── data.ts                     # /v1/data/decay, /v1/data/graph, and /v1/data/ratings
+│   ├── data.ts                     # /v1/data/decay, /v1/data/graph, /v1/data/intent, and /v1/data/ratings
 │   ├── agent.ts                    # GET /agent/{wallet} (HTML)
 │   ├── blacklist.ts                # GET /v1/data/fraud/blacklist
 │   ├── certification.ts            # /v1/certification/* (apply, status, badge)
@@ -94,7 +101,7 @@ src/
 │   ├── apiKeys.ts                  # /admin/api-keys management
 │   ├── health.ts                   # GET /health
 │   ├── metrics.ts                  # GET /metrics (Prometheus)
-│   ├── economy.ts                  # Economy data endpoints
+│   ├── economy.ts                  # Economy summary endpoints and /v1/data/economy/survival
 │   ├── admin.ts                    # Admin/debug endpoints, including Forensics dispute triage
 │   ├── legal.ts                    # Terms & privacy
 │   ├── docs.ts                     # Swagger UI at /docs
@@ -162,11 +169,12 @@ The scoring engine orchestrates the full scoring pipeline:
 2. **Detections** — Sybil detection (DB-only, fast) + gaming checks (DB + balance)
 3. **Dimension scoring** — calculates all 5 dimensions with adaptive breakpoints from population stats, sybil caps, and gaming penalties
 4. **Composite score** — weighted sum using adaptive weights (learned from outcome correlations)
-5. **Trajectory modifier** — ±5 point adjustment based on score velocity, momentum, and direction
-6. **Confidence dampening** — clamps score delta based on confidence level (high-confidence scores are sticky)
-7. **Integrity multiplier** — multiplicative modifier from sybil + gaming + fraud reports
-8. **Confidence scoring** — multi-factor confidence estimate including trajectory stability
-9. **Explainability** — trajectory data, effective weights, percentile rank, dampening info in response
+5. **Creator stake boost** — modest creator-confidence boost from active validated stakes
+6. **Trajectory modifier** — ±5 point adjustment based on score velocity, momentum, and direction
+7. **Confidence dampening** — clamps score delta based on confidence level (high-confidence scores are sticky)
+8. **Integrity multiplier** — multiplicative modifier from sybil + gaming + fraud reports
+9. **Confidence scoring** — multi-factor confidence estimate including trajectory stability
+10. **Explainability** — trajectory data, effective weights, percentile rank, dampening info in response
 
 Dimensions are weighted across Reliability, Viability, Identity, Behavior, and Capability. Base weights and sub-signal point budgets are defined in `dimensions.ts`. Effective weights adapt over time via `adaptiveWeights.ts`, which learns from outcome correlation data collected by the auto-recalibration job.
 
@@ -189,12 +197,15 @@ Separate indexer for standard USDC `Transfer` events. Feeds the Reliability and 
 
 ### Database (`src/db/`)
 
-SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached volume compatibility). 33 tables:
+SQLite with DELETE journal mode (chosen over WAL for Fly.io network-attached volume compatibility). Core platform tables include:
 
 - `scores` — cached composite + dimension scores
 - `score_history` — historical score snapshots
 - `fraud_reports` — user-submitted misconduct reports
+- `fraud_patterns` — reusable fraud-pattern catalog used by risk overlays and future pattern matching
+- `cluster_assignments` — persisted wallet cluster labels for cluster analysis and future clustering jobs
 - `mutual_ratings` — transaction-backed peer ratings and community sentiment signals
+- `creator_stakes` — validated creator-to-agent stakes, score boosts, and fraud-triggered slashing state
 - `agent_registrations` — voluntary wallet registration metadata
 - `query_log` — per-request logging for rate limiting and analytics
 - `x402_settlements` — indexed EIP-3009 events
