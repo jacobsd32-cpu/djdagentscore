@@ -1,3 +1,4 @@
+import { envEnabled } from '../config/env.js'
 import type { ReleaseMetadata } from '../config/runtimeMetadata.js'
 import { getReleaseMetadata, getRuntimeMode } from '../config/runtimeMetadata.js'
 import {
@@ -28,6 +29,20 @@ interface DetailedHealthPayload extends PublicHealthPayload {
     mode: string
     apiEnabled: boolean
     workerEnabled: boolean
+    workerJobs: {
+      blockchainIndexer: {
+        configured: boolean
+        active: boolean
+      }
+      usdcTransferIndexer: {
+        configured: boolean
+        active: boolean
+      }
+      hourlyRefresh: {
+        configured: boolean
+        active: boolean
+      }
+    }
   }
   database: {
     cachedScores: number
@@ -85,6 +100,10 @@ function buildPublicHealthPayload(): PublicHealthPayload {
 function buildDetailedHealthPayload(): DetailedHealthPayload {
   const indexer = getIndexerStatus()
   const runtimeMode = getRuntimeMode()
+  const workerEnabled = runtimeMode !== 'api'
+  const blockchainIndexerEnabled = envEnabled('ENABLE_BLOCKCHAIN_INDEXER')
+  const usdcTransferIndexerEnabled = envEnabled('ENABLE_USDC_INDEXER')
+  const hourlyRefreshEnabled = envEnabled('ENABLE_HOURLY_REFRESH')
 
   return {
     ...buildPublicHealthPayload(),
@@ -93,7 +112,21 @@ function buildDetailedHealthPayload(): DetailedHealthPayload {
     runtime: {
       mode: runtimeMode,
       apiEnabled: runtimeMode !== 'worker',
-      workerEnabled: runtimeMode !== 'api',
+      workerEnabled,
+      workerJobs: {
+        blockchainIndexer: {
+          configured: blockchainIndexerEnabled,
+          active: workerEnabled && blockchainIndexerEnabled,
+        },
+        usdcTransferIndexer: {
+          configured: usdcTransferIndexerEnabled,
+          active: workerEnabled && usdcTransferIndexerEnabled,
+        },
+        hourlyRefresh: {
+          configured: hourlyRefreshEnabled,
+          active: workerEnabled && hourlyRefreshEnabled,
+        },
+      },
     },
     database: {
       cachedScores: countCachedScores(),
