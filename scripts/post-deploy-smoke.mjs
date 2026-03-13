@@ -82,6 +82,24 @@ export function validateDetailedHealthPayload(payload, expectedRuntimeMode) {
   }
 }
 
+function formatHealthWarnings(payload) {
+  if (!Array.isArray(payload?.warnings) || payload.warnings.length === 0) {
+    return null
+  }
+
+  return payload.warnings
+    .map((warning) => {
+      if (!warning || typeof warning.message !== 'string') {
+        return null
+      }
+
+      const code = typeof warning.code === 'string' && warning.code.length > 0 ? `${warning.code}: ` : ''
+      return `${code}${warning.message}`
+    })
+    .filter(Boolean)
+    .join(' | ')
+}
+
 export async function runPostDeploySmokeCheck(options = {}) {
   const healthUrl = options.healthUrl ?? process.env.DJD_HEALTHCHECK_URL ?? 'https://djdagentscore.dev/health'
   const adminKey = options.adminKey ?? process.env.DJD_ADMIN_KEY ?? ''
@@ -126,6 +144,10 @@ export async function runPostDeploySmokeCheck(options = {}) {
         console.log(
           `[smoke] OK after ${attempt} attempt(s): public + admin health verified for runtime=${expectedRuntimeMode}${expectedReleaseSha ? ` release=${expectedReleaseSha.slice(0, 7)}` : ''}`,
         )
+        const warningSummary = formatHealthWarnings(detailedPayload)
+        if (warningSummary) {
+          console.log(`[smoke] Admin health warnings: ${warningSummary}`)
+        }
       } else {
         console.log(
           `[smoke] OK after ${attempt} attempt(s): public health verified${expectedReleaseSha ? ` release=${expectedReleaseSha.slice(0, 7)}` : ''} (admin runtime verification skipped; DJD_ADMIN_KEY not set)`,
