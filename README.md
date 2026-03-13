@@ -334,6 +334,7 @@ npm run smoke:deploy
 
 - Required GitHub variable: `FLY_PREVIEW_APP`
 - Optional GitHub variable: `FLY_PREVIEW_PUBLIC_BASE_URL`
+- Optional GitHub secret: `FLY_PREVIEW_API_TOKEN` (use this when your existing `FLY_API_TOKEN` is scoped only to the production app)
 - Optional GitHub secret: `FLY_PREVIEW_ADMIN_KEY`
 
 If `FLY_PREVIEW_PUBLIC_BASE_URL` is not set, the workflow defaults to `https://<FLY_PREVIEW_APP>.fly.dev`.
