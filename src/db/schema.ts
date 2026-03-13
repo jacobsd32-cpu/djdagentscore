@@ -59,6 +59,12 @@ function addColumnIfMissing(table: string, column: string, definition: string): 
   if (!VALID_IDENTIFIER.test(table) || !VALID_IDENTIFIER.test(column)) {
     throw new Error(`Invalid SQL identifier: table=${table}, column=${column}`)
   }
+  const existingTable = db
+    .prepare('SELECT name FROM sqlite_master WHERE type = ? AND name = ?')
+    .get('table', table) as { name: string } | undefined
+  if (!existingTable) {
+    return
+  }
   const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>
   if (!cols.find((c) => c.name === column)) {
     db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
@@ -339,7 +345,12 @@ db.exec(`
     outcome_type          TEXT,
     outcome_at            TEXT,
     days_to_outcome       INTEGER,
-    outcome_value         REAL
+    outcome_value         REAL,
+    reliability_at_query  INTEGER,
+    viability_at_query    INTEGER,
+    identity_at_query     INTEGER,
+    capability_at_query   INTEGER,
+    behavior_at_query     INTEGER
   );
   CREATE INDEX IF NOT EXISTS idx_outcomes_score  ON score_outcomes(score_at_query, outcome_type);
   CREATE INDEX IF NOT EXISTS idx_outcomes_model  ON score_outcomes(model_version,  outcome_type);
