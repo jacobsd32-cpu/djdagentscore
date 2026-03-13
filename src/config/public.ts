@@ -1,5 +1,5 @@
 const DEFAULT_PUBLIC_BASE_URL = 'https://djdagentscore.dev'
-const DEFAULT_SUPPORT_EMAIL = 'feedback@djdagentscore.dev'
+const DEFAULT_SUPPORT_EMAIL = 'drewjacobs32@gmail.com'
 
 function stripTrailingSlash(url: string): string {
   return url.replace(/\/+$/, '')

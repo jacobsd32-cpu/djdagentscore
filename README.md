@@ -260,7 +260,7 @@ Paid endpoints return `402 Payment Required` without a valid payment proof or AP
 
 ## Need a pilot path?
 
-If you want to use DJD Agent Score in production and want help choosing a starting score threshold or rollout policy, reach out at [feedback@djdagentscore.dev](mailto:feedback@djdagentscore.dev).
+If you want to use DJD Agent Score in production and want help choosing a starting score threshold or rollout policy, reach out at [drewjacobs32@gmail.com](mailto:drewjacobs32@gmail.com).
 
 ---
 
