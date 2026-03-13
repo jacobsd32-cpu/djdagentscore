@@ -30,6 +30,7 @@ import billingRoute from './routes/billing.js'
 import blacklistRoute from './routes/blacklist.js'
 import blogRoute from './routes/blog.js'
 import certificationRoute from './routes/certification.js'
+import certifyRoute from './routes/certify.js'
 import clusterRoute from './routes/cluster.js'
 import dataRoute from './routes/data.js'
 import docsRoute from './routes/docs.js'
@@ -116,6 +117,7 @@ app.route('/v1/analytics', analyticsRoute)
 app.route('/v1/agent/register', registerRoute)
 app.route('/v1/badge', badgeRoute)
 app.route('/explorer', explorerRoute)
+app.route('/certify', certifyRoute)
 app.route('/blog', blogRoute)
 app.route('/agent', agentRoute)
 app.route('/openapi.json', openapiRoute)
@@ -173,6 +175,32 @@ const x402Middleware = paymentMiddlewareFromConfig(
                 sybilRisk: 15,
                 gamingRisk: 10,
               },
+            },
+          },
+        }),
+      },
+    },
+    '/v1/score/evaluator': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/score/evaluator'])],
+      description:
+        'ERC-8183 evaluator prototype for a wallet, combining score, certification, risk, ratings, and creator-stake signals',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { wallet: '0x1234567890abcdef1234567890abcdef12345678' },
+          inputSchema: {
+            properties: {
+              wallet: { type: 'string', description: 'Wallet address to evaluate for settlement readiness' },
+            },
+            required: ['wallet'],
+          },
+          output: {
+            example: {
+              wallet: '0x1234...',
+              standard: 'erc-8183-evaluator-prototype',
+              decision: 'review',
+              confidence: 0.78,
+              risk: { risk_level: 'watch', action: 'monitor' },
+              certification: { active: true, tier: 'Trusted' },
             },
           },
         }),
@@ -776,6 +804,7 @@ const x402Middleware = paymentMiddlewareFromConfig(
 
 const PAID_ROUTES = new Set([
   '/v1/score/full',
+  '/v1/score/evaluator',
   '/v1/score/risk',
   '/v1/cluster',
   '/v1/score/refresh',

@@ -9,12 +9,15 @@ import {
 } from '../db.js'
 import { ErrorCodes } from '../errors.js'
 import { explorerDashboardHtml } from '../templates/explorer.js'
+import type { CertificationDirectoryView } from './certificationService.js'
 
 const VALID_PERIODS = ['daily', 'weekly', 'monthly'] as const
 const DEFAULT_ECONOMY_LIMIT = 30
 const MAX_ECONOMY_LIMIT = 90
 const DEFAULT_ACTIVITY_LIMIT = 20
 const MAX_ACTIVITY_LIMIT = 50
+const DEFAULT_CERTIFIED_LIMIT = 8
+const MAX_CERTIFIED_LIMIT = 24
 
 type EconomyPeriod = (typeof VALID_PERIODS)[number]
 
@@ -204,5 +207,29 @@ export function getExplorerActivityFeed(rawLimit: string | undefined): {
   const limit = parseClampedLimit(rawLimit, DEFAULT_ACTIVITY_LIMIT, MAX_ACTIVITY_LIMIT)
   return {
     activity: getRecentActivity(limit),
+  }
+}
+
+export async function getExplorerCertifiedDirectory(
+  rawLimit: string | undefined,
+  rawTier?: string | undefined,
+): Promise<{
+  certified: CertificationDirectoryView['certifications']
+  returned: number
+}> {
+  const limit = parseClampedLimit(rawLimit, DEFAULT_CERTIFIED_LIMIT, MAX_CERTIFIED_LIMIT)
+  const { getCertificationDirectoryView } = await import('./certificationService.js')
+  const result = getCertificationDirectoryView({ limit: String(limit), tier: rawTier })
+
+  if (!result.ok) {
+    return {
+      certified: [],
+      returned: 0,
+    }
+  }
+
+  return {
+    certified: result.data.certifications,
+    returned: result.data.returned,
   }
 }

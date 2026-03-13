@@ -39,7 +39,7 @@ export function explorerDashboardHtml(stats: EcosystemStats): string {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Explorer - DJD Agent Score</title>
-<meta name="description" content="Live dashboard for AI agent reputation scores on Base. Explore wallets, track the ecosystem, and verify agents before transacting.">
+<meta name="description" content="Live dashboard for DJD trust infrastructure on Base. Explore wallets, certified agents, and the scoring network before your agent transacts.">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -166,6 +166,28 @@ nav{padding:16px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px
 .feed-wallet:hover{color:var(--accent)}
 .feed-time{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;white-space:nowrap}
 
+/* ── Certified Directory ── */
+.cert-panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:28px;margin-bottom:28px}
+.cert-panel h2{font-size:18px;font-weight:700;margin-bottom:4px}
+.cert-panel .sub{font-size:13px;color:var(--dim);margin-bottom:16px}
+.cert-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.cert-card{background:linear-gradient(180deg,rgba(31,39,56,.95),rgba(12,17,27,.95));border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.cert-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.cert-name{font-size:14px;font-weight:700;line-height:1.3}
+.cert-wallet{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;word-break:break-all}
+.cert-tier{font-size:10px;font-weight:600;padding:3px 8px;border-radius:999px;font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.cert-desc{font-size:12px;color:var(--dim);line-height:1.5;min-height:36px}
+.cert-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cert-metric{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px}
+.cert-metric-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;font-family:'JetBrains Mono',monospace;margin-bottom:4px}
+.cert-metric-val{font-size:12px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.cert-links{display:flex;flex-wrap:wrap;gap:8px}
+.cert-links a{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--accent)}
+.cert-meta{display:flex;gap:6px;flex-wrap:wrap}
+.cert-flag{font-size:10px;padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;border:1px solid transparent}
+.cert-flag-gh{background:rgba(52,211,153,.08);color:var(--green);border-color:rgba(52,211,153,.18)}
+.cert-flag-site{background:rgba(34,211,238,.08);color:var(--accent);border-color:rgba(34,211,238,.18)}
+
 /* ── Leaderboard ── */
 .stats{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
 .stat{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px 18px;min-width:120px}
@@ -212,6 +234,7 @@ footer a{color:var(--muted)}
   <div class="nav-r">
     <a href="/">Home</a>
     <a href="/explorer">Explorer</a>
+    <a href="/certify">Certify</a>
     <a href="/docs">API Docs</a>
     <a href="/pricing">Pricing</a>
     <a href="/methodology">Methodology</a>
@@ -321,6 +344,15 @@ footer a{color:var(--muted)}
     </div>
   </div>
 
+  <!-- ── Certified Directory ── -->
+  <div class="cert-panel">
+    <h2>Certified Directory</h2>
+    <p class="sub">Public DJD-certified agents and endpoints with direct evaluator and standards links.</p>
+    <div class="cert-grid" id="certGrid">
+      <div class="loading">Loading certified entities...</div>
+    </div>
+  </div>
+
   <!-- ── Leaderboard ── -->
   <div class="stats" id="stats"></div>
   <div class="lb-section">
@@ -331,8 +363,9 @@ footer a{color:var(--muted)}
   </div>
 </div>
 <footer>
-  DJD Agent Score &middot; Reputation API for the agent economy &middot;
+  DJD Agent Score &middot; Trust surfaces for the agent economy &middot;
   <a href="/docs">API</a> &middot;
+  <a href="/certify">Certify</a> &middot;
   <a href="/pricing">Pricing</a> &middot;
   <a href="/methodology">Methodology</a> &middot;
   <a href="/terms">Terms</a>
@@ -516,6 +549,89 @@ async function loadFeed() {
   }
 }
 
+// ── Certified Directory ──
+async function loadCertified() {
+  try {
+    var resp = await fetch(API + '/explorer/api/certified?limit=6');
+    if (!resp.ok) throw new Error(resp.status);
+    var data = await resp.json();
+    var grid = el('certGrid');
+    clearChildren(grid);
+    if (!data.certified || !data.certified.length) {
+      grid.appendChild(mkEl('div', 'loading', 'No active certifications yet.'));
+      return;
+    }
+    data.certified.forEach(function(entry) {
+      var card = mkEl('div', 'cert-card');
+
+      var head = mkEl('div', 'cert-head');
+      var titleWrap = document.createElement('div');
+      titleWrap.appendChild(mkEl('div', 'cert-name', entry.profile.name || 'Certified agent'));
+      titleWrap.appendChild(mkEl('div', 'cert-wallet', entry.wallet));
+      head.appendChild(titleWrap);
+
+      var tier = mkEl('span', 'cert-tier ' + tierClass(entry.certification.tier), entry.certification.tier);
+      head.appendChild(tier);
+      card.appendChild(head);
+
+      card.appendChild(
+        mkEl(
+          'div',
+          'cert-desc',
+          entry.profile.description || 'Active DJD certification with live trust context and evaluator-ready links.',
+        ),
+      );
+
+      var metrics = mkEl('div', 'cert-metrics');
+      [
+        { label: 'Current Score', value: entry.current_score.score !== null ? entry.current_score.score : '--' },
+        { label: 'Score Tier', value: entry.current_score.tier || '--' },
+        {
+          label: 'Confidence',
+          value:
+            entry.current_score.confidence !== null && entry.current_score.confidence !== undefined
+              ? (entry.current_score.confidence * 100).toFixed(0) + '%'
+              : '--',
+        },
+      ].forEach(function(metric) {
+        var metricEl = mkEl('div', 'cert-metric');
+        metricEl.appendChild(mkEl('div', 'cert-metric-label', metric.label));
+        metricEl.appendChild(mkEl('div', 'cert-metric-val', metric.value));
+        metrics.appendChild(metricEl);
+      });
+      card.appendChild(metrics);
+
+      var meta = mkEl('div', 'cert-meta');
+      if (entry.profile.github_verified) meta.appendChild(mkEl('span', 'cert-flag cert-flag-gh', 'GitHub verified'));
+      if (entry.profile.website_url) meta.appendChild(mkEl('span', 'cert-flag cert-flag-site', 'Website linked'));
+      if (meta.children.length > 0) card.appendChild(meta);
+
+      var links = mkEl('div', 'cert-links');
+      [
+        { href: entry.links.agent_profile, label: 'Profile' },
+        { href: entry.links.certify_readiness, label: 'Certify' },
+        { href: entry.links.evaluator_preview, label: 'Evaluator' },
+        { href: entry.links.standards_document, label: 'ERC-8004' },
+      ].forEach(function(link) {
+        var a = document.createElement('a');
+        a.href = link.href;
+        a.textContent = link.label;
+        if (link.label !== 'Profile' && link.label !== 'Certify') a.target = '_blank';
+        links.appendChild(a);
+      });
+      card.appendChild(links);
+
+      grid.appendChild(card);
+    });
+  } catch (e) {
+    var grid = el('certGrid');
+    clearChildren(grid);
+    var errMsg = mkEl('div', 'loading', 'Failed to load certified directory.');
+    errMsg.style.color = 'var(--red)';
+    grid.appendChild(errMsg);
+  }
+}
+
 // ── Leaderboard ──
 async function loadLB() {
   try {
@@ -607,6 +723,7 @@ async function loadLB() {
   if (w) { el('q').value = w; lookup(false); }
   loadLB();
   loadFeed();
+  loadCertified();
   // Refresh activity feed every 60 seconds
   setInterval(loadFeed, 60000);
   el('q').addEventListener('keydown', function(e) { if (e.key === 'Enter') lookup(); });

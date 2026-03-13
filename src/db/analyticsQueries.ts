@@ -441,6 +441,12 @@ export interface ReputationPublication {
   published_at: string
 }
 
+const stmtGetPublication = db.prepare<[string], ReputationPublication>(`
+  SELECT wallet, composite_score, model_version, tx_hash, published_at
+  FROM reputation_publications
+  WHERE wallet = ?
+`)
+
 const stmtUpsertPublication = db.prepare(`
   INSERT INTO reputation_publications (wallet, composite_score, model_version, tx_hash, published_at)
   VALUES (@wallet, @composite_score, @model_version, @tx_hash, @published_at)
@@ -464,6 +470,10 @@ export function upsertPublication(pub: {
     tx_hash: pub.tx_hash,
     published_at: new Date().toISOString(),
   })
+}
+
+export function getReputationPublication(wallet: string): ReputationPublication | undefined {
+  return stmtGetPublication.get(wallet)
 }
 
 export function getScoresNeedingPublication(minConfidence: number, scoreDelta: number, limit: number): ScoreRow[] {

@@ -25,6 +25,8 @@ export function pricingPageHtml(plans: PricingPlan[]): string {
   const growth = plans.find((p) => p.id === 'growth')
   const scale = plans.find((p) => p.id === 'scale')
   const pricingUrl = buildPublicUrl('/pricing')
+  const certifiedDirectoryUrl = buildPublicUrl('/v1/certification/directory')
+  const explorerUrl = buildPublicUrl('/explorer')
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -32,10 +34,10 @@ export function pricingPageHtml(plans: PricingPlan[]): string {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pricing — DJD Agent Score</title>
-<meta name="description" content="Simple, flat-rate pricing for AI agent trust scores. Free tier included. Start in minutes with an API key.">
+<meta name="description" content="Simple pricing for DJD trust infrastructure. Start with free scoring, then unlock Certify, evaluator previews, monitoring, and deeper trust surfaces with an API key.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Pricing — DJD Agent Score">
-<meta property="og:description" content="Simple, flat-rate pricing for AI agent trust scores. Free tier included.">
+<meta property="og:description" content="Simple pricing for DJD trust infrastructure, from free scoring to Certify, evaluator previews, and deeper trust surfaces.">
 <meta property="og:url" content="${pricingUrl}">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -181,6 +183,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
   <a class="logo" href="/">DJD<span> Agent Score</span></a>
   <div class="nav-links">
     <a href="/explorer">Explorer</a>
+    <a href="/certify">Certify</a>
     <a href="/blog">Blog</a>
     <a href="/pricing" class="active">Pricing</a>
     <a href="/docs">API Docs</a>
@@ -193,8 +196,8 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
 
 <!-- HERO -->
 <div class="pricing-hero">
-  <h1>Simple pricing for <em>reputation intelligence</em></h1>
-  <p>Start free. Upgrade when you need more. Every plan includes full API access with a standard API key &mdash; no crypto wallet required.</p>
+  <h1>Simple pricing for <em>trust infrastructure</em></h1>
+  <p>Start with free scoring, then upgrade when you need more surface area. Every paid plan includes API access to DJD scores, Certify workflows, evaluator previews, monitoring, and trust distribution with a standard API key &mdash; no crypto wallet required.</p>
 </div>
 
 <!-- HOW IT WORKS -->
@@ -211,8 +214,8 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
   </div>
   <div class="how-step">
     <div class="how-num">Step 3</div>
-    <div class="how-title">Start scoring wallets</div>
-    <div class="how-desc">One header. One GET request. Trust score in milliseconds.</div>
+    <div class="how-title">Ship trust into production</div>
+    <div class="how-desc">Move from raw scores to certification, evaluator, and monitoring surfaces as your workflow matures.</div>
   </div>
 </div>
 
@@ -226,6 +229,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
     <div class="plan-limit">10 requests / day &mdash; no signup</div>
     <ul class="plan-features">
       <li>Basic score endpoint</li>
+      <li>ERC-8004-compatible trust document</li>
       <li>Score + tier + recommendation</li>
       <li>IP-based rate limit</li>
       <li>No API key needed</li>
@@ -260,6 +264,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
       <li>Everything in Starter</li>
       <li>Batch scoring (20 wallets)</li>
       <li>Certification applications</li>
+      <li>ERC-8183 evaluator preview endpoint</li>
       <li>Force-refresh scores</li>
       <li>Priority support</li>
     </ul>
@@ -275,6 +280,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
       <li>Everything in Growth</li>
       <li>25,000 requests/month</li>
       <li>Managed score, anomaly, and Forensics monitoring subscriptions with alert filters</li>
+      <li>Certified directory and evaluator-ready trust surfaces</li>
       <li>Best per-query cost</li>
       <li>Priority support</li>
     </ul>
@@ -286,8 +292,8 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
 <!-- TWO PATHS: Developers vs Agents -->
 <div style="margin-bottom:80px">
   <div class="section-label">Two Ways to Pay</div>
-  <div class="section-title">Built for developers <em class="serif" style="color:var(--accent)">and</em> AI agents</div>
-  <div class="section-desc">Human developers pay with credit cards. Autonomous AI agents pay per-request with crypto. Same API, same scores.</div>
+  <div class="section-title">Built for developers <em class="serif" style="color:var(--accent)">and</em> autonomous agents</div>
+  <div class="section-desc">Human teams can buy predictable access with cards. Autonomous agents can still pay per request with crypto. Same platform, same trust surfaces.</div>
   <div class="compare">
     <div class="compare-card">
       <div class="compare-icon">&#128187;</div>
@@ -366,12 +372,13 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
 </div>
 
 <!-- BOTTOM CTA -->
-<div class="bottom-cta">
+  <div class="bottom-cta">
   <h2>Ready to add trust to your app?</h2>
-  <p>Start with the free tier &mdash; no signup required. Upgrade when you're ready.</p>
+  <p>Start with the free tier &mdash; no signup required. Upgrade when you're ready to plug into Certify, evaluator previews, monitoring, and the certified directory.</p>
   <div class="btn-row">
     <a href="/#lookup" class="btn btn-primary">Try Free &mdash; No Signup</a>
-    <a href="/docs" class="btn btn-ghost">Read the Docs</a>
+    <a href="${certifiedDirectoryUrl}" class="btn btn-ghost">Browse Certified Directory</a>
+    <a href="${explorerUrl}" class="btn btn-ghost">Open Explorer</a>
   </div>
 </div>
 

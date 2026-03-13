@@ -164,10 +164,64 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
         output: { example: { wallet: '0x…', score: 78, tier: 'Established', recommendation: 'transact' } },
       },
       {
+        path: '/v1/score/erc8004',
+        method: 'GET',
+        price: 0,
+        description:
+          'Free ERC-8004-compatible reputation document that packages score, identity registration, certification, and publication status.',
+        input: { query: { wallet: { type: 'string', required: true, description: 'Ethereum wallet address' } } },
+        output: {
+          example: {
+            wallet: '0x…',
+            agent_id: '123456789',
+            standard: 'erc-8004-compatible',
+            reputation: { composite_score: 78, tier: 'Established', confidence: 0.82 },
+            certification: { active: true, tier: 'Trusted' },
+          },
+        },
+      },
+      {
+        path: '/v1/certification/readiness',
+        method: 'GET',
+        price: 0,
+        description:
+          'Free certification readiness check that tells a wallet whether it can apply, what is blocking it, and what to do next.',
+        input: { query: { wallet: { type: 'string', required: true, description: 'Ethereum wallet address' } } },
+        output: {
+          example: {
+            wallet: '0x…',
+            can_apply: true,
+            status: 'eligible',
+            payment: { protocol: 'x402', amount_usdc: 99 },
+          },
+        },
+      },
+      {
+        path: '/v1/certification/directory',
+        method: 'GET',
+        price: 0,
+        description:
+          'Public directory of active DJD certifications with current score context, profile metadata, and links to standards and evaluator views.',
+        input: {
+          query: {
+            limit: { type: 'integer' },
+            tier: { type: 'string' },
+          },
+        },
+      },
+      {
         path: '/v1/score/full',
         method: 'GET',
         price: ENDPOINT_PRICING['/v1/score/full'],
         description: 'Full score with 6-dimension breakdown, sybil/gaming flags, confidence, and explainability.',
+        input: { query: { wallet: { type: 'string', required: true } } },
+      },
+      {
+        path: '/v1/score/evaluator',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/score/evaluator'],
+        description:
+          'ERC-8183 evaluator prototype that returns an approve, review, or reject recommendation for settlement readiness.',
         input: { query: { wallet: { type: 'string', required: true } } },
       },
       {

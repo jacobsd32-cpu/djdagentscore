@@ -13,6 +13,7 @@ import { buildPublicUrl } from './public.js'
 /** Maps API path → price in USDC. Used by both x402 middleware and query logger. */
 export const ENDPOINT_PRICING: Record<string, number> = {
   '/v1/score/full': 0.1,
+  '/v1/score/evaluator': 0.35,
   '/v1/score/risk': 0.5,
   '/v1/score/refresh': 0.25,
   '/v1/report': 0.02,

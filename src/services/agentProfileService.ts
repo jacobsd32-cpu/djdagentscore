@@ -1,4 +1,4 @@
-import { getRegistration, getScore, getScoreHistory } from '../db.js'
+import { getActiveCertification, getRegistration, getScore, getScoreHistory } from '../db.js'
 import { ErrorCodes } from '../errors.js'
 import { log } from '../logger.js'
 import { getOrCalculateScore } from '../scoring/engine.js'
@@ -45,11 +45,12 @@ export async function getAgentProfilePage(rawWallet: string, origin: string): Pr
 
   const history = getScoreHistory(wallet)
   const registration = getRegistration(wallet)
+  const certification = getActiveCertification(wallet)
 
   return {
     ok: true,
     data: {
-      html: renderAgentPage(wallet, score, history, registration, origin),
+      html: renderAgentPage(wallet, score, history, registration, certification, origin),
     },
   }
 }

@@ -1,3 +1,5 @@
+import type { ReleaseMetadata } from '../config/runtimeMetadata.js'
+import { getReleaseMetadata, getRuntimeMode } from '../config/runtimeMetadata.js'
 import {
   countCachedScores,
   countFraudReports,
@@ -16,11 +18,17 @@ interface PublicHealthPayload {
   status: 'ok'
   version: string
   uptime: number
+  release?: ReleaseMetadata
 }
 
 interface DetailedHealthPayload extends PublicHealthPayload {
   modelVersion: string
   experimentalStatus: true
+  runtime: {
+    mode: string
+    apiEnabled: boolean
+    workerEnabled: boolean
+  }
   database: {
     cachedScores: number
     indexedWallets: number
@@ -64,20 +72,29 @@ let cachedHealthPayload: PublicHealthPayload | null = null
 let cachedHealthAt = 0
 
 function buildPublicHealthPayload(): PublicHealthPayload {
+  const release = getReleaseMetadata()
+
   return {
     status: 'ok',
     version: MODEL_VERSION,
     uptime: uptimeSeconds(),
+    ...(release ? { release } : {}),
   }
 }
 
 function buildDetailedHealthPayload(): DetailedHealthPayload {
   const indexer = getIndexerStatus()
+  const runtimeMode = getRuntimeMode()
 
   return {
     ...buildPublicHealthPayload(),
     modelVersion: MODEL_VERSION,
     experimentalStatus: true,
+    runtime: {
+      mode: runtimeMode,
+      apiEnabled: runtimeMode !== 'worker',
+      workerEnabled: runtimeMode !== 'api',
+    },
     database: {
       cachedScores: countCachedScores(),
       indexedWallets: countIndexedWallets(),

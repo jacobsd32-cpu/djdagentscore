@@ -39,6 +39,13 @@ describe('GET /.well-known/x402', () => {
     expect(body.service.openapi).toBe('https://api.example.test/openapi.json')
     expect(body.service.version).toBeTruthy()
     expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/score/basic' && endpoint.price === 0)).toBe(true)
+    expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/score/erc8004' && endpoint.price === 0)).toBe(true)
+    expect(
+      body.endpoints.some((endpoint) => endpoint.path === '/v1/certification/directory' && endpoint.price === 0),
+    ).toBe(true)
+    expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/score/evaluator' && endpoint.price === 0.35)).toBe(
+      true,
+    )
     expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/score/risk' && endpoint.price === 0.5)).toBe(true)
     expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/cluster' && endpoint.price === 0.15)).toBe(true)
     expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/rate' && endpoint.price === 0.01)).toBe(true)

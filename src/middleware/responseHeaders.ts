@@ -5,6 +5,7 @@
 import type { MiddlewareHandler } from 'hono'
 
 import { getPublicOrigin } from '../config/public.js'
+import { getReleaseMetadata, getRuntimeMode } from '../config/runtimeMetadata.js'
 import { MODEL_VERSION } from '../scoring/responseBuilders.js'
 export { MODEL_VERSION }
 
@@ -14,8 +15,16 @@ export const responseHeadersMiddleware: MiddlewareHandler = async (c, next) => {
   await next()
 
   // ── DJD custom headers ──
+  const release = getReleaseMetadata()
   c.res.headers.set('X-DJD-Status', 'experimental')
   c.res.headers.set('X-DJD-Model-Version', MODEL_VERSION)
+  c.res.headers.set('X-DJD-Runtime-Mode', getRuntimeMode())
+  if (release?.sha) {
+    c.res.headers.set('X-DJD-Release-Sha', release.sha)
+  }
+  if (release?.builtAt) {
+    c.res.headers.set('X-DJD-Build-Timestamp', release.builtAt)
+  }
   c.res.headers.set('X-DJD-Disclaimer', 'Scores are informational and experimental. Not financial advice.')
 
   // ── Security headers ──
@@ -33,6 +42,7 @@ export const responseHeadersMiddleware: MiddlewareHandler = async (c, next) => {
     normalizedPath === '/' ||
     normalizedPath === '/leaderboard' ||
     normalizedPath === '/explorer' ||
+    normalizedPath === '/certify' ||
     normalizedPath === '/pricing' ||
     normalizedPath === '/methodology' ||
     normalizedPath === '/portal' ||

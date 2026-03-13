@@ -60,6 +60,30 @@
         }
       }
     },
+    "/v1/score/erc8004": {
+      "get": {
+        "tags": ["score"],
+        "summary": "ERC-8004-compatible reputation document",
+        "description": "Returns a free ERC-8004-compatible reputation document for a wallet, bundling the latest DJD score with registration, certification, and on-chain publication status.",
+        "operationId": "getErc8004CompatibleScore",
+        "parameters": [
+          { "$ref": "#/components/parameters/wallet" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Compatibility document returned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ERC8004CompatibleScoreResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
     "/v1/score/full": {
       "get": {
         "tags": ["score"],
@@ -77,6 +101,32 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/FullScoreResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/v1/score/evaluator": {
+      "get": {
+        "tags": ["score"],
+        "summary": "ERC-8183 evaluator prototype",
+        "description": "Returns a settlement-readiness decision using DJD score, certification, risk, ratings, and creator-stake data. **Requires x402 payment of $0.35 USDC on Base or Bearer API key.**",
+        "operationId": "getEvaluatorPreview",
+        "parameters": [
+          { "$ref": "#/components/parameters/wallet" }
+        ],
+        "security": [{ "x402": [] }],
+        "x-x402": { "price": "$0.35", "network": "base" },
+        "responses": {
+          "200": {
+            "description": "Evaluator preview returned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EvaluatorPreviewResponse" }
               }
             }
           },
@@ -674,7 +724,7 @@
       "get": {
         "tags": ["system"],
         "summary": "Health check",
-        "description": "Returns system status, database statistics, indexer state, and background job stats.",
+        "description": "Returns public service health for any caller, and includes runtime/database/indexer/job detail when called with a valid admin key. Release metadata is exposed when the deploy image is stamped with build identifiers.",
         "operationId": "getHealth",
         "responses": {
           "200": { "description": "System healthy" }
@@ -1902,6 +1952,69 @@
         }
       }
     },
+    "/v1/certification/readiness": {
+      "get": {
+        "tags": ["certification"],
+        "summary": "Check certification readiness",
+        "description": "Returns whether a wallet can apply for DJD certification right now, which requirements are met, what is blocking it, and the next recommended actions.",
+        "operationId": "getCertificationReadiness",
+        "parameters": [
+          {
+            "name": "wallet",
+            "in": "query",
+            "required": true,
+            "description": "Ethereum wallet address",
+            "schema": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Certification readiness returned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CertificationReadinessResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/v1/certification/directory": {
+      "get": {
+        "tags": ["certification"],
+        "summary": "Certified directory",
+        "description": "Returns a public directory of active DJD certifications with current score context, profile metadata, and direct links into standards and evaluator surfaces.",
+        "operationId": "getCertificationDirectory",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Max number of certifications to return (default 25, max 100)",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 25 }
+          },
+          {
+            "name": "tier",
+            "in": "query",
+            "required": false,
+            "description": "Filter to a specific certification tier",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Certified directory returned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CertificationDirectoryResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
     "/v1/certification/{wallet}": {
       "get": {
         "tags": ["certification"],
@@ -2110,6 +2223,154 @@
           "computedAt":     { "type": "string", "format": "date-time", "description": "ISO-8601 timestamp of when the score was computed (may differ from lastUpdated when served from cache)" },
           "scoreFreshness": { "type": "number", "minimum": 0, "maximum": 1, "description": "Freshness factor: 1 = just computed, decays linearly toward 0 at cache expiry. Consumers can use this to weight trust." },
           "stale":          { "type": "boolean", "description": "True when RPC was unavailable and a cached result was returned" }
+        }
+      },
+      "ERC8004CompatibleScoreResponse": {
+        "type": "object",
+        "properties": {
+          "standard": { "type": "string", "enum": ["erc-8004-compatible"] },
+          "wallet": { "type": "string" },
+          "agent_id": { "type": "string", "description": "Decimal string form of uint256(uint160(wallet))" },
+          "provider": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "reputation_tag": { "type": "string" },
+              "model_version": { "type": "string" },
+              "document_url": { "type": "string", "format": "uri" }
+            }
+          },
+          "reputation": {
+            "type": "object",
+            "properties": {
+              "composite_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+              "tier": { "type": "string", "enum": ["Unverified", "Emerging", "Established", "Trusted", "Elite"] },
+              "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+              "recommendation": { "type": "string" },
+              "computed_at": { "type": "string", "format": "date-time" },
+              "last_updated": { "type": "string", "format": "date-time" },
+              "score_freshness": { "type": "number", "minimum": 0, "maximum": 1 },
+              "data_source": { "type": "string", "enum": ["live", "cached", "unavailable"], "nullable": true }
+            }
+          },
+          "identity": {
+            "type": "object",
+            "properties": {
+              "registered": { "type": "boolean" },
+              "name": { "type": "string", "nullable": true },
+              "description": { "type": "string", "nullable": true },
+              "github_url": { "type": "string", "format": "uri", "nullable": true },
+              "website_url": { "type": "string", "format": "uri", "nullable": true },
+              "github_verified": { "type": "boolean" },
+              "registered_at": { "type": "string", "format": "date-time", "nullable": true },
+              "updated_at": { "type": "string", "format": "date-time", "nullable": true }
+            }
+          },
+          "certification": {
+            "type": "object",
+            "properties": {
+              "active": { "type": "boolean" },
+              "tier": { "type": "string", "nullable": true },
+              "score_at_certification": { "type": "integer", "minimum": 0, "maximum": 100, "nullable": true },
+              "granted_at": { "type": "string", "format": "date-time", "nullable": true },
+              "expires_at": { "type": "string", "format": "date-time", "nullable": true },
+              "tx_hash": { "type": "string", "nullable": true }
+            }
+          },
+          "publication": {
+            "type": "object",
+            "properties": {
+              "published": { "type": "boolean" },
+              "registry": { "type": "string", "enum": ["erc-8004"] },
+              "endpoint": { "type": "string", "format": "uri" },
+              "tx_hash": { "type": "string", "nullable": true },
+              "published_at": { "type": "string", "format": "date-time", "nullable": true },
+              "score_at_publication": { "type": "integer", "minimum": 0, "maximum": 100, "nullable": true },
+              "model_version": { "type": "string", "nullable": true }
+            }
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "basic_score": { "type": "string", "format": "uri" },
+              "full_score": { "type": "string", "format": "uri" },
+              "certification_status": { "type": "string", "format": "uri" },
+              "certification_badge": { "type": "string", "format": "uri" },
+              "score_badge": { "type": "string", "format": "uri" },
+              "agent_profile": { "type": "string", "format": "uri" }
+            }
+          }
+        }
+      },
+      "EvaluatorPreviewResponse": {
+        "type": "object",
+        "properties": {
+          "standard": { "type": "string", "enum": ["erc-8183-evaluator-prototype"] },
+          "wallet": { "type": "string" },
+          "decision": { "type": "string", "enum": ["approve", "review", "reject"] },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "rationale": { "type": "string" },
+          "score": {
+            "type": "object",
+            "properties": {
+              "current_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+              "current_tier": { "type": "string" },
+              "score_confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+              "score_recommendation": { "type": "string" },
+              "score_model_version": { "type": "string" },
+              "last_scored_at": { "type": "string", "format": "date-time" }
+            }
+          },
+          "certification": {
+            "type": "object",
+            "properties": {
+              "active": { "type": "boolean" },
+              "tier": { "type": "string", "nullable": true },
+              "granted_at": { "type": "string", "format": "date-time", "nullable": true },
+              "expires_at": { "type": "string", "format": "date-time", "nullable": true }
+            }
+          },
+          "risk": {
+            "type": "object",
+            "properties": {
+              "risk_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+              "risk_level": { "type": "string", "enum": ["clear", "watch", "elevated", "critical"] },
+              "action": { "type": "string", "enum": ["allow", "monitor", "review", "block"] }
+            }
+          },
+          "market_signals": {
+            "type": "object",
+            "properties": {
+              "rating_count": { "type": "integer" },
+              "average_rating": { "type": "number", "nullable": true },
+              "unique_raters": { "type": "integer" },
+              "intent_count": { "type": "integer" },
+              "conversion_rate": { "type": "number" },
+              "active_creator_stakes": { "type": "integer" },
+              "active_score_boost": { "type": "integer" }
+            }
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": { "type": "string" },
+                "label": { "type": "string" },
+                "status": { "type": "string", "enum": ["pass", "review", "fail"] },
+                "details": { "type": "object", "additionalProperties": true }
+              }
+            }
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "full_score": { "type": "string", "format": "uri" },
+              "risk": { "type": "string", "format": "uri" },
+              "standards_document": { "type": "string", "format": "uri" },
+              "certification_status": { "type": "string", "format": "uri" }
+            }
+          }
         }
       },
       "FullScoreResponse": {
@@ -3219,7 +3480,18 @@
           "granted_at":             { "type": "string", "format": "date-time" },
           "expires_at":             { "type": "string", "format": "date-time" },
           "is_active":              { "type": "boolean" },
-          "message":                { "type": "string" }
+          "message":                { "type": "string" },
+          "links": {
+            "type": "object",
+            "properties": {
+              "certification_badge": { "type": "string", "format": "uri" },
+              "score_badge": { "type": "string", "format": "uri" },
+              "standards_document": { "type": "string", "format": "uri" },
+              "evaluator_preview": { "type": "string", "format": "uri" },
+              "agent_profile": { "type": "string", "format": "uri" },
+              "certify_readiness": { "type": "string", "format": "uri" }
+            }
+          }
         }
       },
       "CertificationStatusResponse": {
@@ -3230,7 +3502,174 @@
           "score_at_certification": { "type": "integer" },
           "granted_at":             { "type": "string", "format": "date-time" },
           "expires_at":             { "type": "string", "format": "date-time" },
-          "is_valid":               { "type": "boolean" }
+          "is_valid":               { "type": "boolean" },
+          "links": {
+            "type": "object",
+            "properties": {
+              "certification_badge": { "type": "string", "format": "uri" },
+              "score_badge": { "type": "string", "format": "uri" },
+              "standards_document": { "type": "string", "format": "uri" },
+              "evaluator_preview": { "type": "string", "format": "uri" },
+              "agent_profile": { "type": "string", "format": "uri" },
+              "certify_readiness": { "type": "string", "format": "uri" }
+            }
+          }
+        }
+      },
+      "CertificationReadinessResponse": {
+        "type": "object",
+        "properties": {
+          "wallet": { "type": "string" },
+          "can_apply": { "type": "boolean" },
+          "status": {
+            "type": "string",
+            "enum": [
+              "eligible",
+              "already_certified",
+              "not_registered",
+              "score_missing",
+              "score_expired",
+              "score_too_low"
+            ]
+          },
+          "requirements": {
+            "type": "object",
+            "properties": {
+              "registration": {
+                "type": "object",
+                "properties": {
+                  "met": { "type": "boolean" }
+                }
+              },
+              "score": {
+                "type": "object",
+                "properties": {
+                  "met": { "type": "boolean" },
+                  "minimum_score": { "type": "integer" },
+                  "current_score": { "type": "integer", "nullable": true },
+                  "current_tier": { "type": "string", "nullable": true },
+                  "confidence": { "type": "number", "nullable": true },
+                  "expires_at": { "type": "string", "format": "date-time", "nullable": true },
+                  "is_fresh": { "type": "boolean" }
+                }
+              },
+              "certification": {
+                "type": "object",
+                "properties": {
+                  "active": { "type": "boolean" },
+                  "tier": { "type": "string", "nullable": true },
+                  "granted_at": { "type": "string", "format": "date-time", "nullable": true },
+                  "expires_at": { "type": "string", "format": "date-time", "nullable": true }
+                }
+              }
+            }
+          },
+          "blockers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": { "type": "string" },
+                "message": { "type": "string" }
+              }
+            }
+          },
+          "next_steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": { "type": "string" },
+                "label": { "type": "string" },
+                "href": { "type": "string", "format": "uri" }
+              }
+            }
+          },
+          "payment": {
+            "type": "object",
+            "properties": {
+              "protocol": { "type": "string" },
+              "amount_usdc": { "type": "number" },
+              "endpoint": { "type": "string", "format": "uri" }
+            }
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "certification_status": { "type": "string", "format": "uri" },
+              "certification_badge": { "type": "string", "format": "uri" },
+              "score_badge": { "type": "string", "format": "uri" },
+              "standards_document": { "type": "string", "format": "uri" },
+              "evaluator_preview": { "type": "string", "format": "uri" },
+              "agent_profile": { "type": "string", "format": "uri" },
+              "certify_readiness": { "type": "string", "format": "uri" },
+              "certify_overview": { "type": "string", "format": "uri" },
+              "certified_directory": { "type": "string", "format": "uri" },
+              "apply_endpoint": { "type": "string", "format": "uri" }
+            }
+          }
+        }
+      },
+      "CertificationDirectoryResponse": {
+        "type": "object",
+        "properties": {
+          "as_of": { "type": "string", "format": "date-time" },
+          "filters": {
+            "type": "object",
+            "properties": {
+              "limit": { "type": "integer" },
+              "tier": { "type": "string", "nullable": true }
+            }
+          },
+          "returned": { "type": "integer" },
+          "certifications": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "wallet": { "type": "string" },
+                "certification": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "integer" },
+                    "tier": { "type": "string" },
+                    "score_at_certification": { "type": "integer" },
+                    "granted_at": { "type": "string", "format": "date-time" },
+                    "expires_at": { "type": "string", "format": "date-time" }
+                  }
+                },
+                "current_score": {
+                  "type": "object",
+                  "properties": {
+                    "score": { "type": "integer", "nullable": true },
+                    "tier": { "type": "string", "nullable": true },
+                    "confidence": { "type": "number", "nullable": true }
+                  }
+                },
+                "profile": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string", "nullable": true },
+                    "description": { "type": "string", "nullable": true },
+                    "github_url": { "type": "string", "format": "uri", "nullable": true },
+                    "website_url": { "type": "string", "format": "uri", "nullable": true },
+                    "github_verified": { "type": "boolean" }
+                  }
+                },
+                "links": {
+                  "type": "object",
+                  "properties": {
+                    "certification_badge": { "type": "string", "format": "uri" },
+                    "score_badge": { "type": "string", "format": "uri" },
+                    "standards_document": { "type": "string", "format": "uri" },
+                    "evaluator_preview": { "type": "string", "format": "uri" },
+                    "agent_profile": { "type": "string", "format": "uri" },
+                    "certify_readiness": { "type": "string", "format": "uri" }
+                  }
+                }
+              }
+            }
+          }
         }
       },
       "CertificationAdminItem": {
