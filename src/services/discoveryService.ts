@@ -197,15 +197,36 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
         },
       },
       {
+        path: '/v1/certification/review',
+        method: 'GET/POST',
+        price: 0,
+        description:
+          'Free certification review queue surface for submitting a review request or reading the latest reviewer status for a wallet.',
+        input: {
+          query: { wallet: { type: 'string', required: true, description: 'Ethereum wallet address' } },
+          body: { wallet: { type: 'string', required: true }, note: { type: 'string', required: false } },
+        },
+        output: {
+          example: {
+            wallet: '0x…',
+            status: 'pending',
+            requested_tier: 'Trusted',
+            requested_score: 82,
+          },
+        },
+      },
+      {
         path: '/v1/certification/directory',
         method: 'GET',
         price: 0,
         description:
-          'Public directory of active DJD certifications with current score context, profile metadata, and links to standards and evaluator views.',
+          'Public directory of active DJD certifications with current score context, profile metadata, trust links, and optional search/sort filters.',
         input: {
           query: {
             limit: { type: 'integer' },
             tier: { type: 'string' },
+            search: { type: 'string' },
+            sort: { type: 'string', enum: ['score', 'confidence', 'recent', 'name'] },
           },
         },
       },

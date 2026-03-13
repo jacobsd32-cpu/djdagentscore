@@ -228,7 +228,9 @@ The scoring engine indexes x402 settlements on-chain using the EIP-3009 `Authori
 | `/v1/score/basic?wallet=0x…` | GET | Score, tier, confidence. 10 free calls/day. |
 | `/v1/score/erc8004?wallet=0x…` | GET | ERC-8004-compatible reputation document with score, identity, certification, and publication status. |
 | `/v1/certification/readiness?wallet=0x…` | GET | Check if a wallet can apply for certification, see blockers, and get the next step before paying. |
-| `/v1/certification/directory` | GET | Public directory of active certifications with score context and evaluator/standards links. |
+| `/v1/certification/review` | GET / POST | Submit a certification review request or inspect the latest reviewer status for a wallet. |
+| `/v1/certification/directory?limit=&tier=&search=&sort=` | GET | Public directory of active certifications with score context, trust links, and search/sort filters. |
+| `/directory` | GET | Trusted Endpoint Directory page for browsing certified agents in the browser. |
 | `/v1/agent/register` | POST | Register your wallet. +10 identity bonus. |
 | `/v1/score/compute` | POST | Queue background score computation. Returns jobId immediately. |
 | `/v1/score/job/:jobId` | GET | Poll async job status (pending → complete). |

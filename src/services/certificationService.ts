@@ -1,15 +1,26 @@
 import { buildPublicUrl } from '../config/public.js'
-import type { CertificationDirectoryRow, CertificationRevenueSummary, CertificationRow } from '../db.js'
+import type {
+  CertificationDirectoryRow,
+  CertificationRevenueSummary,
+  CertificationReviewRequestRow,
+  CertificationRow,
+} from '../db.js'
 import {
   db,
   getActiveCertification,
   getCertificationRevenueSummary,
+  getCertificationReviewRequestById,
+  getLatestCertificationReviewRequest,
+  getPendingCertificationReviewRequest,
   getRegistration,
   getScore,
   insertCertification,
+  insertCertificationReviewRequest,
   listActiveCertificationDirectory,
+  listCertificationReviewRequests,
   listCertifications,
   revokeCertification,
+  updateCertificationReviewRequestDecision,
 } from '../db.js'
 import { makeBadge } from '../utils/badgeGenerator.js'
 import { normalizeWallet } from '../utils/walletUtils.js'
@@ -24,6 +35,8 @@ export interface CertificationApplyError {
     | 'cert_not_registered'
     | 'cert_already_active'
     | 'cert_not_found'
+    | 'cert_review_not_found'
+    | 'cert_review_not_approved'
   message: string
   status: 400 | 404 | 409
   details?: Record<string, unknown>
@@ -32,7 +45,7 @@ export interface CertificationApplyError {
 interface CertificationSuccess<T> {
   ok: true
   data: T
-  status?: 201
+  status?: 200 | 201
 }
 
 export type CertificationResult<T> = CertificationApplyError | CertificationSuccess<T>
@@ -103,7 +116,10 @@ export interface CertificationDirectoryView {
   filters: {
     limit: number
     tier: string | null
+    search: string | null
+    sort: CertificationDirectorySort
   }
+  total: number
   returned: number
   certifications: CertificationDirectoryEntryView[]
 }
@@ -111,7 +127,17 @@ export interface CertificationDirectoryView {
 export interface CertificationReadinessView {
   wallet: string
   can_apply: boolean
-  status: 'eligible' | 'already_certified' | 'not_registered' | 'score_missing' | 'score_expired' | 'score_too_low'
+  status:
+    | 'eligible'
+    | 'already_certified'
+    | 'not_registered'
+    | 'score_missing'
+    | 'score_expired'
+    | 'score_too_low'
+    | 'review_pending'
+    | 'review_approved'
+    | 'review_needs_info'
+    | 'review_rejected'
   requirements: {
     registration: {
       met: boolean
@@ -130,6 +156,14 @@ export interface CertificationReadinessView {
       tier: string | null
       granted_at: string | null
       expires_at: string | null
+    }
+    review: {
+      exists: boolean
+      status: CertificationReviewStatus | null
+      requested_at: string | null
+      reviewed_at: string | null
+      reviewed_by: string | null
+      review_note: string | null
     }
   }
   blockers: Array<{
@@ -151,7 +185,65 @@ export interface CertificationReadinessView {
     certify_overview: string
     certified_directory: string
     apply_endpoint: string
+    review_status: string
   }
+}
+
+export const CERTIFICATION_REVIEW_STATUSES = ['pending', 'approved', 'needs_info', 'rejected'] as const
+export type CertificationReviewStatus = (typeof CERTIFICATION_REVIEW_STATUSES)[number]
+
+interface CertificationReviewLinks {
+  agent_profile: string
+  readiness: string
+  review_status: string
+  apply_endpoint: string
+  certified_directory: string
+}
+
+export interface CertificationReviewRequestView {
+  id: number
+  wallet: string
+  requested_by_wallet: string
+  status: CertificationReviewStatus
+  requested_at: string
+  updated_at: string
+  reviewed_at: string | null
+  reviewed_by: string | null
+  requested_score: number
+  requested_tier: string
+  requested_confidence: number | null
+  score_expires_at: string | null
+  request_note: string | null
+  review_note: string | null
+  current_score: {
+    score: number | null
+    tier: string | null
+    confidence: number | null
+  }
+  profile: {
+    name: string | null
+    description: string | null
+    github_url: string | null
+    website_url: string | null
+    github_verified: boolean
+  }
+  links: CertificationReviewLinks
+  message: string
+}
+
+export interface CertificationReviewQueueView {
+  filters: {
+    status: CertificationReviewStatus | null
+    limit: number
+  }
+  returned: number
+  requests: CertificationReviewRequestView[]
+}
+
+export interface CertificationIssuedFromReviewView {
+  review: CertificationReviewRequestView
+  certification: CertificationApplyView
+  message: string
 }
 
 const applyForCertificationTxn = db.transaction((wallet: string): CertificationApplyResult => {
@@ -202,6 +294,9 @@ const applyForCertificationTxn = db.transaction((wallet: string): CertificationA
   }
 })
 
+export const CERTIFICATION_DIRECTORY_SORTS = ['score', 'confidence', 'recent', 'name'] as const
+export type CertificationDirectorySort = (typeof CERTIFICATION_DIRECTORY_SORTS)[number]
+
 function invalidWalletError(message: string): CertificationApplyError {
   return {
     ok: false,
@@ -209,6 +304,29 @@ function invalidWalletError(message: string): CertificationApplyError {
     message,
     status: 400,
   }
+}
+
+function normalizeReviewStatus(rawStatus: string | null | undefined): CertificationReviewStatus | null {
+  const normalized = rawStatus?.trim().toLowerCase()
+  if (!normalized) return null
+  if (CERTIFICATION_REVIEW_STATUSES.includes(normalized as CertificationReviewStatus)) {
+    return normalized as CertificationReviewStatus
+  }
+  return null
+}
+
+function normalizeReviewDecision(rawStatus: string | null | undefined): CertificationReviewStatus | null {
+  const normalized = normalizeReviewStatus(rawStatus)
+  if (normalized && normalized !== 'pending') {
+    return normalized
+  }
+  return null
+}
+
+function normalizeReviewNote(rawNote: string | null | undefined): string | null {
+  const note = rawNote?.trim()
+  if (!note) return null
+  return note.slice(0, 500)
 }
 
 function buildCertificationLinks(wallet: string): CertificationStatusView['links'] {
@@ -227,8 +345,19 @@ function buildCertificationReadinessLinks(wallet: string): CertificationReadines
     ...buildCertificationLinks(wallet),
     certification_status: buildPublicUrl(`/v1/certification/${wallet}`),
     certify_overview: buildPublicUrl(`/certify?wallet=${wallet}`),
-    certified_directory: buildPublicUrl('/v1/certification/directory'),
+    certified_directory: buildPublicUrl('/directory'),
     apply_endpoint: buildPublicUrl('/v1/certification/apply'),
+    review_status: buildPublicUrl(`/v1/certification/review?wallet=${wallet}`),
+  }
+}
+
+function buildCertificationReviewLinks(wallet: string): CertificationReviewLinks {
+  return {
+    agent_profile: buildPublicUrl(`/agent/${wallet}`),
+    readiness: buildPublicUrl(`/v1/certification/readiness?wallet=${wallet}`),
+    review_status: buildPublicUrl(`/v1/certification/review?wallet=${wallet}`),
+    apply_endpoint: buildPublicUrl('/v1/certification/apply'),
+    certified_directory: buildPublicUrl('/directory'),
   }
 }
 
@@ -293,6 +422,113 @@ function buildCertificationDirectoryEntryView(row: CertificationDirectoryRow): C
   }
 }
 
+function buildCertificationReviewMessage(status: CertificationReviewStatus): string {
+  if (status === 'approved') {
+    return 'Review request approved. This wallet is cleared for the next certification step.'
+  }
+  if (status === 'needs_info') {
+    return 'Review request needs more information before approval.'
+  }
+  if (status === 'rejected') {
+    return 'Review request rejected. Resolve the reviewer feedback before submitting again.'
+  }
+  return 'Review request submitted and waiting for reviewer action.'
+}
+
+function buildCertificationReviewView(row: CertificationReviewRequestRow): CertificationReviewRequestView {
+  return {
+    id: row.id,
+    wallet: row.wallet,
+    requested_by_wallet: row.requested_by_wallet,
+    status: row.status as CertificationReviewStatus,
+    requested_at: row.requested_at,
+    updated_at: row.updated_at,
+    reviewed_at: row.reviewed_at,
+    reviewed_by: row.reviewed_by,
+    requested_score: row.requested_score,
+    requested_tier: row.requested_tier,
+    requested_confidence: row.requested_confidence,
+    score_expires_at: row.score_expires_at,
+    request_note: row.request_note,
+    review_note: row.review_note,
+    current_score: {
+      score: row.current_score,
+      tier: row.current_tier,
+      confidence: row.current_confidence,
+    },
+    profile: {
+      name: row.name,
+      description: row.description,
+      github_url: row.github_url,
+      website_url: row.website_url,
+      github_verified: row.github_verified === 1,
+    },
+    links: buildCertificationReviewLinks(row.wallet),
+    message: buildCertificationReviewMessage(row.status as CertificationReviewStatus),
+  }
+}
+
+function normalizeDirectorySort(rawSort: string | null | undefined): CertificationDirectorySort {
+  const normalized = rawSort?.trim().toLowerCase()
+  if (normalized && CERTIFICATION_DIRECTORY_SORTS.includes(normalized as CertificationDirectorySort)) {
+    return normalized as CertificationDirectorySort
+  }
+  return 'score'
+}
+
+function matchesDirectorySearch(entry: CertificationDirectoryEntryView, search: string | null): boolean {
+  if (!search) return true
+
+  const haystack = [
+    entry.wallet,
+    entry.profile.name,
+    entry.profile.description,
+    entry.profile.github_url,
+    entry.profile.website_url,
+  ]
+    .filter((value): value is string => typeof value === 'string' && value.length > 0)
+    .join(' ')
+    .toLowerCase()
+
+  return haystack.includes(search)
+}
+
+function sortDirectoryEntries(
+  entries: CertificationDirectoryEntryView[],
+  sort: CertificationDirectorySort,
+): CertificationDirectoryEntryView[] {
+  const scoreValue = (entry: CertificationDirectoryEntryView) =>
+    entry.current_score.score ?? entry.certification.score_at_certification
+  const confidenceValue = (entry: CertificationDirectoryEntryView) => entry.current_score.confidence ?? -1
+  const grantedAtValue = (entry: CertificationDirectoryEntryView) => Date.parse(entry.certification.granted_at)
+  const nameValue = (entry: CertificationDirectoryEntryView) =>
+    (entry.profile.name?.trim().toLowerCase() || entry.wallet).toLowerCase()
+
+  return [...entries].sort((left, right) => {
+    if (sort === 'confidence') {
+      return (
+        confidenceValue(right) - confidenceValue(left) ||
+        scoreValue(right) - scoreValue(left) ||
+        grantedAtValue(right) - grantedAtValue(left)
+      )
+    }
+
+    if (sort === 'recent') {
+      return grantedAtValue(right) - grantedAtValue(left) || scoreValue(right) - scoreValue(left)
+    }
+
+    if (sort === 'name') {
+      return nameValue(left).localeCompare(nameValue(right)) || scoreValue(right) - scoreValue(left)
+    }
+
+    return (
+      scoreValue(right) - scoreValue(left) ||
+      confidenceValue(right) - confidenceValue(left) ||
+      grantedAtValue(right) - grantedAtValue(left)
+    )
+  })
+}
+
 export function getCertificationStatus(wallet: string): CertificationRow | null {
   return getActiveCertification(wallet) ?? null
 }
@@ -308,6 +544,7 @@ export function getCertificationReadinessView(
   const registration = getRegistration(wallet)
   const score = getScore(wallet)
   const certification = getActiveCertification(wallet)
+  const review = getLatestCertificationReviewRequest(wallet)
   const nowIso = new Date().toISOString()
   const links = buildCertificationReadinessLinks(wallet)
   const scoreIsFresh = !!score && score.expires_at > nowIso
@@ -327,7 +564,7 @@ export function getCertificationReadinessView(
     nextSteps = [
       { code: 'view_status', label: 'View certification status', href: links.certification_status },
       { code: 'open_profile', label: 'Open agent profile', href: links.agent_profile },
-      { code: 'browse_directory', label: 'Browse certified directory', href: links.certified_directory },
+      { code: 'browse_directory', label: 'Browse certified directory', href: buildPublicUrl('/directory') },
     ]
   } else if (!registration) {
     status = 'not_registered'
@@ -371,12 +608,54 @@ export function getCertificationReadinessView(
     nextSteps = [
       { code: 'review_profile', label: 'Review agent profile', href: links.agent_profile },
       { code: 'review_evaluator', label: 'Open evaluator preview', href: links.evaluator_preview },
-      { code: 'browse_directory', label: 'See certified peers', href: links.certified_directory },
+      { code: 'browse_directory', label: 'See certified peers', href: buildPublicUrl('/directory') },
+    ]
+  } else if (review?.status === 'pending') {
+    status = 'review_pending'
+    blockers.push({
+      code: 'cert_review_pending',
+      message: 'A certification review request is already pending for this wallet.',
+    })
+    nextSteps = [
+      { code: 'review_status', label: 'Check review status', href: links.review_status },
+      { code: 'open_profile', label: 'Open agent profile', href: links.agent_profile },
+      { code: 'review_standards', label: 'Review ERC-8004 document', href: links.standards_document },
+    ]
+  } else if (review?.status === 'needs_info') {
+    status = 'review_needs_info'
+    blockers.push({
+      code: 'cert_review_needs_info',
+      message: 'A reviewer asked for more information before certification can proceed.',
+    })
+    nextSteps = [
+      { code: 'review_status', label: 'Read reviewer status', href: links.review_status },
+      { code: 'open_profile', label: 'Open agent profile', href: links.agent_profile },
+      { code: 'submit_review', label: 'Return to Certify', href: links.certify_overview },
+    ]
+  } else if (review?.status === 'rejected') {
+    status = 'review_rejected'
+    blockers.push({
+      code: 'cert_review_rejected',
+      message: 'The latest certification review request was rejected. Resolve the reviewer feedback first.',
+    })
+    nextSteps = [
+      { code: 'review_status', label: 'Read reviewer status', href: links.review_status },
+      { code: 'review_evaluator', label: 'Open evaluator preview', href: links.evaluator_preview },
+      { code: 'return_certify', label: 'Return to Certify', href: links.certify_overview },
+    ]
+  } else if (review?.status === 'approved') {
+    canApply = true
+    status = 'review_approved'
+    nextSteps = [
+      { code: 'review_status', label: 'Review approved status', href: links.review_status },
+      { code: 'apply', label: 'Submit certification purchase', href: links.apply_endpoint },
+      { code: 'open_profile', label: 'Open agent profile', href: links.agent_profile },
     ]
   } else {
     canApply = true
     status = 'eligible'
     nextSteps = [
+      { code: 'submit_review', label: 'Request a review packet', href: links.certify_overview },
       { code: 'apply', label: 'Submit certification purchase', href: links.apply_endpoint },
       { code: 'review_standards', label: 'Review ERC-8004 document', href: links.standards_document },
       { code: 'open_profile', label: 'Open agent profile', href: links.agent_profile },
@@ -408,6 +687,14 @@ export function getCertificationReadinessView(
           granted_at: certification?.granted_at ?? null,
           expires_at: certification?.expires_at ?? null,
         },
+        review: {
+          exists: !!review,
+          status: (review?.status as CertificationReviewStatus | undefined) ?? null,
+          requested_at: review?.requested_at ?? null,
+          reviewed_at: review?.reviewed_at ?? null,
+          reviewed_by: review?.reviewed_by ?? null,
+          review_note: review?.review_note ?? null,
+        },
       },
       blockers,
       next_steps: nextSteps,
@@ -421,15 +708,266 @@ export function getCertificationReadinessView(
   }
 }
 
+export function getCertificationReviewStatusView(
+  rawWallet: string | null | undefined,
+): CertificationResult<CertificationReviewRequestView> {
+  const wallet = normalizeWallet(rawWallet)
+  if (!wallet) {
+    return invalidWalletError('Valid Ethereum wallet address required')
+  }
+
+  const reviewRequest = getLatestCertificationReviewRequest(wallet)
+  if (!reviewRequest) {
+    return {
+      ok: false,
+      code: 'cert_review_not_found',
+      message: 'No certification review request found for this wallet',
+      status: 404,
+    }
+  }
+
+  return {
+    ok: true,
+    data: buildCertificationReviewView(reviewRequest),
+  }
+}
+
+export function submitCertificationReviewRequest(params: {
+  wallet: string | null | undefined
+  note?: string | null | undefined
+}): CertificationResult<CertificationReviewRequestView> {
+  const wallet = normalizeWallet(params.wallet)
+  if (!wallet) {
+    return invalidWalletError('Valid Ethereum wallet address required')
+  }
+
+  const latestReview = getLatestCertificationReviewRequest(wallet)
+  if (latestReview?.status === 'approved') {
+    return {
+      ok: true,
+      status: 200,
+      data: {
+        ...buildCertificationReviewView(latestReview),
+        message: 'Review request already approved for this wallet.',
+      },
+    }
+  }
+
+  const existingPending = getPendingCertificationReviewRequest(wallet)
+  if (existingPending) {
+    return {
+      ok: true,
+      status: 200,
+      data: {
+        ...buildCertificationReviewView(existingPending),
+        message: 'Review request already pending for this wallet.',
+      },
+    }
+  }
+
+  const score = getScore(wallet)
+  if (!score || score.expires_at <= new Date().toISOString()) {
+    return {
+      ok: false,
+      code: 'cert_requirements_not_met',
+      message: 'Score has expired — request a fresh score before submitting for review',
+      status: 400,
+    }
+  }
+
+  if (score.composite_score < 75) {
+    return {
+      ok: false,
+      code: 'cert_score_too_low',
+      message: 'Composite score must be >= 75 before a review request can be submitted',
+      status: 400,
+      details: { current_score: score.composite_score },
+    }
+  }
+
+  if (!getRegistration(wallet)) {
+    return {
+      ok: false,
+      code: 'cert_not_registered',
+      message: 'Agent must be registered before submitting a review request',
+      status: 400,
+    }
+  }
+
+  if (getActiveCertification(wallet)) {
+    return {
+      ok: false,
+      code: 'cert_already_active',
+      message: 'Wallet already has an active certification',
+      status: 409,
+    }
+  }
+
+  const reviewRequest = insertCertificationReviewRequest(
+    wallet,
+    wallet,
+    score.tier,
+    score.composite_score,
+    score.confidence ?? null,
+    score.expires_at ?? null,
+    normalizeReviewNote(params.note),
+  )
+
+  return {
+    ok: true,
+    status: 201,
+    data: buildCertificationReviewView(reviewRequest),
+  }
+}
+
+export function listCertificationReviewRequestViews(params: {
+  status?: string | null | undefined
+  limit?: string | null | undefined
+}): CertificationResult<CertificationReviewQueueView> {
+  const parsedLimit = Number.parseInt(params.limit ?? '50', 10)
+  const limit = Number.isNaN(parsedLimit) ? 50 : Math.min(Math.max(parsedLimit, 1), 200)
+  const status = normalizeReviewStatus(params.status)
+  const requests = listCertificationReviewRequests(status, limit).map(buildCertificationReviewView)
+
+  return {
+    ok: true,
+    data: {
+      filters: {
+        status,
+        limit,
+      },
+      returned: requests.length,
+      requests,
+    },
+  }
+}
+
+export function reviewCertificationRequestDecision(params: {
+  id: number
+  decision: string | null | undefined
+  note?: string | null | undefined
+  reviewedBy?: string | null | undefined
+}): CertificationResult<CertificationReviewRequestView> {
+  if (!Number.isInteger(params.id) || params.id <= 0) {
+    return {
+      ok: false,
+      code: 'invalid_request',
+      message: 'Invalid certification review request ID',
+      status: 400,
+    }
+  }
+
+  const decision = normalizeReviewDecision(params.decision)
+  if (!decision) {
+    return {
+      ok: false,
+      code: 'invalid_request',
+      message: 'Decision must be approved, needs_info, or rejected',
+      status: 400,
+    }
+  }
+
+  if (
+    !updateCertificationReviewRequestDecision(
+      params.id,
+      decision,
+      params.reviewedBy?.trim() || 'admin',
+      normalizeReviewNote(params.note),
+    )
+  ) {
+    return {
+      ok: false,
+      code: 'cert_review_not_found',
+      message: 'Certification review request not found',
+      status: 404,
+    }
+  }
+
+  const updated = getCertificationReviewRequestById(params.id)
+  if (!updated) {
+    return {
+      ok: false,
+      code: 'cert_review_not_found',
+      message: 'Certification review request not found',
+      status: 404,
+    }
+  }
+
+  return {
+    ok: true,
+    data: buildCertificationReviewView(updated),
+  }
+}
+
+export function issueCertificationFromReviewRequest(params: {
+  id: number
+}): CertificationResult<CertificationIssuedFromReviewView> {
+  if (!Number.isInteger(params.id) || params.id <= 0) {
+    return {
+      ok: false,
+      code: 'invalid_request',
+      message: 'Invalid certification review request ID',
+      status: 400,
+    }
+  }
+
+  const review = getCertificationReviewRequestById(params.id)
+  if (!review) {
+    return {
+      ok: false,
+      code: 'cert_review_not_found',
+      message: 'Certification review request not found',
+      status: 404,
+    }
+  }
+
+  if (review.status !== 'approved') {
+    return {
+      ok: false,
+      code: 'cert_review_not_approved',
+      message: 'Certification review must be approved before issuance',
+      status: 400,
+    }
+  }
+
+  const issuance = applyForCertification(review.wallet)
+  if (!issuance.ok) {
+    return issuance
+  }
+
+  return {
+    ok: true,
+    status: 201,
+    data: {
+      review: buildCertificationReviewView(review),
+      certification: issuance.data,
+      message: 'Certification issued from approved review request',
+    },
+  }
+}
+
 export function getCertificationDirectoryView(params: {
   limit: string | null | undefined
   tier: string | null | undefined
+  search?: string | null | undefined
+  sort?: string | null | undefined
 }): CertificationResult<CertificationDirectoryView> {
   const parsedLimit = Number.parseInt(params.limit ?? '25', 10)
   const limit = Number.isNaN(parsedLimit) ? 25 : Math.min(Math.max(parsedLimit, 1), 100)
   const rawTier = params.tier?.trim()
   const tier = rawTier && rawTier.length > 0 ? rawTier : null
-  const certifications = listActiveCertificationDirectory(limit, tier).map(buildCertificationDirectoryEntryView)
+  const rawSearch = params.search?.trim().toLowerCase()
+  const search = rawSearch && rawSearch.length > 0 ? rawSearch : null
+  const sort = normalizeDirectorySort(params.sort)
+  const matchingCertifications = sortDirectoryEntries(
+    listActiveCertificationDirectory(tier)
+      .map(buildCertificationDirectoryEntryView)
+      .filter((entry) => {
+        return matchesDirectorySearch(entry, search)
+      }),
+    sort,
+  )
+  const certifications = matchingCertifications.slice(0, limit)
 
   return {
     ok: true,
@@ -438,7 +976,10 @@ export function getCertificationDirectoryView(params: {
       filters: {
         limit,
         tier,
+        search,
+        sort,
       },
+      total: matchingCertifications.length,
       returned: certifications.length,
       certifications,
     },

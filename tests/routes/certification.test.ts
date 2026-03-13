@@ -50,6 +50,22 @@ const { testDb } = vi.hoisted(() => {
       revoked_at TEXT,
       revocation_reason TEXT
     );
+    CREATE TABLE IF NOT EXISTS certification_review_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      wallet TEXT NOT NULL,
+      requested_by_wallet TEXT NOT NULL,
+      requested_tier TEXT NOT NULL,
+      requested_score INTEGER NOT NULL,
+      requested_confidence REAL,
+      score_expires_at TEXT,
+      request_note TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      requested_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      reviewed_at TEXT,
+      reviewed_by TEXT,
+      review_note TEXT
+    );
     CREATE INDEX IF NOT EXISTS idx_certs_wallet ON certifications(wallet);
     CREATE INDEX IF NOT EXISTS idx_certs_active ON certifications(is_active, expires_at);
   `)
@@ -79,7 +95,7 @@ vi.mock('../../src/db.js', () => ({
     return testDb.prepare('SELECT * FROM certifications WHERE id = ?').get(Number(result.lastInsertRowid))
   },
   listCertifications: () => testDb.prepare('SELECT * FROM certifications ORDER BY granted_at DESC').all(),
-  listActiveCertificationDirectory: (limit: number, tier?: string | null) =>
+  listActiveCertificationDirectory: (tier?: string | null) =>
     testDb
       .prepare(
         `SELECT
@@ -107,10 +123,151 @@ vi.mock('../../src/db.js', () => ({
          WHERE c.is_active = 1
            AND c.expires_at > datetime('now')
            AND (? IS NULL OR c.tier = ?)
-         ORDER BY COALESCE(s.composite_score, c.score_at_certification) DESC, c.granted_at DESC
-         LIMIT ?`,
+         ORDER BY COALESCE(s.composite_score, c.score_at_certification) DESC, c.granted_at DESC`,
       )
-      .all(tier ?? null, tier ?? null, limit),
+      .all(tier ?? null, tier ?? null),
+  insertCertificationReviewRequest: (
+    wallet: string,
+    requestedByWallet: string,
+    requestedTier: string,
+    requestedScore: number,
+    requestedConfidence: number | null,
+    scoreExpiresAt: string | null,
+    requestNote: string | null,
+  ) => {
+    const result = testDb
+      .prepare(
+        `INSERT INTO certification_review_requests (
+          wallet,
+          requested_by_wallet,
+          requested_tier,
+          requested_score,
+          requested_confidence,
+          score_expires_at,
+          request_note
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(wallet, requestedByWallet, requestedTier, requestedScore, requestedConfidence, scoreExpiresAt, requestNote)
+    return testDb
+      .prepare(
+        `SELECT
+          r.*,
+          reg.name,
+          reg.description,
+          reg.github_url,
+          reg.website_url,
+          COALESCE(reg.github_verified, 0) AS github_verified,
+          s.composite_score AS current_score,
+          s.tier AS current_tier,
+          s.confidence AS current_confidence
+        FROM certification_review_requests r
+        LEFT JOIN agent_registrations reg ON reg.wallet = r.wallet
+        LEFT JOIN scores s ON s.wallet = r.wallet
+        WHERE r.id = ?
+        LIMIT 1`,
+      )
+      .get(Number(result.lastInsertRowid))
+  },
+  getCertificationReviewRequestById: (id: number) =>
+    testDb
+      .prepare(
+        `SELECT
+          r.*,
+          reg.name,
+          reg.description,
+          reg.github_url,
+          reg.website_url,
+          COALESCE(reg.github_verified, 0) AS github_verified,
+          s.composite_score AS current_score,
+          s.tier AS current_tier,
+          s.confidence AS current_confidence
+        FROM certification_review_requests r
+        LEFT JOIN agent_registrations reg ON reg.wallet = r.wallet
+        LEFT JOIN scores s ON s.wallet = r.wallet
+        WHERE r.id = ?
+        LIMIT 1`,
+      )
+      .get(id),
+  getLatestCertificationReviewRequest: (wallet: string) =>
+    testDb
+      .prepare(
+        `SELECT
+          r.*,
+          reg.name,
+          reg.description,
+          reg.github_url,
+          reg.website_url,
+          COALESCE(reg.github_verified, 0) AS github_verified,
+          s.composite_score AS current_score,
+          s.tier AS current_tier,
+          s.confidence AS current_confidence
+        FROM certification_review_requests r
+        LEFT JOIN agent_registrations reg ON reg.wallet = r.wallet
+        LEFT JOIN scores s ON s.wallet = r.wallet
+        WHERE r.wallet = ?
+        ORDER BY r.requested_at DESC, r.id DESC
+        LIMIT 1`,
+      )
+      .get(wallet),
+  getPendingCertificationReviewRequest: (wallet: string) =>
+    testDb
+      .prepare(
+        `SELECT
+          r.*,
+          reg.name,
+          reg.description,
+          reg.github_url,
+          reg.website_url,
+          COALESCE(reg.github_verified, 0) AS github_verified,
+          s.composite_score AS current_score,
+          s.tier AS current_tier,
+          s.confidence AS current_confidence
+        FROM certification_review_requests r
+        LEFT JOIN agent_registrations reg ON reg.wallet = r.wallet
+        LEFT JOIN scores s ON s.wallet = r.wallet
+        WHERE r.wallet = ? AND r.status = 'pending'
+        ORDER BY r.requested_at DESC, r.id DESC
+        LIMIT 1`,
+      )
+      .get(wallet),
+  listCertificationReviewRequests: (status: string | null, limit: number) =>
+    testDb
+      .prepare(
+        `SELECT
+          r.*,
+          reg.name,
+          reg.description,
+          reg.github_url,
+          reg.website_url,
+          COALESCE(reg.github_verified, 0) AS github_verified,
+          s.composite_score AS current_score,
+          s.tier AS current_tier,
+          s.confidence AS current_confidence
+        FROM certification_review_requests r
+        LEFT JOIN agent_registrations reg ON reg.wallet = r.wallet
+        LEFT JOIN scores s ON s.wallet = r.wallet
+        WHERE (? IS NULL OR r.status = ?)
+        ORDER BY r.requested_at DESC, r.id DESC
+        LIMIT ?`,
+      )
+      .all(status, status, limit),
+  updateCertificationReviewRequestDecision: (
+    id: number,
+    status: string,
+    reviewedBy: string,
+    reviewNote: string | null,
+  ) =>
+    testDb
+      .prepare(
+        `UPDATE certification_review_requests
+        SET status = ?,
+            updated_at = datetime('now'),
+            reviewed_at = datetime('now'),
+            reviewed_by = ?,
+            review_note = ?
+        WHERE id = ?`,
+      )
+      .run(status, reviewedBy, reviewNote, id).changes > 0,
   revokeCertification: (id: number, reason: string) =>
     testDb
       .prepare(
@@ -210,12 +367,29 @@ function seedExpiredScore(wallet: string) {
     .run(wallet, pastDate)
 }
 
-function seedRegistration(wallet: string) {
+function seedRegistration(
+  wallet: string,
+  overrides: {
+    name?: string
+    description?: string | null
+    githubUrl?: string | null
+    websiteUrl?: string | null
+    githubVerified?: number
+  } = {},
+) {
   testDb
     .prepare(`
-    INSERT INTO agent_registrations (wallet, name) VALUES (?, ?)
+    INSERT INTO agent_registrations (wallet, name, description, github_url, website_url, github_verified)
+    VALUES (?, ?, ?, ?, ?, ?)
   `)
-    .run(wallet, 'Test Agent')
+    .run(
+      wallet,
+      overrides.name ?? 'Test Agent',
+      overrides.description ?? null,
+      overrides.githubUrl ?? null,
+      overrides.websiteUrl ?? null,
+      overrides.githubVerified ?? 0,
+    )
 }
 
 function seedCertification(wallet: string) {
@@ -234,6 +408,7 @@ describe('Certification routes', () => {
     testDb.exec('DELETE FROM scores')
     testDb.exec('DELETE FROM agent_registrations')
     testDb.exec('DELETE FROM certifications')
+    testDb.exec('DELETE FROM certification_review_requests')
     process.env.ADMIN_KEY = ADMIN_KEY
   })
 
@@ -292,7 +467,7 @@ describe('Certification routes', () => {
         can_apply: boolean
         status: string
         requirements: { certification: { active: boolean } }
-        links: { certification_status: string }
+        links: { certification_status: string; certify_overview: string; certified_directory: string }
       }
 
       expect(body.can_apply).toBe(false)
@@ -300,6 +475,259 @@ describe('Certification routes', () => {
       expect(body.requirements.certification.active).toBe(true)
       expect(body.links.certification_status).toContain(`/v1/certification/${VALID_WALLET_LOWER}`)
       expect(body.links.certify_overview).toContain(`/certify?wallet=${VALID_WALLET_LOWER}`)
+      expect(body.links.certified_directory).toContain('/directory')
+    })
+
+    it('returns review_pending when an eligible wallet already has a pending review', async () => {
+      seedGoodScore(VALID_WALLET_LOWER)
+      seedRegistration(VALID_WALLET_LOWER)
+
+      const app = createApp()
+      await app.request('/v1/certification/review', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ wallet: VALID_WALLET }),
+      })
+
+      const res = await app.request(`/v1/certification/readiness?wallet=${VALID_WALLET}`)
+      expect(res.status).toBe(200)
+
+      const body = (await res.json()) as {
+        can_apply: boolean
+        status: string
+        requirements: {
+          review: {
+            exists: boolean
+            status: string | null
+          }
+        }
+        links: { review_status: string }
+      }
+
+      expect(body.can_apply).toBe(false)
+      expect(body.status).toBe('review_pending')
+      expect(body.requirements.review.exists).toBe(true)
+      expect(body.requirements.review.status).toBe('pending')
+      expect(body.links.review_status).toContain(`/v1/certification/review?wallet=${VALID_WALLET_LOWER}`)
+    })
+  })
+
+  describe('certification review workflow', () => {
+    it('creates a pending review request for an eligible wallet', async () => {
+      seedGoodScore(VALID_WALLET_LOWER)
+      seedRegistration(VALID_WALLET_LOWER)
+
+      const app = createApp()
+      const res = await app.request('/v1/certification/review', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          wallet: VALID_WALLET,
+          note: 'Requesting reviewer packet before purchase.',
+        }),
+      })
+
+      expect(res.status).toBe(201)
+      const body = (await res.json()) as {
+        wallet: string
+        status: string
+        requested_score: number
+        request_note: string | null
+        links: { review_status: string; apply_endpoint: string }
+      }
+
+      expect(body.wallet).toBe(VALID_WALLET_LOWER)
+      expect(body.status).toBe('pending')
+      expect(body.requested_score).toBe(82)
+      expect(body.request_note).toContain('reviewer packet')
+      expect(body.links.review_status).toContain(`/v1/certification/review?wallet=${VALID_WALLET_LOWER}`)
+      expect(body.links.apply_endpoint).toContain('/v1/certification/apply')
+    })
+
+    it('returns the existing pending review request for duplicate submissions', async () => {
+      seedGoodScore(VALID_WALLET_LOWER)
+      seedRegistration(VALID_WALLET_LOWER)
+
+      const app = createApp()
+      await app.request('/v1/certification/review', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ wallet: VALID_WALLET }),
+      })
+      const res = await app.request('/v1/certification/review', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ wallet: VALID_WALLET }),
+      })
+
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as { message: string; status: string }
+      expect(body.status).toBe('pending')
+      expect(body.message).toContain('already pending')
+    })
+
+    it('returns review status for a wallet with a submitted request', async () => {
+      seedGoodScore(VALID_WALLET_LOWER)
+      seedRegistration(VALID_WALLET_LOWER)
+
+      const app = createApp()
+      await app.request('/v1/certification/review', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ wallet: VALID_WALLET }),
+      })
+
+      const res = await app.request(`/v1/certification/review?wallet=${VALID_WALLET}`)
+      expect(res.status).toBe(200)
+
+      const body = (await res.json()) as {
+        status: string
+        profile: { name: string | null }
+        current_score: { score: number | null }
+      }
+      expect(body.status).toBe('pending')
+      expect(body.profile.name).toBe('Test Agent')
+      expect(body.current_score.score).toBe(82)
+    })
+
+    it('rejects review requests for ineligible wallets', async () => {
+      seedLowScore(VALID_WALLET_LOWER)
+      seedRegistration(VALID_WALLET_LOWER)
+
+      const app = createApp()
+      const res = await app.request('/v1/certification/review', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ wallet: VALID_WALLET }),
+      })
+
+      expect(res.status).toBe(400)
+      const body = (await res.json()) as { error: { code: string } }
+      expect(body.error.code).toBe('cert_score_too_low')
+    })
+
+    it('supports admin review queue and reviewer decisions', async () => {
+      seedGoodScore(VALID_WALLET_LOWER)
+      seedRegistration(VALID_WALLET_LOWER, { name: 'Queue Candidate' })
+
+      const app = createApp()
+      await app.request('/v1/certification/review', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ wallet: VALID_WALLET }),
+      })
+
+      const queueRes = await app.request('/v1/certification/admin/reviews?status=pending', {
+        headers: { 'x-admin-key': ADMIN_KEY },
+      })
+      expect(queueRes.status).toBe(200)
+      const queueBody = (await queueRes.json()) as {
+        returned: number
+        requests: Array<{ id: number; profile: { name: string | null }; status: string }>
+      }
+
+      expect(queueBody.returned).toBe(1)
+      expect(queueBody.requests[0]?.profile.name).toBe('Queue Candidate')
+      expect(queueBody.requests[0]?.status).toBe('pending')
+
+      const decisionRes = await app.request(`/v1/certification/admin/reviews/${queueBody.requests[0]?.id}/decision`, {
+        method: 'POST',
+        headers: {
+          'x-admin-key': ADMIN_KEY,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          decision: 'approved',
+          note: 'Score and profile are sufficient for issuance review.',
+          reviewed_by: 'ops',
+        }),
+      })
+
+      expect(decisionRes.status).toBe(200)
+      const decisionBody = (await decisionRes.json()) as {
+        status: string
+        reviewed_by: string | null
+        review_note: string | null
+      }
+      expect(decisionBody.status).toBe('approved')
+      expect(decisionBody.reviewed_by).toBe('ops')
+      expect(decisionBody.review_note).toContain('issuance review')
+    })
+
+    it('issues certification from an approved review request', async () => {
+      seedGoodScore(VALID_WALLET_LOWER)
+      seedRegistration(VALID_WALLET_LOWER, { name: 'Issue Candidate' })
+
+      const app = createApp()
+      await app.request('/v1/certification/review', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ wallet: VALID_WALLET }),
+      })
+
+      const queueRes = await app.request('/v1/certification/admin/reviews?status=pending', {
+        headers: { 'x-admin-key': ADMIN_KEY },
+      })
+      const queueBody = (await queueRes.json()) as {
+        requests: Array<{ id: number }>
+      }
+      const requestId = queueBody.requests[0]?.id
+
+      await app.request(`/v1/certification/admin/reviews/${requestId}/decision`, {
+        method: 'POST',
+        headers: {
+          'x-admin-key': ADMIN_KEY,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          decision: 'approved',
+          note: 'Approved for issuance.',
+        }),
+      })
+
+      const issueRes = await app.request(`/v1/certification/admin/reviews/${requestId}/issue`, {
+        method: 'POST',
+        headers: { 'x-admin-key': ADMIN_KEY },
+      })
+
+      expect(issueRes.status).toBe(201)
+      const issueBody = (await issueRes.json()) as {
+        message: string
+        review: { status: string }
+        certification: { wallet: string; tier: string }
+      }
+      expect(issueBody.message).toContain('issued from approved review')
+      expect(issueBody.review.status).toBe('approved')
+      expect(issueBody.certification.wallet).toBe(VALID_WALLET_LOWER)
+      expect(issueBody.certification.tier).toBe('Trusted')
+    })
+
+    it('rejects issuance when the review request is not approved', async () => {
+      seedGoodScore(VALID_WALLET_LOWER)
+      seedRegistration(VALID_WALLET_LOWER)
+
+      const app = createApp()
+      await app.request('/v1/certification/review', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ wallet: VALID_WALLET }),
+      })
+
+      const queueRes = await app.request('/v1/certification/admin/reviews?status=pending', {
+        headers: { 'x-admin-key': ADMIN_KEY },
+      })
+      const queueBody = (await queueRes.json()) as {
+        requests: Array<{ id: number }>
+      }
+
+      const issueRes = await app.request(`/v1/certification/admin/reviews/${queueBody.requests[0]?.id}/issue`, {
+        method: 'POST',
+        headers: { 'x-admin-key': ADMIN_KEY },
+      })
+
+      expect(issueRes.status).toBe(400)
+      const issueBody = (await issueRes.json()) as { error: { code: string } }
+      expect(issueBody.error.code).toBe('cert_review_not_approved')
     })
   })
 
@@ -446,12 +874,21 @@ describe('Certification routes', () => {
   describe('GET /v1/certification/directory', () => {
     it('returns a public directory of active certifications', async () => {
       seedGoodScore(VALID_WALLET_LOWER)
-      seedRegistration(VALID_WALLET_LOWER)
+      seedRegistration(VALID_WALLET_LOWER, {
+        name: 'Zeta Agent',
+        description: 'Recovery and routing endpoint',
+        websiteUrl: 'https://zeta.example.test',
+      })
       seedCertification(VALID_WALLET_LOWER)
 
       const secondWallet = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'
       seedGoodScore(secondWallet)
-      seedRegistration(secondWallet)
+      seedRegistration(secondWallet, {
+        name: 'Alpha Agent',
+        description: 'Settlement relay for enterprise flows',
+        githubUrl: 'https://github.com/example/alpha-agent',
+        githubVerified: 1,
+      })
       testDb
         .prepare(`
           INSERT INTO certifications (wallet, tier, score_at_certification, expires_at)
@@ -467,6 +904,8 @@ describe('Certification routes', () => {
 
       expect(res.status).toBe(200)
       const body = (await res.json()) as {
+        total: number
+        filters: { limit: number; tier: string | null; search: string | null; sort: string }
         returned: number
         certifications: Array<{
           wallet: string
@@ -477,15 +916,55 @@ describe('Certification routes', () => {
         }>
       }
 
+      expect(body.total).toBe(2)
+      expect(body.filters.limit).toBe(10)
+      expect(body.filters.search).toBe(null)
+      expect(body.filters.sort).toBe('score')
       expect(body.returned).toBe(2)
       expect(body.certifications[0]?.wallet).toBe(secondWallet)
       expect(body.certifications[0]?.certification.tier).toBe('Elite')
       expect(body.certifications[0]?.current_score.score).toBe(95)
-      expect(body.certifications[1]?.profile.github_verified).toBe(false)
+      expect(body.certifications[0]?.profile.github_verified).toBe(true)
       expect(body.certifications[1]?.links.standards_document).toContain(
         `/v1/score/erc8004?wallet=${VALID_WALLET_LOWER}`,
       )
       expect(body.certifications[1]?.links.certify_readiness).toContain(`/certify?wallet=${VALID_WALLET_LOWER}`)
+    })
+
+    it('supports search, sort, and sliced results', async () => {
+      seedGoodScore(VALID_WALLET_LOWER)
+      seedRegistration(VALID_WALLET_LOWER, {
+        name: 'Zeta Agent',
+        description: 'Agent for routing and orchestration',
+      })
+      seedCertification(VALID_WALLET_LOWER)
+
+      const secondWallet = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'
+      seedGoodScore(secondWallet)
+      seedRegistration(secondWallet, {
+        name: 'Alpha Agent',
+        description: 'Agent for settlement routing',
+      })
+      seedCertification(secondWallet)
+
+      const app = createApp()
+      const res = await app.request('/v1/certification/directory?limit=1&search=agent&sort=name')
+
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as {
+        total: number
+        returned: number
+        filters: { search: string | null; sort: string; limit: number }
+        certifications: Array<{ wallet: string; profile: { name: string | null } }>
+      }
+
+      expect(body.total).toBe(2)
+      expect(body.returned).toBe(1)
+      expect(body.filters.limit).toBe(1)
+      expect(body.filters.search).toBe('agent')
+      expect(body.filters.sort).toBe('name')
+      expect(body.certifications[0]?.wallet).toBe(secondWallet)
+      expect(body.certifications[0]?.profile.name).toBe('Alpha Agent')
     })
   })
 

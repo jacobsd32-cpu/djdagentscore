@@ -1980,6 +1980,72 @@
         }
       }
     },
+    "/v1/certification/review": {
+      "get": {
+        "tags": ["certification"],
+        "summary": "Get certification review status",
+        "description": "Returns the latest certification review request and reviewer status for a wallet.",
+        "operationId": "getCertificationReview",
+        "parameters": [
+          {
+            "name": "wallet",
+            "in": "query",
+            "required": true,
+            "description": "Ethereum wallet address",
+            "schema": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Certification review returned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CertificationReviewResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "post": {
+        "tags": ["certification"],
+        "summary": "Submit certification review request",
+        "description": "Creates a certification review request for an eligible wallet before the final certification purchase.",
+        "operationId": "submitCertificationReview",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CertificationReviewRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Existing pending certification review returned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CertificationReviewResponse" }
+              }
+            }
+          },
+          "201": {
+            "description": "Certification review request created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CertificationReviewResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "409": {
+            "description": "Wallet already has an active certification",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
     "/v1/certification/directory": {
       "get": {
         "tags": ["certification"],
@@ -2000,6 +2066,24 @@
             "required": false,
             "description": "Filter to a specific certification tier",
             "schema": { "type": "string" }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "description": "Filter by wallet, profile name, description, GitHub URL, or website URL",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "description": "Sort the directory by score, confidence, recency, or name",
+            "schema": {
+              "type": "string",
+              "enum": ["score", "confidence", "recent", "name"],
+              "default": "score"
+            }
           }
         ],
         "responses": {
@@ -3529,7 +3613,11 @@
               "not_registered",
               "score_missing",
               "score_expired",
-              "score_too_low"
+              "score_too_low",
+              "review_pending",
+              "review_approved",
+              "review_needs_info",
+              "review_rejected"
             ]
           },
           "requirements": {
@@ -3560,6 +3648,21 @@
                   "tier": { "type": "string", "nullable": true },
                   "granted_at": { "type": "string", "format": "date-time", "nullable": true },
                   "expires_at": { "type": "string", "format": "date-time", "nullable": true }
+                }
+              },
+              "review": {
+                "type": "object",
+                "properties": {
+                  "exists": { "type": "boolean" },
+                  "status": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": ["pending", "approved", "needs_info", "rejected"]
+                  },
+                  "requested_at": { "type": "string", "format": "date-time", "nullable": true },
+                  "reviewed_at": { "type": "string", "format": "date-time", "nullable": true },
+                  "reviewed_by": { "type": "string", "nullable": true },
+                  "review_note": { "type": "string", "nullable": true }
                 }
               }
             }
@@ -3605,9 +3708,69 @@
               "certify_readiness": { "type": "string", "format": "uri" },
               "certify_overview": { "type": "string", "format": "uri" },
               "certified_directory": { "type": "string", "format": "uri" },
-              "apply_endpoint": { "type": "string", "format": "uri" }
+              "apply_endpoint": { "type": "string", "format": "uri" },
+              "review_status": { "type": "string", "format": "uri" }
             }
           }
+        }
+      },
+      "CertificationReviewRequest": {
+        "type": "object",
+        "required": ["wallet"],
+        "properties": {
+          "wallet": { "type": "string", "pattern": "^0x[0-9a-fA-F]{40}$" },
+          "note": { "type": "string", "maxLength": 500 }
+        }
+      },
+      "CertificationReviewResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "wallet": { "type": "string" },
+          "requested_by_wallet": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "approved", "needs_info", "rejected"]
+          },
+          "requested_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "reviewed_at": { "type": "string", "format": "date-time", "nullable": true },
+          "reviewed_by": { "type": "string", "nullable": true },
+          "requested_score": { "type": "integer" },
+          "requested_tier": { "type": "string" },
+          "requested_confidence": { "type": "number", "nullable": true },
+          "score_expires_at": { "type": "string", "format": "date-time", "nullable": true },
+          "request_note": { "type": "string", "nullable": true },
+          "review_note": { "type": "string", "nullable": true },
+          "current_score": {
+            "type": "object",
+            "properties": {
+              "score": { "type": "integer", "nullable": true },
+              "tier": { "type": "string", "nullable": true },
+              "confidence": { "type": "number", "nullable": true }
+            }
+          },
+          "profile": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string", "nullable": true },
+              "description": { "type": "string", "nullable": true },
+              "github_url": { "type": "string", "format": "uri", "nullable": true },
+              "website_url": { "type": "string", "format": "uri", "nullable": true },
+              "github_verified": { "type": "boolean" }
+            }
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "agent_profile": { "type": "string", "format": "uri" },
+              "readiness": { "type": "string", "format": "uri" },
+              "review_status": { "type": "string", "format": "uri" },
+              "apply_endpoint": { "type": "string", "format": "uri" },
+              "certified_directory": { "type": "string", "format": "uri" }
+            }
+          },
+          "message": { "type": "string" }
         }
       },
       "CertificationDirectoryResponse": {
@@ -3618,9 +3781,15 @@
             "type": "object",
             "properties": {
               "limit": { "type": "integer" },
-              "tier": { "type": "string", "nullable": true }
+              "tier": { "type": "string", "nullable": true },
+              "search": { "type": "string", "nullable": true },
+              "sort": {
+                "type": "string",
+                "enum": ["score", "confidence", "recent", "name"]
+              }
             }
           },
+          "total": { "type": "integer" },
           "returned": { "type": "integer" },
           "certifications": {
             "type": "array",

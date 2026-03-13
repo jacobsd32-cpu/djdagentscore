@@ -71,6 +71,7 @@ describe('GET /openapi.json', () => {
     expect(body.paths?.['/v1/score/erc8004']).toBeDefined()
     expect(body.paths?.['/v1/score/evaluator']).toBeDefined()
     expect(body.paths?.['/v1/certification/readiness']).toBeDefined()
+    expect(body.paths?.['/v1/certification/review']).toBeDefined()
     expect(body.paths?.['/v1/certification/directory']).toBeDefined()
     expect(body.paths?.['/v1/score/risk']).toBeDefined()
     expect(body.paths?.['/v1/cluster']).toBeDefined()
@@ -89,6 +90,7 @@ describe('GET /openapi.json', () => {
     expect(body.components?.schemas?.ERC8004CompatibleScoreResponse).toBeDefined()
     expect(body.components?.schemas?.EvaluatorPreviewResponse).toBeDefined()
     expect(body.components?.schemas?.CertificationReadinessResponse).toBeDefined()
+    expect(body.components?.schemas?.CertificationReviewResponse).toBeDefined()
     expect(body.components?.schemas?.CertificationDirectoryResponse).toBeDefined()
     expect(body.components?.schemas?.RiskScoreResponse).toBeDefined()
     expect(body.components?.schemas?.ClusterResponse).toBeDefined()
@@ -105,5 +107,60 @@ describe('GET /openapi.json', () => {
     expect(body.components?.schemas?.DataRatingsResponse).toBeDefined()
     expect(body.components?.schemas?.WebhookPreset?.properties?.name?.enum).toContain('anomaly_monitoring')
     expect(body.components?.schemas?.MonitoringPreset?.properties?.policy_type?.enum).toContain('anomaly_monitoring')
+  })
+
+  it('documents certification directory filters and response metadata', async () => {
+    const app = new Hono()
+    app.route('/openapi.json', openapiRoute)
+
+    const res = await app.request('/openapi.json')
+    const body = JSON.parse(await res.text()) as {
+      paths?: Record<string, { get?: { parameters?: Array<{ name?: string }> } }>
+      components?: {
+        schemas?: Record<
+          string,
+          {
+            properties?: Record<
+              string,
+              {
+                properties?: Record<string, { enum?: string[] }>
+              }
+            >
+          }
+        >
+      }
+    }
+
+    const directoryParams = body.paths?.['/v1/certification/directory']?.get?.parameters ?? []
+    expect(directoryParams.some((parameter) => parameter.name === 'search')).toBe(true)
+    expect(directoryParams.some((parameter) => parameter.name === 'sort')).toBe(true)
+    expect(body.components?.schemas?.CertificationDirectoryResponse?.properties?.total).toBeDefined()
+    expect(
+      body.components?.schemas?.CertificationDirectoryResponse?.properties?.filters?.properties?.sort?.enum,
+    ).toEqual(['score', 'confidence', 'recent', 'name'])
+  })
+
+  it('documents certification review request and status surfaces', async () => {
+    const app = new Hono()
+    app.route('/openapi.json', openapiRoute)
+
+    const res = await app.request('/openapi.json')
+    const body = JSON.parse(await res.text()) as {
+      paths?: Record<string, { get?: object; post?: object }>
+      components?: {
+        schemas?: Record<string, { properties?: Record<string, { enum?: string[] }> }>
+      }
+    }
+
+    expect(body.paths?.['/v1/certification/review']?.get).toBeDefined()
+    expect(body.paths?.['/v1/certification/review']?.post).toBeDefined()
+    expect(body.components?.schemas?.CertificationReviewRequest).toBeDefined()
+    expect(body.components?.schemas?.CertificationReviewResponse).toBeDefined()
+    expect(body.components?.schemas?.CertificationReviewResponse?.properties?.status?.enum).toEqual([
+      'pending',
+      'approved',
+      'needs_info',
+      'rejected',
+    ])
   })
 })

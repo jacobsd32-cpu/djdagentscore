@@ -36,6 +36,7 @@ legal.get('/robots.txt', (c) => {
     'User-agent: *\n' +
       'Allow: /\n' +
       'Allow: /certify\n' +
+      'Allow: /directory\n' +
       'Allow: /docs\n' +
       'Allow: /methodology\n' +
       'Allow: /pricing\n' +
@@ -44,6 +45,7 @@ legal.get('/robots.txt', (c) => {
       'Disallow: /metrics\n' +
       'Disallow: /stripe\n' +
       'Disallow: /portal\n' +
+      'Disallow: /reviewer\n' +
       '\n' +
       `Sitemap: ${buildPublicUrl('/openapi.json')}\n`,
   )
