@@ -268,7 +268,7 @@ ${blogNav}
 
     <p>Sybil attacks &mdash; where one operator creates many fake identities to accumulate outsized influence or rewards &mdash; are the oldest trick in decentralized systems. But agents make sybils <strong>cheaper to create</strong> and <strong>harder to detect</strong> than ever before.</p>
 
-    <p>At DJD Agent Score, we analyze on-chain transaction patterns to assign reputation scores to AI agent wallets. Here are five behavioral signatures that reliably expose sybil agents &mdash; even when their operators try to disguise them.</p>
+    <p>At DJD Agent Score, we analyze on-chain transaction patterns to assign trust scores to AI agent wallets. Here are five behavioral signatures that reliably expose sybil agents &mdash; even when their operators try to disguise them.</p>
 
     <!-- Pattern 1 -->
     <div class="pattern-card">
@@ -348,10 +348,10 @@ ${blogNav}
     <div class="cta-box">
       <p>Check your agent's score via x402 micropayments, or verify on-chain at the ERC-8004 Reputation Registry:</p>
       <p><code>0x8004BAa17C55a88189AE136b182e5fdA19dE9b63</code></p>
-      <a href="/#api-ref" class="btn">Get Your API Key (Free)</a>
+      <a href="/#lookup" class="btn">Try the Free Lookup</a>
     </div>
 
-    <p class="article-footer">DJD Agent Score is a reputation scoring engine for autonomous AI agents. Scores are paid via x402 micropayments and published to the ERC-8004 Reputation Registry on Base mainnet.</p>
+    <p class="article-footer">DJD Agent Score is a trust scoring engine for autonomous AI agents. Scores are paid via x402 micropayments and published to the ERC-8004 Reputation Registry on Base mainnet.</p>
 
   </div>
 </article>
@@ -445,7 +445,7 @@ Standard: ERC-8004 Reputation Registry</code></div>
     <div class="cta-box">
       <p>Query the ERC-8004 registry directly on Base, or score a wallet through our API:</p>
       <p><code>0x8004BAa17C55a88189AE136b182e5fdA19dE9b63</code></p>
-      <a href="/#api-ref" class="btn">Get Your API Key (Free)</a>
+      <a href="/#lookup" class="btn">Try the Free Lookup</a>
     </div>
 
     <p class="article-footer">DJD Agent Score publishes to the ERC-8004 Reputation Registry on Base mainnet. Scores are paid via x402 micropayments. Registry reads are free and permissionless.</p>
@@ -553,7 +553,7 @@ if (score >= 30 || confidence < 20) allowWithLimits();</code></div>
 
     <div class="cta-box">
       <p>Check where your agent stands today:</p>
-      <a href="/#api-ref" class="btn">Get Your API Key (Free)</a>
+      <a href="/#lookup" class="btn">Try the Free Lookup</a>
     </div>
 
     <p class="article-footer">DJD Agent Score evaluates AI agent wallets across five behavioral dimensions. Scores are published to the ERC-8004 Reputation Registry on Base mainnet.</p>
@@ -703,8 +703,8 @@ Filter: address = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
     </ul>
 
     <div class="cta-box">
-      <p>Check any wallet&rsquo;s reputation score to identify suspicious activity patterns:</p>
-      <a href="/#api-ref" class="btn">Get Your API Key (Free)</a>
+      <p>Check any wallet&rsquo;s trust score to identify suspicious activity patterns:</p>
+      <a href="/#lookup" class="btn">Try the Free Lookup</a>
     </div>
 
     <p class="article-footer">DJD Agent Score analyzes on-chain behavioral patterns to assign trust scores to AI agent wallets and package them into broader trust surfaces. Scores are published to the ERC-8004 Reputation Registry on Base mainnet.</p>
@@ -796,7 +796,7 @@ if (result.dataSource === 'cached') {
 
     <div class="cta-box">
       <p>Try the updated scoring engine on any Base wallet:</p>
-      <a href="/#api-ref" class="btn">Get Your API Key (Free)</a>
+      <a href="/#lookup" class="btn">Try the Free Lookup</a>
     </div>
 
     <p class="article-footer">DJD Agent Score analyzes on-chain behavioral patterns to assign trust scores to AI agent wallets and package them into broader trust surfaces. Scores are published to the ERC-8004 Reputation Registry on Base mainnet.</p>

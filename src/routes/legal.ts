@@ -58,7 +58,7 @@ legal.get('/.well-known/agent.json', (c) => {
   return c.json({
     name: 'DJD Agent Score',
     description:
-      'On-chain reputation scoring and certification surfaces for autonomous AI agents on Base L2. Score any wallet, inspect certified agents, and evaluate settlement readiness before transacting.',
+      'On-chain trust scoring and certification surfaces for autonomous AI agents on Base L2. Score any wallet, inspect certified agents, and evaluate settlement readiness before transacting.',
     url: publicBaseUrl,
     docs: buildPublicUrl('/docs'),
     openapi: buildPublicUrl('/openapi.json'),
@@ -67,7 +67,7 @@ legal.get('/.well-known/agent.json', (c) => {
       description: 'MCP server for AI agents to query wallet trust scores',
     },
     capabilities: [
-      'reputation-scoring',
+      'trust-scoring',
       'certified-directory',
       'erc-8004-compatibility',
       'erc-8183-evaluator-prototype',
