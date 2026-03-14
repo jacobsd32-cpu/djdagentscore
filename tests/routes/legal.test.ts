@@ -58,10 +58,12 @@ describe('GET /', () => {
     const agentRes = await app.request('/.well-known/agent.json')
     expect(agentRes.status).toBe(200)
     const agentBody = await agentRes.json()
+    expect(agentBody.description).toContain('trust scoring')
     expect(agentBody.url).toBe('https://preview.djdagentscore.test')
     expect(agentBody.docs).toBe('https://preview.djdagentscore.test/docs')
     expect(agentBody.openapi).toBe('https://preview.djdagentscore.test/openapi.json')
     expect(agentBody.payment.discovery).toBe('https://preview.djdagentscore.test/.well-known/x402')
+    expect(agentBody.capabilities).toContain('trust-scoring')
 
     delete process.env.PUBLIC_BASE_URL
     delete process.env.PUBLIC_SUPPORT_EMAIL
@@ -76,6 +78,8 @@ describe('GET /', () => {
 
     const body = await res.text()
     expect(body).toContain('Reviewer Session Data')
+    expect(body).toContain('Calculating trust scores')
+    expect(body).toContain('on-chain trust systems')
     expect(body).toContain('short-lived, signed')
     expect(body).toContain('HttpOnly')
     expect(body).toContain('We do not use tracking pixels or browser fingerprinting')

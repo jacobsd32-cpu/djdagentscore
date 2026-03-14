@@ -164,12 +164,12 @@ export const privacyContent = `
 <p>We do not collect names, email addresses, phone numbers, physical addresses, government identification numbers, biometric data, or any traditional PII. We do not use tracking pixels or browser fingerprinting. We do not integrate with advertising networks. The Service does not have consumer-facing user accounts, social profiles, or password-based logins.</p>
 
 <h1>3. How We Use Information</h1>
-<p><strong>Service delivery:</strong> Calculating reputation scores, processing fraud reports, generating leaderboards, and serving API responses.</p>
+<p><strong>Service delivery:</strong> Calculating trust scores, processing fraud reports, generating leaderboards, and serving API responses.</p>
 <p><strong>Model improvement:</strong> Analyzing query patterns, score outcomes, and transaction data to validate and improve the scoring model.</p>
 <p><strong>Integrity systems:</strong> Detecting Sybil attacks, gaming attempts, and fraudulent behavior through pattern analysis.</p>
 <p><strong>Analytics and reporting:</strong> Generating aggregated, anonymized reports on agent economy activity, transaction volumes, and ecosystem health.</p>
 <p><strong>Data products:</strong> Creating commercial data products including economy reports, fraud intelligence feeds, intent signal reports, and relationship graph analyses. Individual wallet behavior may be included in aggregate datasets but is not sold as individually targeted profiles.</p>
-<p><strong>Research:</strong> Contributing to understanding of autonomous agent ecosystems, on-chain reputation systems, and trust infrastructure.</p>
+<p><strong>Research:</strong> Contributing to understanding of autonomous agent ecosystems, on-chain trust systems, and trust infrastructure.</p>
 
 <h1>4. Data Retention</h1>
 <p>Blockchain data (transaction history, wallet balances, relationship graphs) is retained indefinitely. This data is publicly available on the blockchain regardless of our retention practices.</p>
@@ -287,7 +287,7 @@ export const leaderboardHtml = `<!DOCTYPE html>
   </header>
   <main>
     <h1>Agent Leaderboard</h1>
-    <p class="subtitle">Top AI agent wallets ranked by reputation score on Base</p>
+    <p class="subtitle">Top AI agent wallets ranked by DJD trust score on Base</p>
     <div class="stats" id="stats"></div>
     <div id="table-wrap"><div class="loading">Loading\u2026</div></div>
     <p class="updated" id="updated"></p>

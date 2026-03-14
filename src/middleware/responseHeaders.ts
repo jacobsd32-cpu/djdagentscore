@@ -42,10 +42,12 @@ export const responseHeadersMiddleware: MiddlewareHandler = async (c, next) => {
     normalizedPath === '/' ||
     normalizedPath === '/leaderboard' ||
     normalizedPath === '/explorer' ||
+    normalizedPath === '/directory' ||
     normalizedPath === '/certify' ||
     normalizedPath === '/pricing' ||
     normalizedPath === '/methodology' ||
     normalizedPath === '/portal' ||
+    normalizedPath === '/reviewer' ||
     normalizedPath === '/billing/success' ||
     normalizedPath === '/terms' ||
     normalizedPath === '/privacy' ||
