@@ -93,6 +93,13 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
 .how-title{font-size:15px;font-weight:600;margin-bottom:6px}
 .how-desc{font-size:13px;color:var(--text-dim);line-height:1.6}
 
+/* Buyer stories */
+.buyer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin:0 0 60px}
+.buyer-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px 26px}
+.buyer-kicker{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px}
+.buyer-card h3{font-size:17px;font-weight:600;margin-bottom:8px}
+.buyer-card p{font-size:14px;color:var(--text-dim);line-height:1.75}
+
 /* Plans grid */
 .plans{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:0 0 60px}
 .plan-card{background:var(--bg2);border:1px solid var(--border);padding:36px 28px;position:relative;transition:border-color .2s}
@@ -169,6 +176,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
   .plan-card:first-child{border-radius:var(--radius) var(--radius) 0 0!important;border-top:1px solid var(--border)}
   .plan-card:last-child{border-radius:0 0 var(--radius) var(--radius)!important}
   .how-strip{grid-template-columns:1fr}
+  .buyer-grid{grid-template-columns:1fr}
   .compare{grid-template-columns:1fr}
   .nav-links{gap:14px}
   .ft-bot{flex-direction:column;gap:12px;text-align:center;padding:0 20px}
@@ -216,6 +224,29 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
     <div class="how-num">Step 3</div>
     <div class="how-title">Expand into trust workflows</div>
     <div class="how-desc">Move from raw scores to certification, evaluator decisions, monitoring, and public trust distribution as your workflow matures.</div>
+  </div>
+</div>
+
+<div style="margin-bottom:60px">
+  <div class="section-label">Best First Customers</div>
+  <div class="section-title">Common ways developer teams use DJD</div>
+  <div class="section-desc">The product usually lands first where a wallet can cost you money, reputation, or fulfillment quality. These are the customer stories we are built for today.</div>
+  <div class="buyer-grid">
+    <div class="buyer-card">
+      <div class="buyer-kicker">Marketplaces</div>
+      <h3>Agent marketplaces and directories</h3>
+      <p>Screen providers before listing them, rank counterparties with more context, and give buyers inspectable profile, certification, and directory surfaces instead of a bare wallet address.</p>
+    </div>
+    <div class="buyer-card">
+      <div class="buyer-kicker">Settlement</div>
+      <h3>Payout and settlement products</h3>
+      <p>Use score, risk, staking, and evaluator outputs to decide whether a payout should auto-approve, route into review, or stop before money moves.</p>
+    </div>
+    <div class="buyer-card">
+      <div class="buyer-kicker">Monetized APIs</div>
+      <h3>Paid agent tools and x402 services</h3>
+      <p>Protect expensive routes, reject unknown payers, and keep wallet trust checks inside the same flow that already handles billing, API keys, or x402 settlement.</p>
+    </div>
   </div>
 </div>
 
@@ -385,7 +416,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
 <!-- FOOTER -->
 <footer>
   <div class="ft-bot">
-    <div class="ft-l">&copy; 2026 DJD Agent Score LLC &middot; Built on Base</div>
+    <div class="ft-l">&copy; 2026 DJD Agent Score LLC &middot; Trust infrastructure for agent marketplaces, payouts, and settlement on Base</div>
     <div class="ft-links"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/blog">Blog</a><a href="/health">Status</a></div>
   </div>
 </footer>
