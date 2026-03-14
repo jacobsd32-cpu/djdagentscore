@@ -1,17 +1,5 @@
-/**
- * Pricing Page Template
- *
- * Dedicated pricing page that makes it crystal clear how developers
- * can start using and paying for DJD Agent Score. Two paths:
- * 1. Free tier — 10 requests/day, no signup
- * 2. Subscription plans — Stripe checkout, API key provisioned
- *
- * Also mentions x402 for AI agents as a secondary path.
- * Uses the same design system as index.html (DM Sans, Instrument Serif,
- * JetBrains Mono, indigo-on-navy).
- */
-
 import { buildPublicUrl } from '../config/public.js'
+import { renderPublicPage } from './publicPage.js'
 
 interface PricingPlan {
   id: string
@@ -20,436 +8,452 @@ interface PricingPlan {
   monthlyLimit: number
 }
 
+const pricingCss = `
+.pricing-hero-panel{
+  display:grid;
+  grid-template-columns:minmax(0,1.15fr) minmax(260px,0.85fr);
+  gap:18px;
+  margin-top:24px;
+}
+.hero-note{
+  padding:24px;
+  border-radius:16px;
+  border:1px solid var(--border);
+  background:linear-gradient(180deg, rgba(17,35,58,0.9), rgba(12,27,45,0.92));
+}
+.hero-note .metric-label{margin-bottom:8px}
+.hero-note-copy{
+  color:var(--text-dim);
+  font-size:14px;
+  line-height:1.78;
+}
+.story-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:18px;
+}
+.plans{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:14px;
+}
+.plan-card{
+  position:relative;
+  padding:24px;
+  border-radius:18px;
+  border:1px solid var(--border);
+  background:linear-gradient(180deg, rgba(17,35,58,0.88), rgba(12,27,45,0.92));
+}
+.plan-card.popular{
+  border-color:var(--border-hi);
+  box-shadow:0 22px 60px rgba(56,189,248,0.12);
+}
+.popular-badge{
+  position:absolute;
+  top:14px;
+  right:14px;
+}
+.plan-name{
+  color:var(--accent);
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  margin-bottom:12px;
+}
+.plan-price{
+  font-size:42px;
+  font-weight:800;
+  letter-spacing:-0.04em;
+}
+.plan-period{
+  color:var(--text-muted);
+  font-size:14px;
+  font-weight:500;
+}
+.plan-limit{
+  margin-top:10px;
+  padding-bottom:18px;
+  border-bottom:1px solid var(--border);
+  color:var(--text-dim);
+  font-size:14px;
+  line-height:1.7;
+}
+.plan-features{
+  list-style:none;
+  margin:18px 0 0;
+  display:grid;
+  gap:10px;
+}
+.plan-features li{
+  position:relative;
+  padding-left:18px;
+  color:var(--text-dim);
+  font-size:13px;
+  line-height:1.75;
+}
+.plan-features li::before{
+  content:'';
+  position:absolute;
+  left:0;
+  top:9px;
+  width:7px;
+  height:7px;
+  border-radius:999px;
+  background:var(--green);
+}
+.plan-action{
+  margin-top:20px;
+  width:100%;
+}
+.plan-action button{
+  width:100%;
+}
+.plan-action .button{
+  width:100%;
+}
+.split-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:18px;
+}
+.faq-list{
+  display:grid;
+  gap:12px;
+}
+.faq-item{
+  border-radius:16px;
+  border:1px solid var(--border);
+  background:rgba(12,27,45,0.9);
+  overflow:hidden;
+}
+.faq-q{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:18px 20px;
+  cursor:pointer;
+  color:var(--text);
+  font-size:15px;
+  font-weight:700;
+}
+.faq-a{
+  display:none;
+  padding:0 20px 18px;
+  color:var(--text-dim);
+  font-size:14px;
+  line-height:1.78;
+}
+.faq-item.open .faq-a{
+  display:block;
+}
+.faq-toggle{
+  color:var(--text-muted);
+  font-size:20px;
+}
+.cta-strip{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+  margin-top:24px;
+}
+.cta-metric{
+  padding:16px;
+  border-radius:16px;
+  border:1px solid var(--border);
+  background:rgba(7,17,31,0.45);
+}
+.cta-metric .metric-value{
+  font-size:18px;
+}
+@media(max-width:980px){
+  .pricing-hero-panel,
+  .story-grid,
+  .plans,
+  .split-grid,
+  .cta-strip{grid-template-columns:1fr}
+}
+`
+
 export function pricingPageHtml(plans: PricingPlan[]): string {
-  const starter = plans.find((p) => p.id === 'starter')
-  const growth = plans.find((p) => p.id === 'growth')
-  const scale = plans.find((p) => p.id === 'scale')
-  const pricingUrl = buildPublicUrl('/pricing')
+  const starter = plans.find((plan) => plan.id === 'starter')
+  const growth = plans.find((plan) => plan.id === 'growth')
+  const scale = plans.find((plan) => plan.id === 'scale')
+
   const certifiedDirectoryUrl = buildPublicUrl('/directory')
   const explorerUrl = buildPublicUrl('/explorer')
 
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pricing — DJD Agent Score</title>
-<meta name="description" content="Pricing for developers building with wallet trust. Start free, then unlock API-key access to scoring, Certify, evaluator decisions, monitoring, and public trust surfaces.">
-<meta property="og:type" content="website">
-<meta property="og:title" content="Pricing — DJD Agent Score">
-<meta property="og:description" content="Pricing for developers building with wallet trust, from free scoring to Certify, evaluator decisions, and public trust surfaces.">
-<meta property="og:url" content="${pricingUrl}">
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root {
-  --bg: #0a1628; --bg2: #0d1b2a; --bg3: #132238;
-  --surface: #162740; --surface2: #1a3050;
-  --border: rgba(99,102,241,0.10); --border-hi: rgba(99,102,241,0.18);
-  --text: #f0f2f5; --text-dim: #94a3b8; --text-muted: #4b5c73;
-  --accent: #6366f1; --accent-dim: rgba(99,102,241,0.08);
-  --green: #34d399; --green-dim: rgba(52,211,153,0.08);
-  --yellow: #fbbf24; --red: #f87171;
-  --radius: 16px;
-}
-*{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
-a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
-.mono{font-family:'JetBrains Mono',monospace}
-.serif{font-family:'Instrument Serif',serif}
-
-/* Nav */
-.nav-outer{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,22,40,0.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
-nav{max-width:1080px;margin:0 auto;padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between}
-.logo{font-weight:700;font-size:17px;color:var(--accent);letter-spacing:-0.3px;display:flex;align-items:center;gap:8px;text-decoration:none}
-.logo:hover{text-decoration:none}
-.logo span{color:var(--text-dim);font-weight:400}
-.nav-links{display:flex;gap:24px;align-items:center}
-.nav-links a{color:var(--text-muted);text-decoration:none;font-size:13px;font-weight:500;transition:color .2s}
-.nav-links a:hover{color:var(--accent);text-decoration:none}
-.nav-links .active{color:var(--accent)}
-.nav-links .nav-cta{color:var(--bg);background:var(--accent);padding:7px 18px;border-radius:8px;font-weight:600;font-size:12px;transition:all .2s}
-.nav-links .nav-cta:hover{opacity:.88}
-
-/* Footer */
-footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
-.ft-bot{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:0 32px}
-.ft-l{font-size:12px;color:var(--text-muted)}
-.ft-links{display:flex;gap:18px}.ft-links a{font-size:12px;color:var(--text-muted);text-decoration:none;transition:color .2s}.ft-links a:hover{color:var(--accent)}
-
-/* Page */
-.wrap{max-width:1080px;margin:0 auto;padding:0 32px;position:relative;z-index:1}
-
-/* Hero */
-.pricing-hero{padding:120px 0 60px;text-align:center;max-width:700px;margin:0 auto}
-.pricing-hero h1{font-family:'Instrument Serif',serif;font-size:clamp(36px,5vw,56px);font-weight:400;line-height:1.12;margin-bottom:16px;letter-spacing:-1px}
-.pricing-hero h1 em{font-style:italic;color:var(--accent)}
-.pricing-hero p{font-size:18px;color:var(--text-dim);line-height:1.75;max-width:560px;margin:0 auto}
-
-/* How it works strip */
-.how-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin:48px 0 60px}
-.how-step{background:var(--bg2);padding:28px 24px;text-align:center}
-.how-num{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px}
-.how-title{font-size:15px;font-weight:600;margin-bottom:6px}
-.how-desc{font-size:13px;color:var(--text-dim);line-height:1.6}
-
-/* Buyer stories */
-.buyer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin:0 0 60px}
-.buyer-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px 26px}
-.buyer-kicker{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px}
-.buyer-card h3{font-size:17px;font-weight:600;margin-bottom:8px}
-.buyer-card p{font-size:14px;color:var(--text-dim);line-height:1.75}
-
-/* Plans grid */
-.plans{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:0 0 60px}
-.plan-card{background:var(--bg2);border:1px solid var(--border);padding:36px 28px;position:relative;transition:border-color .2s}
-.plan-card:first-child{border-radius:var(--radius) 0 0 var(--radius)}
-.plan-card:last-child{border-radius:0 var(--radius) var(--radius) 0}
-.plan-card:not(:first-child){border-left:none}
-.plan-card.popular{border-color:var(--accent);background:linear-gradient(180deg,rgba(99,102,241,0.04) 0%,var(--bg2) 100%)}
-.popular-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--accent);color:var(--bg);font-size:11px;font-weight:700;padding:4px 14px;border-radius:100px;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap}
-.plan-name{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:2px;margin-bottom:12px}
-.plan-price{font-size:40px;font-weight:700;margin-bottom:4px;letter-spacing:-1px}
-.plan-price .dollar{font-size:22px;color:var(--text-dim);vertical-align:top;position:relative;top:6px}
-.plan-price .period{font-size:14px;color:var(--text-muted);font-weight:400}
-.plan-free-price{font-size:40px;font-weight:700;margin-bottom:4px;color:var(--green)}
-.plan-limit{font-size:14px;color:var(--text-dim);margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid var(--border)}
-.plan-features{list-style:none;font-size:13px;color:var(--text-dim);line-height:2.2}
-.plan-features li::before{content:'\\2713';color:var(--green);font-weight:700;margin-right:8px}
-.plan-cta{display:block;text-align:center;padding:12px 0;border-radius:10px;font-size:14px;font-weight:600;margin-top:28px;text-decoration:none;transition:all .2s;cursor:pointer;border:none}
-.plan-cta:hover{text-decoration:none;transform:translateY(-1px)}
-.plan-cta-primary{background:var(--accent);color:var(--bg)}
-.plan-cta-primary:hover{opacity:.9}
-.plan-cta-ghost{background:transparent;border:1px solid var(--border-hi);color:var(--text-dim)}
-.plan-cta-ghost:hover{border-color:var(--accent);color:var(--accent)}
-.plan-cta-free{background:var(--green-dim);border:1px solid rgba(52,211,153,0.18);color:var(--green)}
-.plan-cta-free:hover{background:rgba(52,211,153,0.14)}
-
-/* FAQ & Comparison */
-.section-label{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;text-align:center}
-.section-title{font-family:'Instrument Serif',serif;font-size:clamp(28px,3.5vw,40px);font-weight:400;margin-bottom:10px;letter-spacing:-0.5px;text-align:center}
-.section-desc{font-size:16px;color:var(--text-dim);line-height:1.75;max-width:600px;text-align:center;margin:0 auto 40px}
-
-/* Comparison table — Agents vs Developers */
-.compare{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:80px}
-.compare-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:36px 32px}
-.compare-icon{font-size:28px;margin-bottom:12px}
-.compare-name{font-size:18px;font-weight:600;margin-bottom:8px}
-.compare-desc{font-size:14px;color:var(--text-dim);line-height:1.7;margin-bottom:20px}
-.compare-list{list-style:none;font-size:13px;color:var(--text-dim);line-height:2.2}
-.compare-list li::before{content:'\\2022';color:var(--accent);font-weight:700;margin-right:8px}
-
-/* FAQ */
-.faq{max-width:700px;margin:0 auto 80px}
-.faq-item{border-bottom:1px solid var(--border);padding:20px 0}
-.faq-q{font-size:15px;font-weight:600;cursor:pointer;display:flex;justify-content:space-between;align-items:center;color:var(--text)}
-.faq-q:hover{color:var(--accent)}
-.faq-a{font-size:14px;color:var(--text-dim);line-height:1.75;margin-top:12px;display:none}
-.faq-item.open .faq-a{display:block}
-.faq-toggle{font-size:18px;color:var(--text-muted);transition:transform .2s}
-.faq-item.open .faq-toggle{transform:rotate(45deg)}
-
-/* CTA */
-.bottom-cta{text-align:center;padding:60px 0;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:40px}
-.bottom-cta h2{font-family:'Instrument Serif',serif;font-size:32px;font-weight:400;margin-bottom:12px}
-.bottom-cta p{font-size:16px;color:var(--text-dim);margin-bottom:24px}
-.bottom-cta .btn-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:13px 28px;border-radius:10px;font-size:14px;font-weight:600;transition:all .2s;text-decoration:none;cursor:pointer;border:none}
-.btn:hover{text-decoration:none;transform:translateY(-1px)}
-.btn-primary{background:var(--accent);color:var(--bg)}
-.btn-primary:hover{opacity:.9}
-.btn-ghost{background:transparent;border:1px solid var(--border-hi);color:var(--text-dim)}
-.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
-
-@media(max-width:900px){
-  .plans{grid-template-columns:1fr 1fr}
-  .plan-card:first-child{border-radius:var(--radius) 0 0 0}
-  .plan-card:nth-child(2){border-radius:0 var(--radius) 0 0;border-left:none}
-  .plan-card:nth-child(3){border-radius:0 0 0 var(--radius);border-left:1px solid var(--border);border-top:none}
-  .plan-card:last-child{border-radius:0 0 var(--radius) 0;border-top:none}
-}
-@media(max-width:768px){
-  nav{padding:0 20px}
-  .wrap{padding:0 20px}
-  .plans{grid-template-columns:1fr}
-  .plan-card{border-radius:0!important;border-left:1px solid var(--border)!important;border-top:none}
-  .plan-card:first-child{border-radius:var(--radius) var(--radius) 0 0!important;border-top:1px solid var(--border)}
-  .plan-card:last-child{border-radius:0 0 var(--radius) var(--radius)!important}
-  .how-strip{grid-template-columns:1fr}
-  .buyer-grid{grid-template-columns:1fr}
-  .compare{grid-template-columns:1fr}
-  .nav-links{gap:14px}
-  .ft-bot{flex-direction:column;gap:12px;text-align:center;padding:0 20px}
-}
-</style>
-</head>
-<body>
-
-<!-- NAV -->
-<div class="nav-outer">
-<nav>
-  <a class="logo" href="/">DJD<span> Agent Score</span></a>
-  <div class="nav-links">
-    <a href="/explorer">Explorer</a>
-    <a href="/certify">Certify</a>
-    <a href="/blog">Blog</a>
-    <a href="/pricing" class="active">Pricing</a>
-    <a href="/docs">API Docs</a>
-    <a class="nav-cta" href="#plans">Get Started</a>
-  </div>
-</nav>
-</div>
-
-<div class="wrap">
-
-<!-- HERO -->
-<div class="pricing-hero">
-  <h1>Pricing for developers building with <em>wallet trust</em></h1>
-  <p>In plain English, DJD helps your app decide whether to trust a wallet, show that trust publicly, and enforce rules before money moves. Start free, then upgrade when you need production API-key access to Certify, evaluator decisions, monitoring, and public trust surfaces &mdash; no crypto wallet required for human teams.</p>
-</div>
-
-<!-- HOW IT WORKS -->
-<div class="how-strip">
-  <div class="how-step">
-    <div class="how-num">Step 1</div>
-    <div class="how-title">Test the trust layer</div>
-    <div class="how-desc">Start with the free lookup and see how DJD scores a wallet before you wire anything deeper.</div>
-  </div>
-  <div class="how-step">
-    <div class="how-num">Step 2</div>
-    <div class="how-title">Ship with an API key</div>
-    <div class="how-desc">Pay with any credit card. Receive your key instantly after checkout and move into production quotas.</div>
-  </div>
-  <div class="how-step">
-    <div class="how-num">Step 3</div>
-    <div class="how-title">Expand into trust workflows</div>
-    <div class="how-desc">Move from raw scores to certification, evaluator decisions, monitoring, and public trust distribution as your workflow matures.</div>
-  </div>
-</div>
-
-<div style="margin-bottom:60px">
-  <div class="section-label">Best First Customers</div>
-  <div class="section-title">Common ways developer teams use DJD</div>
-  <div class="section-desc">The product usually lands first where a wallet can cost you money, reputation, or fulfillment quality. These are the customer stories we are built for today.</div>
-  <div class="buyer-grid">
-    <div class="buyer-card">
-      <div class="buyer-kicker">Marketplaces</div>
-      <h3>Agent marketplaces and directories</h3>
-      <p>Screen providers before listing them, rank counterparties with more context, and give buyers inspectable profile, certification, and directory surfaces instead of a bare wallet address.</p>
+  return renderPublicPage({
+    title: 'Pricing — DJD Agent Score',
+    description:
+      'Pricing for developers building with wallet trust. Start free, then unlock API-key access to scoring, Certify, evaluator decisions, monitoring, and public trust surfaces.',
+    path: '/pricing',
+    nav: 'pricing',
+    ctaHref: '#plans',
+    ctaLabel: 'Choose a Plan',
+    extraCss: pricingCss,
+    content: `
+<main class="site-shell">
+  <section class="hero">
+    <span class="eyebrow">For developer teams and agent operators</span>
+    <div class="pricing-hero-panel">
+      <div>
+        <h1 class="display">Pricing for products that need to <em>trust a wallet</em></h1>
+        <p class="lede">DJD helps your app decide whether to trust a wallet, make that trust visible to users, and gate money movement with evaluator and certification surfaces. Start free, then move into production API-key access when the trust layer becomes part of a real product path.</p>
+        <div class="action-row">
+          <a class="button button-primary" href="#plans">View plans</a>
+          <a class="button button-secondary" href="/docs">Open docs</a>
+          <a class="button button-secondary" href="${certifiedDirectoryUrl}">Browse certified directory</a>
+        </div>
+      </div>
+      <aside class="hero-note">
+        <div class="metric-label">What teams buy from DJD</div>
+        <div class="hero-note-copy">
+          DJD is not “just a score API.” You are buying a trust layer that combines wallet scoring, certification, evaluator decisions,
+          monitoring, ratings, Forensics reads, and public trust surfaces that counterparties can inspect.
+        </div>
+        <div class="cta-strip">
+          <div class="cta-metric">
+            <div class="metric-label">Start</div>
+            <div class="metric-value">Free lookup</div>
+          </div>
+          <div class="cta-metric">
+            <div class="metric-label">Production</div>
+            <div class="metric-value">API key or x402</div>
+          </div>
+          <div class="cta-metric">
+            <div class="metric-label">Expansion</div>
+            <div class="metric-value">Certify + evaluator</div>
+          </div>
+        </div>
+      </aside>
     </div>
-    <div class="buyer-card">
-      <div class="buyer-kicker">Settlement</div>
-      <h3>Payout and settlement products</h3>
-      <p>Use score, risk, staking, and evaluator outputs to decide whether a payout should auto-approve, route into review, or stop before money moves.</p>
+  </section>
+
+  <section class="section">
+    <div class="section-header">
+      <div class="section-label">Best first customers</div>
+      <h2 class="section-title">Common ways developer teams use DJD</h2>
+      <p class="section-copy">The product is strongest where a wallet can cost you money, reputation, or fulfillment quality. These are the buyer stories the current platform is built for.</p>
     </div>
-    <div class="buyer-card">
-      <div class="buyer-kicker">Monetized APIs</div>
-      <h3>Paid agent tools and x402 services</h3>
-      <p>Protect expensive routes, reject unknown payers, and keep wallet trust checks inside the same flow that already handles billing, API keys, or x402 settlement.</p>
+    <div class="story-grid">
+      <article class="card">
+        <div class="card-kicker">Marketplaces</div>
+        <div class="card-title">Agent marketplaces and directories</div>
+        <div class="card-copy">Screen providers before listing them, rank counterparties with more context, and give buyers inspectable profile, certification, and directory surfaces instead of a bare wallet address.</div>
+      </article>
+      <article class="card">
+        <div class="card-kicker">Settlement</div>
+        <div class="card-title">Payout and settlement products</div>
+        <div class="card-copy">Use score, risk, staking, and evaluator outputs to decide whether a payout should auto-approve, route to review, or stop before money moves.</div>
+      </article>
+      <article class="card">
+        <div class="card-kicker">Paid tools</div>
+        <div class="card-title">Paid agent tools and x402 services</div>
+        <div class="card-copy">Protect expensive routes, reject unknown payers, and keep wallet trust checks inside the same flow that already handles billing, API keys, or x402 settlement.</div>
+      </article>
     </div>
-  </div>
-</div>
+  </section>
 
-<!-- PLAN CARDS -->
-<div class="plans" id="plans">
-
-  <!-- Free -->
-  <div class="plan-card">
-    <div class="plan-name">Free</div>
-    <div class="plan-free-price">$0</div>
-    <div class="plan-limit">10 requests / day &mdash; no signup</div>
-    <ul class="plan-features">
-      <li>Basic score endpoint</li>
-      <li>ERC-8004-compatible trust document</li>
-      <li>Score + tier + recommendation</li>
-      <li>IP-based rate limit</li>
-      <li>No API key needed</li>
-    </ul>
-    <a href="/#lookup" class="plan-cta plan-cta-free">Try It Now</a>
-  </div>
-
-  <!-- Starter -->
-  <div class="plan-card">
-    <div class="plan-name">Starter</div>
-    <div class="plan-price"><span class="dollar">$</span>${starter?.monthlyPrice ?? 29}<span class="period">/mo</span></div>
-    <div class="plan-limit">${(starter?.monthlyLimit ?? 1000).toLocaleString()} requests / month</div>
-    <ul class="plan-features">
-      <li>All paid endpoints</li>
-      <li>Full dimension breakdown</li>
-      <li>Score history &amp; trends</li>
-      <li>Relationship graph, cluster analysis, score decay, intent, economy summary/volume/survival analytics, risk prediction, and counterparty ratings data products</li>
-      <li>DJD Forensics summaries, feeds, watchlists, reports, &amp; disputes</li>
-      <li>Creator staking uses separate on-chain USDC stake + 1% DJD fee validation</li>
-      <li>Standard API key</li>
-    </ul>
-    <button onclick="startCheckout('starter')" class="plan-cta plan-cta-ghost">Get Started</button>
-  </div>
-
-  <!-- Growth -->
-  <div class="plan-card popular">
-    <div class="popular-badge">Most Popular</div>
-    <div class="plan-name">Growth</div>
-    <div class="plan-price"><span class="dollar">$</span>${growth?.monthlyPrice ?? 79}<span class="period">/mo</span></div>
-    <div class="plan-limit">${(growth?.monthlyLimit ?? 5000).toLocaleString()} requests / month</div>
-    <ul class="plan-features">
-      <li>Everything in Starter</li>
-      <li>Batch scoring (20 wallets)</li>
-      <li>Certification applications</li>
-      <li>ERC-8183 evaluator preview endpoint</li>
-      <li>Force-refresh scores</li>
-      <li>Priority support</li>
-    </ul>
-    <button onclick="startCheckout('growth')" class="plan-cta plan-cta-primary">Get Started</button>
-  </div>
-
-  <!-- Scale -->
-  <div class="plan-card">
-    <div class="plan-name">Scale</div>
-    <div class="plan-price"><span class="dollar">$</span>${scale?.monthlyPrice ?? 199}<span class="period">/mo</span></div>
-    <div class="plan-limit">${(scale?.monthlyLimit ?? 25000).toLocaleString()} requests / month</div>
-    <ul class="plan-features">
-      <li>Everything in Growth</li>
-      <li>25,000 requests/month</li>
-      <li>Managed score, anomaly, and Forensics monitoring subscriptions with alert filters</li>
-      <li>Certified directory and evaluator-ready trust surfaces</li>
-      <li>Best per-query cost</li>
-      <li>Priority support</li>
-    </ul>
-    <button onclick="startCheckout('scale')" class="plan-cta plan-cta-ghost">Get Started</button>
-  </div>
-
-</div>
-
-<!-- TWO PATHS: Developers vs Agents -->
-<div style="margin-bottom:80px">
-  <div class="section-label">Two Ways to Pay</div>
-  <div class="section-title">Buy like a software team <em class="serif" style="color:var(--accent)">or</em> pay like an agent</div>
-  <div class="section-desc">DJD is built for both audiences. Human teams usually want predictable API-key billing. Autonomous agents can still pay per request with crypto. Same platform, same trust surfaces.</div>
-  <div class="compare">
-    <div class="compare-card">
-      <div class="compare-icon">&#128187;</div>
-      <div class="compare-name">For Developers</div>
-      <div class="compare-desc">Building a marketplace, agent tool, payment workflow, or network that needs wallet trust checks? Pay with your credit card and get a standard API key.</div>
-      <ul class="compare-list">
-        <li>Monthly subscription via Stripe</li>
-        <li>Standard API key (Bearer token)</li>
-        <li>Flat monthly quota &mdash; no per-request fees</li>
-        <li>Manage plan in Stripe Customer Portal</li>
-        <li>Cancel anytime, no lock-in</li>
-      </ul>
+  <section class="section" id="plans">
+    <div class="section-header section-center">
+      <div class="section-label">Plans</div>
+      <h2 class="section-title">From free screening to production trust infrastructure</h2>
+      <p class="section-copy">Human teams usually pay by subscription and use a standard Bearer API key. Autonomous agents can still pay per request with x402. Same platform, same scoring engine, same certified directory and evaluator surfaces.</p>
     </div>
-    <div class="compare-card">
-      <div class="compare-icon">&#129302;</div>
-      <div class="compare-name">For AI Agents</div>
-      <div class="compare-desc">Autonomous agents with crypto wallets can pay per-request via the x402 micropayment protocol. No key needed.</div>
-      <ul class="compare-list">
-        <li>Pay-per-request with USDC on Base</li>
-        <li>x402 protocol &mdash; automatic micropayments</li>
-        <li>No signup, no API key required</li>
-        <li>Agent pays from its own wallet</li>
-        <li><a href="https://x402.org" target="_blank">Learn about x402</a></li>
-      </ul>
-    </div>
-  </div>
-</div>
+    <div class="plans">
+      <article class="plan-card">
+        <div class="plan-name">Free</div>
+        <div class="plan-price">$0 <span class="plan-period">/ forever</span></div>
+        <div class="plan-limit">10 requests per day. No signup. Best for proving the trust layer before you commit engineering time.</div>
+        <ul class="plan-features">
+          <li>Basic score endpoint</li>
+          <li>ERC-8004-compatible trust document</li>
+          <li>Score, tier, and recommendation</li>
+          <li>IP-based rate limit</li>
+          <li>No API key needed</li>
+        </ul>
+        <div class="plan-action">
+          <a class="button button-secondary" href="/#lookup">Try free lookup</a>
+        </div>
+      </article>
 
-<!-- FAQ -->
-<div class="section-label">FAQ</div>
-<div class="section-title">Common questions</div>
-<div class="section-desc">Everything you need to know about pricing and billing.</div>
-<div class="faq">
-  <div class="faq-item">
-    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
-      <span>What am I buying?</span>
-      <span class="faq-toggle">+</span>
-    </div>
-    <div class="faq-a">You are buying a developer trust layer for agent wallets: score APIs, risk and cluster reads, score history, economy analytics, counterparty ratings, DJD Forensics reads, certification workflows, evaluator decisions, force-refresh, and webhook-based monitoring. Growth and Scale expand that into higher-volume production use. The free tier is limited to the basic score endpoint.</div>
-  </div>
-  <div class="faq-item">
-    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
-      <span>How do I authenticate?</span>
-      <span class="faq-toggle">+</span>
-    </div>
-    <div class="faq-a">After checkout, you receive a standard API key. Include it in every request as a Bearer token: <code style="background:var(--bg);padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px">Authorization: Bearer djd_sk_...</code></div>
-  </div>
-  <div class="faq-item">
-    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
-      <span>What counts toward my quota?</span>
-      <span class="faq-toggle">+</span>
-    </div>
-    <div class="faq-a">Only successful responses (2xx status codes) count toward your monthly quota. Failed requests, rate limit responses, and validation errors are not counted.</div>
-  </div>
-  <div class="faq-item">
-    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
-      <span>Can I change or cancel my plan?</span>
-      <span class="faq-toggle">+</span>
-    </div>
-    <div class="faq-a">Yes. You can upgrade, downgrade, or cancel anytime through the Stripe Customer Portal. Changes take effect at the start of your next billing cycle. No lock-in contracts.</div>
-  </div>
-  <div class="faq-item">
-    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
-      <span>What happens if I hit my monthly limit?</span>
-      <span class="faq-toggle">+</span>
-    </div>
-    <div class="faq-a">You'll receive a 429 response. Your quota resets at the start of each billing cycle. You can upgrade your plan at any time if you need more capacity.</div>
-  </div>
-  <div class="faq-item">
-    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
-      <span>What's x402? Do I need a crypto wallet?</span>
-      <span class="faq-toggle">+</span>
-    </div>
-    <div class="faq-a">No. x402 is the crypto-native path for autonomous agents. If you're a human developer or software team, just use a regular credit card subscription and a normal Bearer API key. You do not need a crypto wallet, USDC, or blockchain ops to use DJD.</div>
-  </div>
-</div>
+      <article class="plan-card">
+        <div class="plan-name">Starter</div>
+        <div class="plan-price">$${starter?.monthlyPrice ?? 29} <span class="plan-period">/ month</span></div>
+        <div class="plan-limit">${(starter?.monthlyLimit ?? 1000).toLocaleString()} requests per month for early production use.</div>
+        <ul class="plan-features">
+          <li>All paid endpoints</li>
+          <li>Full dimension breakdown</li>
+          <li>Score history and trend views</li>
+          <li>Risk, cluster, economy, ratings, and data products</li>
+          <li>DJD Forensics summaries, feeds, watchlists, and disputes</li>
+          <li>Standard API key</li>
+        </ul>
+        <div class="plan-action">
+          <button class="button button-secondary" onclick="startCheckout('starter')">Start with Starter</button>
+        </div>
+      </article>
 
-<!-- BOTTOM CTA -->
-  <div class="bottom-cta">
-  <h2>Ready to add wallet trust checks to your product?</h2>
-  <p>Start with the free tier &mdash; no signup required. Upgrade when you're ready for production API keys, Certify, evaluator decisions, monitoring, and the certified directory.</p>
-  <div class="btn-row">
-    <a href="/#lookup" class="btn btn-primary">Try Free &mdash; No Signup</a>
-    <a href="${certifiedDirectoryUrl}" class="btn btn-ghost">Browse Certified Directory</a>
-    <a href="${explorerUrl}" class="btn btn-ghost">Open Explorer</a>
-  </div>
-</div>
+      <article class="plan-card popular">
+        <span class="badge badge-success popular-badge">Most popular</span>
+        <div class="plan-name">Growth</div>
+        <div class="plan-price">$${growth?.monthlyPrice ?? 79} <span class="plan-period">/ month</span></div>
+        <div class="plan-limit">${(growth?.monthlyLimit ?? 5000).toLocaleString()} requests per month for products moving into real wallet-dependent operations.</div>
+        <ul class="plan-features">
+          <li>Everything in Starter</li>
+          <li>Batch scoring for 20 wallets</li>
+          <li>Certification applications</li>
+          <li>ERC-8183 evaluator preview endpoint</li>
+          <li>Force-refresh scores</li>
+          <li>Priority support</li>
+        </ul>
+        <div class="plan-action">
+          <button class="button button-primary" onclick="startCheckout('growth')">Choose Growth</button>
+        </div>
+      </article>
 
-<!-- FOOTER -->
-<footer>
-  <div class="ft-bot">
-    <div class="ft-l">&copy; 2026 DJD Agent Score LLC &middot; Trust infrastructure for agent marketplaces, payouts, and settlement on Base</div>
-    <div class="ft-links"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/blog">Blog</a><a href="/health">Status</a></div>
-  </div>
-</footer>
+      <article class="plan-card">
+        <div class="plan-name">Scale</div>
+        <div class="plan-price">$${scale?.monthlyPrice ?? 199} <span class="plan-period">/ month</span></div>
+        <div class="plan-limit">${(scale?.monthlyLimit ?? 25000).toLocaleString()} requests per month plus the strongest production packaging in the current product.</div>
+        <ul class="plan-features">
+          <li>Everything in Growth</li>
+          <li>High-volume production quotas</li>
+          <li>Managed monitoring subscriptions and alert filters</li>
+          <li>Certified directory and evaluator-ready trust surfaces</li>
+          <li>Best per-query cost</li>
+          <li>Priority support</li>
+        </ul>
+        <div class="plan-action">
+          <button class="button button-secondary" onclick="startCheckout('scale')">Talk to Scale</button>
+        </div>
+      </article>
+    </div>
+  </section>
 
-</div>
+  <section class="section">
+    <div class="section-header section-center">
+      <div class="section-label">Two ways to pay</div>
+      <h2 class="section-title">Buy like a software team or pay like an agent</h2>
+      <p class="section-copy">DJD supports both normal SaaS billing and crypto-native request billing. Most developer customers use Stripe plus Bearer auth. Autonomous agents can keep using x402 without changing the underlying trust surface.</p>
+    </div>
+    <div class="split-grid">
+      <article class="card">
+        <div class="card-kicker">For developers</div>
+        <div class="card-title">Use normal SaaS billing</div>
+        <div class="card-copy">Pay with a credit card, receive a standard API key, and manage your plan through the customer portal. This is the default path for marketplaces, internal tooling, payout products, and developer platforms.</div>
+        <ul class="plan-features">
+          <li>Monthly subscription via Stripe</li>
+          <li>Standard Bearer token auth</li>
+          <li>Predictable quota-based billing</li>
+          <li>No crypto wallet required</li>
+        </ul>
+      </article>
+      <article class="card">
+        <div class="card-kicker">For AI agents</div>
+        <div class="card-title">Use x402 pay-per-request</div>
+        <div class="card-copy">Autonomous agents with crypto wallets can pay per request with USDC on Base. Same platform, same trust outputs, just a different billing and auth layer.</div>
+        <ul class="plan-features">
+          <li>USDC micropayments on Base</li>
+          <li>No signup or API key required</li>
+          <li>Fits autonomous spend loops</li>
+          <li><a href="https://x402.org" target="_blank" rel="noreferrer">Learn about x402</a></li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-header section-center">
+      <div class="section-label">FAQ</div>
+      <h2 class="section-title">Common questions</h2>
+      <p class="section-copy">The product can look broad because the score, certification, monitoring, and evaluator surfaces connect to one another. This is the simple version.</p>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item">
+        <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+          <span>What am I buying?</span>
+          <span class="faq-toggle">+</span>
+        </div>
+        <div class="faq-a">You are buying a developer trust layer for agent wallets: score APIs, risk and cluster reads, score history, economy analytics, counterparty ratings, DJD Forensics reads, certification workflows, evaluator decisions, force-refresh, and webhook-based monitoring. Growth and Scale expand that into higher-volume production use. The free tier is limited to the basic score endpoint.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+          <span>How do I authenticate?</span>
+          <span class="faq-toggle">+</span>
+        </div>
+        <div class="faq-a">After checkout you receive a standard API key. Include it as <code class="mono">Authorization: Bearer djd_sk_...</code>. Autonomous agents can alternatively use x402 payment proofs on supported routes.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+          <span>What counts toward my quota?</span>
+          <span class="faq-toggle">+</span>
+        </div>
+        <div class="faq-a">Only successful 2xx responses count toward monthly quota. Validation failures, rate-limit responses, and other unsuccessful calls are not billed against your monthly request pool.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+          <span>Can I change or cancel my plan?</span>
+          <span class="faq-toggle">+</span>
+        </div>
+        <div class="faq-a">Yes. You can upgrade, downgrade, or cancel through the Stripe customer portal. There are no long-term lock-ins in the current product.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">
+          <span>Do I need a crypto wallet to use DJD?</span>
+          <span class="faq-toggle">+</span>
+        </div>
+        <div class="faq-a">No. x402 is the crypto-native path for autonomous agents. If you are a human developer or software team, use the normal Stripe subscription path and a regular API key.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="callout">
+      <h2 class="section-title">Ready to add wallet trust checks to your product?</h2>
+      <p class="section-copy">Start with the free tier, then upgrade when you need production API keys, evaluator decisions, monitoring, and certified directory surfaces.</p>
+      <div class="action-row" style="justify-content:center">
+        <a class="button button-primary" href="/#lookup">Try free lookup</a>
+        <a class="button button-secondary" href="${certifiedDirectoryUrl}">Browse certified directory</a>
+        <a class="button button-secondary" href="${explorerUrl}">Open explorer</a>
+      </div>
+    </div>
+  </section>
+</main>
 
 <script>
 async function startCheckout(plan) {
-  const btn = event.target;
-  const orig = btn.textContent;
-  btn.textContent = 'Redirecting...';
-  btn.disabled = true;
+  const button = event.target;
+  const originalText = button.textContent;
+  button.textContent = 'Redirecting...';
+  button.disabled = true;
+
   try {
-    const res = await fetch('/billing/checkout', {
+    const response = await fetch('/billing/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ plan })
     });
-    const data = await res.json();
+
+    const data = await response.json();
     if (data.url) {
       window.location.href = data.url;
-    } else {
-      alert(data.error?.message || 'Something went wrong. Please try again.');
-      btn.textContent = orig;
-      btn.disabled = false;
+      return;
     }
-  } catch (err) {
+
+    alert(data.error?.message || 'Something went wrong. Please try again.');
+  } catch {
     alert('Network error. Please try again.');
-    btn.textContent = orig;
-    btn.disabled = false;
   }
+
+  button.textContent = originalText;
+  button.disabled = false;
 }
-</script>
-</body>
-</html>`
+</script>`,
+    footerCopy:
+      'DJD Agent Score LLC provides trust infrastructure for agent marketplaces, payouts, and settlement flows on Base.',
+  })
 }

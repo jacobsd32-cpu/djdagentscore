@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ENDPOINT_PRICING } from '../config/constants.js'
 import { getPublicBaseUrl, getSupportEmail } from '../config/public.js'
+import { renderPublicFooter, renderPublicHeadStart, renderPublicNav } from '../templates/publicPage.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const OPENAPI_SPEC_PATH = join(__dirname, '..', '..', 'openapi.json')
@@ -55,96 +56,109 @@ export function getOpenApiSpecView(): string {
 }
 
 export function getDocsHtmlView(): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DJD Agent Score — API Docs</title>
+  return `${renderPublicHeadStart({
+    title: 'DJD Agent Score — API Docs',
+    description:
+      'Developer docs for scoring wallets, publishing trust surfaces, and gating payouts or x402 routes before money moves.',
+    path: '/docs',
+  })}
   <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
   <style>
-    body { margin: 0; background: #1a1a2e; }
-    #swagger-ui .topbar { display: none; }
-    .swagger-ui .info .title { color: #e94560; }
-    .swagger-ui .info .description { color: #c4c4c4; }
-    .swagger-ui .scheme-container { background: #16213e; }
-    .swagger-ui .opblock-tag { color: #e94560; border-bottom-color: #0f3460; }
-    .swagger-ui .opblock .opblock-summary-method { font-weight: bold; }
-    .swagger-ui .btn.execute { background-color: #e94560; border-color: #e94560; }
-    .swagger-ui .btn.execute:hover { background-color: #c73d54; }
-    .swagger-ui select { font-weight: bold; }
-    .header-banner {
-      background: linear-gradient(135deg, #0f3460, #1a1a2e);
-      padding: 2.25rem 2rem 2rem;
-      text-align: center;
-      border-bottom: 2px solid #e94560;
+    .docs-page {
+      padding-bottom: 0;
     }
-    .header-banner h1 {
-      color: #e94560;
-      font-family: system-ui, -apple-system, sans-serif;
-      font-size: 1.8rem;
-      margin: 0 0 0.5rem;
-    }
-    .header-banner p {
-      color: #a6afd0;
-      font-family: system-ui, sans-serif;
+    .docs-shell {
+      max-width: 1180px;
       margin: 0 auto;
-      font-size: 0.95rem;
-      line-height: 1.7;
-      max-width: 760px;
+      padding: 0 28px 40px;
     }
-    .header-banner .badge {
-      display: inline-block;
-      background: #e94560;
-      color: white;
-      padding: 0.2rem 0.6rem;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      font-weight: bold;
-      margin-left: 0.5rem;
-      vertical-align: middle;
+    .docs-hero {
+      padding: 84px 0 36px;
     }
-    .header-actions {
+    .docs-hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+    .docs-note {
+      padding: 24px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(17,35,58,0.9), rgba(12,27,45,0.92));
+    }
+    .docs-note-copy {
+      color: var(--text-dim);
+      font-size: 14px;
+      line-height: 1.78;
+    }
+    .docs-actions {
       display: flex;
-      justify-content: center;
-      gap: 0.75rem;
+      gap: 12px;
       flex-wrap: wrap;
-      margin-top: 1rem;
+      margin-top: 28px;
     }
-    .header-link {
+    .docs-button {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 0.35rem;
-      padding: 0.7rem 1rem;
-      border-radius: 999px;
-      border: 1px solid rgba(129, 140, 248, 0.24);
-      background: rgba(15, 23, 42, 0.35);
-      color: #c7d2fe;
-      font-family: system-ui, sans-serif;
-      font-size: 0.9rem;
-      font-weight: 600;
+      gap: 8px;
+      padding: 13px 20px;
+      border-radius: 12px;
+      border: 1px solid var(--border-hi);
+      font-size: 14px;
+      font-weight: 700;
+      transition: transform .18s ease, opacity .18s ease, border-color .18s ease, color .18s ease;
       text-decoration: none;
     }
-    .header-link:hover { color: #ffffff; text-decoration: none; border-color: rgba(129, 140, 248, 0.5); }
-    .docs-shell {
-      max-width: 1120px;
-      margin: 0 auto;
-      padding: 2rem;
+    .docs-button:hover { transform: translateY(-1px); text-decoration: none; }
+    .docs-button-primary {
+      color: #07111f;
+      background: linear-gradient(135deg, rgba(125,211,252,0.98), rgba(129,140,248,0.9));
+      border-color: transparent;
     }
+    .docs-button-secondary {
+      color: var(--text);
+      background: rgba(17,35,58,0.58);
+    }
+    .docs-button-secondary:hover {
+      color: var(--accent);
+      border-color: var(--border-hi);
+    }
+    #swagger-ui .topbar { display: none; }
+    #swagger-ui {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 28px 48px;
+    }
+    .swagger-ui { color: #dbe4f5; }
+    .swagger-ui .info { margin: 24px 0; }
+    .swagger-ui .info .title { color: #7dd3fc; }
+    .swagger-ui .info .description,
+    .swagger-ui .info p,
+    .swagger-ui .markdown p,
+    .swagger-ui .markdown li { color: #a7b7ce; }
+    .swagger-ui .scheme-container {
+      background: rgba(12,27,45,0.92);
+      box-shadow: none;
+      border: 1px solid rgba(129,140,248,0.14);
+    }
+    .swagger-ui .opblock-tag { color: #7dd3fc; border-bottom-color: rgba(129,140,248,0.18); }
+    .swagger-ui .opblock .opblock-summary-method { font-weight: bold; }
+    .swagger-ui .btn.execute { background-color: #7dd3fc; border-color: #7dd3fc; color: #07111f; }
+    .swagger-ui .btn.execute:hover { background-color: #68c5f0; border-color: #68c5f0; }
+    .swagger-ui select { font-weight: bold; }
     .docs-section {
       margin-bottom: 1.5rem;
     }
     .docs-title {
       color: #f8fafc;
-      font-family: system-ui, -apple-system, sans-serif;
       font-size: 1.15rem;
       font-weight: 700;
       margin-bottom: 0.85rem;
     }
     .docs-copy {
       color: #94a3b8;
-      font-family: system-ui, sans-serif;
       font-size: 0.95rem;
       line-height: 1.7;
       margin-bottom: 1rem;
@@ -169,7 +183,7 @@ export function getDocsHtmlView(): string {
     }
     .docs-kicker {
       color: #818cf8;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 0.72rem;
       font-weight: 700;
       letter-spacing: 0.08em;
@@ -178,13 +192,11 @@ export function getDocsHtmlView(): string {
     }
     .docs-card h3 {
       color: #f8fafc;
-      font-family: system-ui, sans-serif;
       font-size: 1rem;
       margin: 0 0 0.55rem;
     }
     .docs-card p {
       color: #94a3b8;
-      font-family: system-ui, sans-serif;
       font-size: 0.92rem;
       line-height: 1.65;
       margin: 0 0 0.8rem;
@@ -196,29 +208,44 @@ export function getDocsHtmlView(): string {
       background: rgba(2, 6, 23, 0.85);
       border: 1px solid rgba(148, 163, 184, 0.14);
       color: #c7d2fe;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 0.78rem;
       line-height: 1.5;
     }
     @media (max-width: 920px) {
+      .docs-shell,
+      #swagger-ui {
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+      .docs-hero-grid,
       .docs-grid-3,
       .docs-grid-4 {
         grid-template-columns: 1fr;
       }
     }
   </style>
-</head>
-<body>
-  <div class="header-banner">
-    <h1>DJD Agent Score <span class="badge">API</span></h1>
-    <p>Developer docs for scoring wallets, publishing trust surfaces, and gating payouts or x402 routes. Start with a free lookup, move into API-key or x402 production auth, then add evaluator, Certify, and directory surfaces when trust needs to become visible.</p>
-    <div class="header-actions">
-      <a class="header-link" href="/pricing">View pricing</a>
-      <a class="header-link" href="/directory">Browse directory</a>
-      <a class="header-link" href="/certify">Open Certify</a>
-    </div>
-  </div>
+${renderPublicNav('docs', '/pricing', 'View Pricing')}
+  <main class="docs-page">
   <div class="docs-shell">
+    <section class="docs-hero">
+      <div class="docs-hero-grid">
+        <div>
+          <span class="eyebrow">Developer documentation</span>
+          <h1 class="display">Ship your first DJD integration <em>without guessing</em></h1>
+          <p class="lede">DJD lets your product screen wallets, publish trust surfaces, and gate payouts or x402 routes before money moves. Start with a free lookup, then layer in API-key auth, evaluator decisions, certification, and directory distribution as trust needs to become visible.</p>
+          <div class="docs-actions">
+            <a class="docs-button docs-button-primary" href="/pricing">View pricing</a>
+            <a class="docs-button docs-button-secondary" href="/directory">Browse directory</a>
+            <a class="docs-button docs-button-secondary" href="/certify">Open Certify</a>
+          </div>
+        </div>
+        <aside class="docs-note">
+          <div class="metric-label">How teams usually adopt DJD</div>
+          <div class="docs-note-copy">First prove the score in development. Next add production auth for your app or agent. Then expose the decision through evaluator, certification, and directory surfaces only when customers or operators need to inspect what your backend already knows.</div>
+        </aside>
+      </div>
+    </section>
     <section class="docs-section">
       <div class="docs-title">Ship your first DJD integration</div>
       <div class="docs-copy">The simplest path is: screen counterparties in development, choose your production billing path, then add public trust surfaces only when customers or operators need to inspect what your backend already knows.</div>
@@ -288,8 +315,10 @@ export function getDocsHtmlView(): string {
       tryItOutEnabled: true,
     })
   </script>
-</body>
-</html>`
+  </main>
+${renderPublicFooter({
+  copy: 'DJD documentation covers the current trust infrastructure product: score, Certify, evaluator, monitoring, and directory surfaces for apps and agent networks on Base.',
+})}`
 }
 
 export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string | null) {
