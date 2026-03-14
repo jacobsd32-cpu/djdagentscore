@@ -26,81 +26,6 @@ const OPENAPI_DOCUMENT = JSON.parse(OPENAPI_SPEC) as {
 const SERVICE_TITLE = OPENAPI_DOCUMENT.info?.title ?? 'DJD Agent Score API'
 const SERVICE_VERSION = OPENAPI_DOCUMENT.info?.version ?? FALLBACK_SERVICE_VERSION
 
-const SWAGGER_HTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DJD Agent Score — API Docs</title>
-  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
-  <style>
-    body { margin: 0; background: #1a1a2e; }
-    #swagger-ui .topbar { display: none; }
-    .swagger-ui .info .title { color: #e94560; }
-    .swagger-ui .info .description { color: #c4c4c4; }
-    .swagger-ui .scheme-container { background: #16213e; }
-    .swagger-ui .opblock-tag { color: #e94560; border-bottom-color: #0f3460; }
-    .swagger-ui .opblock .opblock-summary-method { font-weight: bold; }
-    .swagger-ui .btn.execute { background-color: #e94560; border-color: #e94560; }
-    .swagger-ui .btn.execute:hover { background-color: #c73d54; }
-    .swagger-ui select { font-weight: bold; }
-    .header-banner {
-      background: linear-gradient(135deg, #0f3460, #1a1a2e);
-      padding: 2rem;
-      text-align: center;
-      border-bottom: 2px solid #e94560;
-    }
-    .header-banner h1 {
-      color: #e94560;
-      font-family: system-ui, -apple-system, sans-serif;
-      font-size: 1.8rem;
-      margin: 0 0 0.5rem;
-    }
-    .header-banner p {
-      color: #8888aa;
-      font-family: system-ui, sans-serif;
-      margin: 0;
-      font-size: 0.95rem;
-    }
-    .header-banner .badge {
-      display: inline-block;
-      background: #e94560;
-      color: white;
-      padding: 0.2rem 0.6rem;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      font-weight: bold;
-      margin-left: 0.5rem;
-      vertical-align: middle;
-    }
-  </style>
-</head>
-<body>
-  <div class="header-banner">
-    <h1>DJD Agent Score <span class="badge">API</span></h1>
-    <p>Developer docs for scoring wallets, publishing trust surfaces, and gating payouts or x402 routes &middot; <a href="/pricing" style="color:#818cf8;text-decoration:underline">View pricing &amp; plans</a></p>
-  </div>
-  <div id="swagger-ui"></div>
-  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js" crossorigin></script>
-  <script>
-    SwaggerUIBundle({
-      url: '/openapi.json',
-      dom_id: '#swagger-ui',
-      deepLinking: true,
-      presets: [
-        SwaggerUIBundle.presets.apis,
-        SwaggerUIBundle.SwaggerUIStandalonePreset,
-      ],
-      layout: 'BaseLayout',
-      defaultModelsExpandDepth: -1,
-      docExpansion: 'list',
-      filter: true,
-      tryItOutEnabled: true,
-    })
-  </script>
-</body>
-</html>`
-
 export function getPublicDiscoveryCacheControl(): string {
   return PUBLIC_CACHE_CONTROL
 }
@@ -130,7 +55,241 @@ export function getOpenApiSpecView(): string {
 }
 
 export function getDocsHtmlView(): string {
-  return SWAGGER_HTML
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DJD Agent Score — API Docs</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+  <style>
+    body { margin: 0; background: #1a1a2e; }
+    #swagger-ui .topbar { display: none; }
+    .swagger-ui .info .title { color: #e94560; }
+    .swagger-ui .info .description { color: #c4c4c4; }
+    .swagger-ui .scheme-container { background: #16213e; }
+    .swagger-ui .opblock-tag { color: #e94560; border-bottom-color: #0f3460; }
+    .swagger-ui .opblock .opblock-summary-method { font-weight: bold; }
+    .swagger-ui .btn.execute { background-color: #e94560; border-color: #e94560; }
+    .swagger-ui .btn.execute:hover { background-color: #c73d54; }
+    .swagger-ui select { font-weight: bold; }
+    .header-banner {
+      background: linear-gradient(135deg, #0f3460, #1a1a2e);
+      padding: 2.25rem 2rem 2rem;
+      text-align: center;
+      border-bottom: 2px solid #e94560;
+    }
+    .header-banner h1 {
+      color: #e94560;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 1.8rem;
+      margin: 0 0 0.5rem;
+    }
+    .header-banner p {
+      color: #a6afd0;
+      font-family: system-ui, sans-serif;
+      margin: 0 auto;
+      font-size: 0.95rem;
+      line-height: 1.7;
+      max-width: 760px;
+    }
+    .header-banner .badge {
+      display: inline-block;
+      background: #e94560;
+      color: white;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+    }
+    .header-actions {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+    .header-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      padding: 0.7rem 1rem;
+      border-radius: 999px;
+      border: 1px solid rgba(129, 140, 248, 0.24);
+      background: rgba(15, 23, 42, 0.35);
+      color: #c7d2fe;
+      font-family: system-ui, sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .header-link:hover { color: #ffffff; text-decoration: none; border-color: rgba(129, 140, 248, 0.5); }
+    .docs-shell {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    .docs-section {
+      margin-bottom: 1.5rem;
+    }
+    .docs-title {
+      color: #f8fafc;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 0.85rem;
+    }
+    .docs-copy {
+      color: #94a3b8;
+      font-family: system-ui, sans-serif;
+      font-size: 0.95rem;
+      line-height: 1.7;
+      margin-bottom: 1rem;
+      max-width: 860px;
+    }
+    .docs-grid {
+      display: grid;
+      gap: 1rem;
+    }
+    .docs-grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .docs-grid-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .docs-card {
+      background: rgba(15, 23, 42, 0.58);
+      border: 1px solid rgba(129, 140, 248, 0.16);
+      border-radius: 16px;
+      padding: 1rem;
+      min-height: 170px;
+    }
+    .docs-kicker {
+      color: #818cf8;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.65rem;
+    }
+    .docs-card h3 {
+      color: #f8fafc;
+      font-family: system-ui, sans-serif;
+      font-size: 1rem;
+      margin: 0 0 0.55rem;
+    }
+    .docs-card p {
+      color: #94a3b8;
+      font-family: system-ui, sans-serif;
+      font-size: 0.92rem;
+      line-height: 1.65;
+      margin: 0 0 0.8rem;
+    }
+    .docs-code {
+      display: inline-block;
+      padding: 0.45rem 0.65rem;
+      border-radius: 10px;
+      background: rgba(2, 6, 23, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      color: #c7d2fe;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+    @media (max-width: 920px) {
+      .docs-grid-3,
+      .docs-grid-4 {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header-banner">
+    <h1>DJD Agent Score <span class="badge">API</span></h1>
+    <p>Developer docs for scoring wallets, publishing trust surfaces, and gating payouts or x402 routes. Start with a free lookup, move into API-key or x402 production auth, then add evaluator, Certify, and directory surfaces when trust needs to become visible.</p>
+    <div class="header-actions">
+      <a class="header-link" href="/pricing">View pricing</a>
+      <a class="header-link" href="/directory">Browse directory</a>
+      <a class="header-link" href="/certify">Open Certify</a>
+    </div>
+  </div>
+  <div class="docs-shell">
+    <section class="docs-section">
+      <div class="docs-title">Ship your first DJD integration</div>
+      <div class="docs-copy">The simplest path is: screen counterparties in development, choose your production billing path, then add public trust surfaces only when customers or operators need to inspect what your backend already knows.</div>
+      <div class="docs-grid docs-grid-3">
+        <article class="docs-card">
+          <div class="docs-kicker">Step 1</div>
+          <h3>Screen counterparties during development</h3>
+          <p>Start with the free score endpoint and test real wallet decisions before you change any production flow.</p>
+          <div class="docs-code">GET /v1/score/basic?wallet=0x...</div>
+        </article>
+        <article class="docs-card">
+          <div class="docs-kicker">Step 2</div>
+          <h3>Add production auth</h3>
+          <p>Human teams usually move to a Bearer API key. Autonomous agents can keep paying per request with x402.</p>
+          <div class="docs-code">Authorization: Bearer djd_sk_...<br/>X-PAYMENT: &lt;proof&gt;</div>
+        </article>
+        <article class="docs-card">
+          <div class="docs-kicker">Step 3</div>
+          <h3>Layer in trust surfaces</h3>
+          <p>When the trust decision needs to be inspectable, add evaluator, directory, certification, and standards-facing outputs.</p>
+          <div class="docs-code">/v1/score/evaluator<br/>/v1/certification/directory<br/>/v1/score/erc8004</div>
+        </article>
+      </div>
+    </section>
+    <section class="docs-section">
+      <div class="docs-title">Use DJD when you're building</div>
+      <div class="docs-copy">DJD fits best anywhere a wallet can cost you money, fulfillment quality, or customer trust. These are the strongest customer wedges in the product today.</div>
+      <div class="docs-grid docs-grid-4">
+        <article class="docs-card">
+          <div class="docs-kicker">Marketplaces</div>
+          <h3>Agent marketplaces</h3>
+          <p>Score providers before listing them and link buyers to profiles, badges, and certification surfaces they can inspect.</p>
+        </article>
+        <article class="docs-card">
+          <div class="docs-kicker">Settlement</div>
+          <h3>Payout and escrow flows</h3>
+          <p>Use score, risk, and evaluator outputs before releasing funds or treating a counterparty as settlement-ready.</p>
+        </article>
+        <article class="docs-card">
+          <div class="docs-kicker">Paid APIs</div>
+          <h3>x402 and paid agent tools</h3>
+          <p>Check the payer before expensive work starts and keep trust gating inside the same monetized route.</p>
+        </article>
+        <article class="docs-card">
+          <div class="docs-kicker">Discovery</div>
+          <h3>Directories and service networks</h3>
+          <p>Publish machine-readable trust documents and public pages so other apps can discover certified, inspectable wallets.</p>
+        </article>
+      </div>
+    </section>
+  </div>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js" crossorigin></script>
+  <script>
+    SwaggerUIBundle({
+      url: '/openapi.json',
+      dom_id: '#swagger-ui',
+      deepLinking: true,
+      presets: [
+        SwaggerUIBundle.presets.apis,
+        SwaggerUIBundle.SwaggerUIStandalonePreset,
+      ],
+      layout: 'BaseLayout',
+      defaultModelsExpandDepth: -1,
+      docExpansion: 'list',
+      filter: true,
+      tryItOutEnabled: true,
+    })
+  </script>
+</body>
+</html>`
 }
 
 export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string | null) {

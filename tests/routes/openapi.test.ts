@@ -32,6 +32,7 @@ describe('GET /openapi.json', () => {
     const body = JSON.parse(await res.text()) as { info?: { title?: string; description?: string } }
     expect(body.info?.title).toBe('DJD Agent Score API')
     expect(body.info?.description).toContain('Trust infrastructure')
+    expect(body.info?.description).toContain('agent marketplaces')
   })
 
   it('injects the canonical public URL and support email at runtime', async () => {

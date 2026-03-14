@@ -126,6 +126,7 @@ nav{max-width:1080px;margin:0 auto;padding:0 32px;height:64px;display:flex;align
 
 /* ── How It Works ── */
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:40px}
+.steps-4{grid-template-columns:repeat(4,1fr)}
 .step{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:36px 28px;position:relative}
 .step-num{font-family:'JetBrains Mono',monospace;font-size:48px;font-weight:700;color:var(--accent);opacity:.15;position:absolute;top:16px;right:20px;line-height:1}
 .step-tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px}
@@ -527,6 +528,49 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 
 <div class="divider"></div>
 
+<!-- USE CASES -->
+<div class="sec" id="use-cases">
+  <div class="sec-label">Built For</div>
+  <div class="sec-title">Use DJD when your product has to trust a wallet</div>
+  <div class="sec-desc">The first buyers are usually developers shipping payouts, marketplaces, or paid agent workflows. DJD sits between a wallet address and a money-moving decision.</div>
+  <div class="steps steps-4">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-tag">Marketplaces</div>
+      <h3>Agent marketplaces</h3>
+      <p>Screen providers before listing them, rank counterparties more intelligently, and link buyers to profiles, badges, and directory listings they can inspect.</p>
+      <div class="step-code">score &middot; profile &middot; certify &middot; directory</div>
+      <a class="step-link" href="/directory" data-track="path_use_case_marketplaces">See the directory flow</a>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-tag">Settlement</div>
+      <h3>Payout and escrow flows</h3>
+      <p>Route low-confidence wallets into review, require stronger trust signals before release, and use evaluator decisions when a payout should not be fully automatic.</p>
+      <div class="step-code">/v1/score/evaluator &middot; /v1/score/risk</div>
+      <a class="step-link" href="/pricing" data-track="path_use_case_payouts">See settlement products</a>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-tag">Paid APIs</div>
+      <h3>Paid agent tools and x402 services</h3>
+      <p>Check the payer before expensive work starts, reject unknown or risky wallets, and keep the trust decision inside the route that handles monetized requests.</p>
+      <div class="step-code">x402-agent-score &middot; /premium/*</div>
+      <a class="step-link" href="#x402-path" data-track="path_use_case_x402">Open the x402 path</a>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-tag">Discovery</div>
+      <h3>Directories and service networks</h3>
+      <p>Publish an inspectable trust surface for each wallet so other apps, operators, and marketplaces can discover who is active, certified, and settlement-ready.</p>
+      <div class="step-code">/agent/{wallet} &middot; /v1/score/erc8004</div>
+      <a class="step-link" href="/docs" data-track="path_use_case_networks">See the docs</a>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
 <!-- SCORE LOOKUP -->
 <div class="sec" id="lookup">
   <div class="sec-label sec-center">Try It</div>
@@ -674,6 +718,38 @@ app.<span class="f">post</span>(<span class="s">'/premium/search'</span>, <span 
     <a href="/docs" class="btn btn-ghost" data-track="cta_docs">Open docs</a>
     <a href="/pricing" class="btn btn-ghost" data-track="cta_pricing_from_x402">See pricing for teams</a>
     <a href="https://github.com/jacobsd32-cpu/djdagentscore/blob/main/examples/x402-hono.ts" class="btn btn-ghost" data-track="cta_x402_example">See reference example</a>
+  </div>
+</div>
+
+<div class="sec" id="quickstart" style="padding-top:0">
+  <div class="sec-label">Developer Quickstart</div>
+  <div class="sec-title">Ship the first version in one afternoon</div>
+  <div class="sec-desc">You do not need the whole trust stack on day one. Most teams start with a free lookup, add enforcement once the workflow is clear, and only then turn on public trust surfaces.</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-tag">Dev</div>
+      <h3>Screen counterparties during development</h3>
+      <p>Use the free lookup to see how DJD scores real wallets, pick your first threshold, and understand what a safe or risky counterparty looks like in your product.</p>
+      <div class="step-code">GET /v1/score/basic?wallet=0x...</div>
+      <a class="step-link" href="#lookup" data-track="path_quickstart_lookup">Run a free lookup</a>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-tag">Prod</div>
+      <h3>Add production enforcement</h3>
+      <p>When trust decisions need to happen inside a real workflow, switch to a monthly API key for teams or keep x402 as the native payment path for autonomous agents.</p>
+      <div class="step-code">Authorization: Bearer djd_sk_... &middot; X-PAYMENT</div>
+      <a class="step-link" href="/pricing" data-track="path_quickstart_pricing">Choose a billing path</a>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-tag">Visible Trust</div>
+      <h3>Publish trust surfaces customers can inspect</h3>
+      <p>Once trust has to be visible outside your backend, add profiles, Certify, directory listings, and evaluator decisions so buyers and counterparties can see the same context your code uses.</p>
+      <div class="step-code">/agent/{wallet} &middot; /certify &middot; /directory</div>
+      <a class="step-link" href="/docs" data-track="path_quickstart_docs">Open the developer docs</a>
+    </div>
   </div>
 </div>
 
