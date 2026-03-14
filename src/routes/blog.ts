@@ -1,120 +1,58 @@
 import { Hono } from 'hono'
 import { buildPublicUrl, getPublicBaseUrl } from '../config/public.js'
+import { renderPublicFooter, renderPublicHeadStart, renderPublicNav } from '../templates/publicPage.js'
 
 const blog = new Hono()
 const SITE = getPublicBaseUrl()
 const BLOG_URL = buildPublicUrl('/blog')
 const BLOG_RSS_URL = buildPublicUrl('/blog/rss.xml')
 
-// ─── Shared head / design tokens (matches index.html gold/navy system) ───
-
-const blogHead = (title: string, description: string, slug = '') => `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${title} — DJD Agent Score</title>
-<meta name="description" content="${description}">
-<meta property="og:type" content="article">
-<meta property="og:title" content="${title} — DJD Agent Score">
-<meta property="og:description" content="${description}">
-<meta property="og:url" content="${buildPublicUrl(`/blog${slug ? `/${slug}` : ''}`)}">
-<meta property="og:site_name" content="DJD Agent Score">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${title} — DJD Agent Score">
-<meta name="twitter:description" content="${description}">
-<link rel="alternate" type="application/rss+xml" title="DJD Agent Score Blog" href="${BLOG_RSS_URL}">
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root {
-  --bg: #0a1628; --bg2: #0d1b2a; --bg3: #132238;
-  --surface: #162740; --surface2: #1a3050;
-  --border: rgba(99,102,241,0.10); --border-hi: rgba(99,102,241,0.18);
-  --text: #f0f2f5; --text-dim: #94a3b8; --text-muted: #4b5c73;
-  --accent: #6366f1; --accent-dim: rgba(99,102,241,0.08);
-  --green: #34d399; --green-dim: rgba(52,211,153,0.08);
-  --yellow: #fbbf24; --red: #f87171; --red-dim: rgba(248,113,113,0.08);
-  --orange: #fb923c; --purple: #a78bfa;
-  --radius: 16px;
-}
-*{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
-.mono{font-family:'JetBrains Mono',monospace}
-.serif{font-family:'Instrument Serif',serif}
-a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
-
-/* Nav */
-.nav-outer{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,22,40,0.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
-nav{max-width:1080px;margin:0 auto;padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between}
-.logo{font-weight:700;font-size:17px;color:var(--accent);letter-spacing:-0.3px;display:flex;align-items:center;gap:8px;text-decoration:none}
-.logo:hover{text-decoration:none}
-.logo span{color:var(--text-dim);font-weight:400}
-.nav-links{display:flex;gap:24px;align-items:center}
-.nav-links a{color:var(--text-muted);text-decoration:none;font-size:13px;font-weight:500;transition:color .2s}
-.nav-links a:hover{color:var(--accent);text-decoration:none}
-.nav-links .active{color:var(--accent)}
-.nav-links .nav-cta{color:var(--bg);background:var(--accent);padding:7px 18px;border-radius:8px;font-weight:600;font-size:12px;transition:all .2s}
-.nav-links .nav-cta:hover{opacity:.88}
-
-/* Footer */
-footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:80px}
-.ft-bot{display:flex;justify-content:space-between;align-items:center;max-width:1080px;margin:0 auto;padding:0 32px}
-.ft-l{font-size:12px;color:var(--text-muted)}
-.ft-links{display:flex;gap:18px}.ft-links a{font-size:12px;color:var(--text-muted);text-decoration:none;transition:color .2s}.ft-links a:hover{color:var(--accent)}
-
+const blogHead = (title: string, description: string, slug = '') =>
+  `${renderPublicHeadStart({
+    title: `${title} — DJD Agent Score`,
+    description,
+    path: `/blog${slug ? `/${slug}` : ''}`,
+    ogType: slug ? 'article' : 'website',
+    extraHead: `<link rel="alternate" type="application/rss+xml" title="DJD Agent Score Blog" href="${BLOG_RSS_URL}">`,
+  })}
+.blog-shell{max-width:1180px;margin:0 auto;padding:0 28px 0}
+.blog-hero{padding:92px 0 48px;text-align:center}
+.blog-hero .chip{display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-dim);border:1px solid var(--border-hi);padding:7px 14px;border-radius:999px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:22px}
+.blog-hero h1{font-family:'Instrument Serif',serif;font-size:clamp(38px,5vw,60px);font-weight:400;line-height:1.06;margin-bottom:16px;letter-spacing:-0.04em}
+.blog-hero p{font-size:18px;color:var(--text-dim);max-width:680px;margin:0 auto;line-height:1.82}
+.posts{max-width:1180px;margin:0 auto;padding:0 28px;display:grid;gap:18px}
+.post-card{display:grid;grid-template-columns:1fr auto;gap:28px;align-items:start;background:linear-gradient(180deg, rgba(17,35,58,0.9), rgba(12,27,45,0.92));border:1px solid var(--border);border-radius:18px;padding:32px;transition:all .22s;text-decoration:none;color:inherit}
+.post-card:hover{border-color:var(--border-hi);transform:translateY(-2px);text-decoration:none;box-shadow:0 22px 60px rgba(2,6,23,0.22)}
+.post-meta{display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.post-date{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted)}
+.post-tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-dim);border:1px solid var(--border-hi);padding:4px 10px;border-radius:999px;text-transform:uppercase;letter-spacing:.08em}
+.post-title{font-family:'Instrument Serif',serif;font-size:clamp(24px,3vw,34px);font-weight:400;line-height:1.18;margin-bottom:12px;letter-spacing:-0.03em}
+.post-excerpt{font-size:15px;color:var(--text-dim);line-height:1.82;max-width:720px}
+.post-read{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);white-space:nowrap;margin-top:20px;opacity:.8;transition:opacity .2s}
+.post-card:hover .post-read{opacity:1}
 @media(max-width:768px){
-  nav{padding:0 20px}
-  .ft-bot{flex-direction:column;gap:12px;text-align:center;padding:0 20px}
-  .nav-links{gap:14px}
-}
-`
+  .blog-shell,.posts{padding-left:20px;padding-right:20px}
+  .blog-hero{padding-top:72px}
+  .post-card{grid-template-columns:1fr;padding:24px}
+}`
 
-const blogNav = `
-</style>
-</head>
-<body>
-<div class="nav-outer">
-<nav>
-  <a class="logo" href="/">DJD<span> Agent Score</span></a>
-  <div class="nav-links">
-    <a href="/explorer">Explorer</a>
-    <a href="/blog" class="active">Blog</a>
-    <a href="/pricing">Pricing</a>
-    <a href="/#api-ref">API</a>
-    <a href="/docs">Docs</a>
-    <a class="nav-cta" href="/pricing">Get Started</a>
-  </div>
-</nav>
-</div>
-`
+const blogNav = renderPublicNav('blog', '/pricing', 'Get Started')
 
-const blogFooter = `
-<footer>
-<div class="ft-bot">
-  <div class="ft-l">&copy; 2026 DJD Agent Score &middot; Identity attestation by <a href="https://insumermodel.com" target="_blank" style="color:var(--text-dim);text-decoration:underline">Insumer Model</a></div>
-  <div class="ft-links">
-    <a href="/">Home</a>
-    <a href="/blog">Blog</a>
-    <a href="/terms">Terms</a>
-    <a href="/privacy">Privacy</a>
-  </div>
-</div>
-</footer>
-</body>
-</html>`
+const blogFooter = renderPublicFooter({
+  copy: 'Research, release notes, and field reports from DJD Agent Score as we build trust infrastructure for apps, marketplaces, and agent networks.',
+})
 
 // ─── Shared article CSS (used by all blog posts) ───
 
 const BLOG_ARTICLE_CSS = `
-.article{max-width:720px;margin:0 auto;padding:120px 32px 0}
-.article-back{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:40px;transition:color .2s}
+.article{max-width:860px;margin:0 auto;padding:92px 28px 0}
+.article-back{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:30px;transition:color .2s}
 .article-back:hover{color:var(--accent);text-decoration:none}
 .article-meta{display:flex;gap:12px;align-items:center;margin-bottom:24px}
 .article-date{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted)}
 .article-tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--accent);background:var(--accent-dim);border:1px solid var(--border-hi);padding:3px 10px;border-radius:100px;text-transform:uppercase;letter-spacing:.5px}
-.article h1{font-family:'Instrument Serif',serif;font-size:clamp(30px,4.5vw,46px);font-weight:400;line-height:1.15;margin-bottom:20px;letter-spacing:-0.5px}
-.article .lead{font-size:18px;color:var(--text-dim);line-height:1.8;margin-bottom:48px;padding-bottom:40px;border-bottom:1px solid var(--border)}
+.article h1{font-family:'Instrument Serif',serif;font-size:clamp(34px,4.5vw,54px);font-weight:400;line-height:1.08;margin-bottom:18px;letter-spacing:-0.04em}
+.article .lead{font-size:18px;color:var(--text-dim);line-height:1.85;margin-bottom:36px;padding-bottom:28px;border-bottom:1px solid var(--border)}
 .prose h2{font-family:'Instrument Serif',serif;font-size:clamp(22px,3vw,30px);font-weight:400;margin-top:56px;margin-bottom:8px;letter-spacing:-0.3px}
 .prose h3{font-size:16px;font-weight:700;margin-top:32px;margin-bottom:8px;color:var(--text)}
 .prose p{font-size:15px;color:var(--text-dim);line-height:1.85;margin-bottom:16px}
@@ -138,7 +76,7 @@ const BLOG_ARTICLE_CSS = `
 .cta-box .btn{display:inline-flex;align-items:center;gap:6px;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;background:var(--accent);color:var(--bg);text-decoration:none;margin-top:16px;transition:all .2s}
 .cta-box .btn:hover{opacity:.9;transform:translateY(-1px);text-decoration:none}
 .article-footer{margin-top:56px;padding-top:32px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted);line-height:1.65;font-style:italic}
-@media(max-width:768px){.article{padding:100px 20px 0}}
+@media(max-width:768px){.article{padding:72px 20px 0}}
 `
 
 /** Generates head + shared article CSS for blog post pages. Pass extra CSS for post-specific styles. */
