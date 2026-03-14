@@ -1,36 +1,93 @@
 import { getSupportEmail } from '../config/public.js'
+import { renderPublicPage } from './publicPage.js'
 
 // ─── Legal page templates ───
 // White theme (Terms/Privacy), dark GitHub theme (Leaderboard)
 
 const SUPPORT_EMAIL = getSupportEmail()
 
-export const wrapHtml = (title: string, content: string) => `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${title} - DJD Agent Score</title>
-<style>
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #1a1a1a; line-height: 1.7; }
-  h1 { font-size: 28px; margin-top: 40px; margin-bottom: 16px; color: #111; }
-  h2 { font-size: 22px; margin-top: 32px; margin-bottom: 12px; color: #222; }
-  p { margin-bottom: 16px; font-size: 15px; }
-  .title { text-align: center; margin-bottom: 8px; font-size: 32px; }
-  .subtitle { text-align: center; margin-bottom: 8px; font-size: 26px; }
-  .date { text-align: center; font-style: italic; margin-bottom: 40px; color: #666; }
-  .caps { text-transform: uppercase; }
-  table { border-collapse: collapse; width: 100%; margin: 16px 0; }
-  th, td { border: 1px solid #ddd; padding: 10px 12px; font-size: 14px; text-align: left; }
-  th { background: #2B3544; color: #fff; font-weight: 600; }
-  tr:nth-child(even) { background: #f9f9f9; }
-  .footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 13px; color: #888; }
-</style>
-</head>
-<body>${content}
-<div class="footer">DJD Agent Score &middot; Trust infrastructure for the agent economy</div>
-</body>
-</html>`
+export const wrapHtml = (title: string, content: string) =>
+  `${renderPublicPage({
+    title: `${title} - DJD Agent Score`,
+    description: `${title} for DJD Agent Score, the trust infrastructure platform for the agent economy.`,
+    path: title === 'Terms of Service' ? '/terms' : title === 'Privacy Policy' ? '/privacy' : '/',
+    ctaHref: '/pricing',
+    ctaLabel: 'View Pricing',
+    extraCss: `
+.legal-shell{padding-top:56px}
+.legal-article{max-width:900px}
+.legal-prose h1{
+  font-size:28px;
+  margin-top:38px;
+  margin-bottom:16px;
+  color:var(--text);
+  font-family:'Instrument Serif',serif;
+  font-weight:400;
+  letter-spacing:-0.02em;
+}
+.legal-prose h2{
+  font-size:20px;
+  margin-top:28px;
+  margin-bottom:12px;
+  color:var(--text);
+  font-weight:700;
+}
+.legal-prose p{
+  margin-bottom:16px;
+  font-size:15px;
+  color:var(--text-dim);
+  line-height:1.82;
+}
+.legal-prose .title{
+  text-align:center;
+  margin-bottom:8px;
+  font-size:42px;
+  line-height:1.02;
+}
+.legal-prose .subtitle{
+  text-align:center;
+  margin-bottom:8px;
+  font-size:32px;
+  line-height:1.08;
+}
+.legal-prose .date{
+  text-align:center;
+  margin-bottom:40px;
+  color:var(--text-muted);
+  font-style:italic;
+}
+.legal-prose .caps{text-transform:uppercase}
+.legal-prose table{
+  border-collapse:collapse;
+  width:100%;
+  margin:18px 0;
+  border-radius:16px;
+  overflow:hidden;
+  border:1px solid var(--border);
+}
+.legal-prose th,
+.legal-prose td{
+  border-bottom:1px solid var(--border);
+  padding:12px 14px;
+  font-size:14px;
+  text-align:left;
+}
+.legal-prose th{
+  background:rgba(17,35,58,0.96);
+  color:var(--text);
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+}
+.legal-prose td{color:var(--text-dim)}
+.legal-prose tr:nth-child(even) td{background:rgba(7,17,31,0.38)}
+`,
+    footerCopy:
+      'DJD Agent Score provides trust infrastructure for the agent economy. Legal pages use the same public brand system as the rest of the product.',
+    content: `<main class="site-shell legal-shell"><article class="article-shell prose legal-prose legal-article">${content}</article></main>`,
+  })}`
 
 // ─── TERMS OF SERVICE ───
 
