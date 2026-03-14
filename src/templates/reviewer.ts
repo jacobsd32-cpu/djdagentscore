@@ -1,36 +1,32 @@
 import { REVIEWER_SESSION_MAX_AGE_SECONDS } from '../middleware/reviewerSession.js'
+import { renderPublicPage } from './publicPage.js'
 
 const REVIEWER_SESSION_HOURS = Math.floor(REVIEWER_SESSION_MAX_AGE_SECONDS / 3600)
 
 export function reviewerPageHtml(): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Certification Reviewer Dashboard - DJD Agent Score</title>
-<style>
+  return renderPublicPage({
+    title: 'Certification Reviewer Dashboard - DJD Agent Score',
+    description:
+      'Internal DJD Certify review queue for approving, requesting info, rejecting, and issuing certifications.',
+    path: '/reviewer',
+    nav: 'reviewer',
+    ctaHref: '/certify',
+    ctaLabel: 'Back to Certify',
+    footerCopy:
+      'Internal DJD Certify reviewer surface. This page is operational infrastructure, not a public certification guarantee.',
+    extraCss: `
   *{box-sizing:border-box;margin:0;padding:0}
-  body{
-    font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-    background:
-      radial-gradient(circle at top left, rgba(34,211,238,0.10), transparent 25%),
-      radial-gradient(circle at top right, rgba(99,102,241,0.12), transparent 30%),
-      linear-gradient(180deg,#08111d 0%,#0a1628 60%,#07111b 100%);
-    color:#e5e7eb;
-    min-height:100vh;
-    padding:24px;
-  }
-  .wrap{max-width:1120px;margin:0 auto;padding-top:28px}
+  .reviewer-shell{padding-top:54px}
+  .wrap{max-width:1120px;margin:0 auto}
   h1{font-size:34px;line-height:1.1;margin-bottom:10px;color:#f8fafc}
-  .sub{color:#94a3b8;font-size:15px;line-height:1.8;max-width:780px;margin-bottom:28px}
+  .sub{color:var(--text-dim);font-size:15px;line-height:1.8;max-width:780px;margin-bottom:28px}
   .card{
-    background:rgba(15,23,42,0.88);
-    border:1px solid rgba(148,163,184,0.16);
+    background:linear-gradient(180deg, rgba(17,35,58,0.9), rgba(12,27,45,0.92));
+    border:1px solid var(--border);
     border-radius:18px;
     padding:24px;
     margin-bottom:18px;
-    box-shadow:0 18px 50px rgba(2,6,23,0.22);
+    box-shadow:var(--shadow);
   }
   .auth-row,.filter-row,.action-row{display:flex;gap:12px;flex-wrap:wrap}
   .field{flex:1;min-width:220px}
@@ -39,24 +35,23 @@ export function reviewerPageHtml(): string {
     font-size:11px;
     text-transform:uppercase;
     letter-spacing:1px;
-    color:#64748b;
+    color:var(--text-muted);
     margin-bottom:8px;
     font-weight:700;
   }
   input,select,textarea{
     width:100%;
-    background:#020817;
-    border:1px solid rgba(148,163,184,0.22);
+    background:rgba(7,17,31,0.72);
+    border:1px solid var(--border-hi);
     border-radius:12px;
-    color:#e5e7eb;
+    color:var(--text);
     padding:13px 14px;
     font-size:14px;
     outline:none;
   }
   textarea{min-height:84px;resize:vertical}
-  input:focus,select:focus,textarea:focus{border-color:#22d3ee}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent)}
   .btn{
-    border:none;
     border-radius:12px;
     padding:13px 16px;
     font-size:14px;
@@ -66,8 +61,8 @@ export function reviewerPageHtml(): string {
   }
   .btn:hover{transform:translateY(-1px)}
   .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
-  .btn-primary{background:#22d3ee;color:#082032}
-  .btn-secondary{background:#1e293b;color:#e2e8f0;border:1px solid rgba(148,163,184,0.18)}
+  .btn-primary{background:linear-gradient(135deg, rgba(125,211,252,0.98), rgba(129,140,248,0.9));color:#07111f;border:1px solid transparent}
+  .btn-secondary{background:rgba(17,35,58,0.58);color:var(--text);border:1px solid var(--border-hi)}
   .btn-success{background:#16a34a;color:#f0fdf4}
   .btn-warn{background:#d97706;color:#fff7ed}
   .btn-danger{background:#dc2626;color:#fef2f2}
@@ -75,19 +70,19 @@ export function reviewerPageHtml(): string {
   .meta-chip{
     display:inline-flex;align-items:center;gap:8px;
     padding:8px 12px;border-radius:999px;
-    background:rgba(15,118,110,0.12);color:#67e8f9;
-    border:1px solid rgba(34,211,238,0.16);font-size:12px;font-weight:700
+    background:rgba(125,211,252,0.10);color:var(--accent);
+    border:1px solid var(--border-hi);font-size:12px;font-weight:700
   }
   .queue{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
   .request{
-    border:1px solid rgba(148,163,184,0.14);
-    background:rgba(2,8,23,0.56);
+    border:1px solid var(--border);
+    background:rgba(7,17,31,0.52);
     border-radius:16px;
     padding:18px;
   }
   .request-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
   .request-name{font-size:19px;font-weight:700;color:#f8fafc}
-  .request-wallet{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#64748b;word-break:break-all;margin-top:4px}
+  .request-wallet{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);word-break:break-all;margin-top:4px}
   .pill{
     display:inline-flex;align-items:center;justify-content:center;
     border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px
@@ -97,23 +92,22 @@ export function reviewerPageHtml(): string {
   .pill-needs-info{background:rgba(249,115,22,0.12);color:#fdba74}
   .pill-rejected{background:rgba(220,38,38,0.12);color:#fca5a5}
   .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
-  .metric{background:rgba(15,23,42,0.84);border:1px solid rgba(148,163,184,0.12);border-radius:12px;padding:12px}
-  .metric-k{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:8px;font-weight:700}
+  .metric{background:rgba(12,27,45,0.92);border:1px solid var(--border);border-radius:12px;padding:12px}
+  .metric-k{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;font-weight:700}
   .metric-v{font-size:14px;font-weight:700}
-  .copy{font-size:13px;color:#cbd5e1;line-height:1.75;margin-bottom:12px}
-  .note{font-size:12px;color:#94a3b8;line-height:1.75;margin-top:8px}
+  .copy{font-size:13px;color:var(--text-dim);line-height:1.75;margin-bottom:12px}
+  .note{font-size:12px;color:var(--text-dim);line-height:1.75;margin-top:8px}
   .request-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-  .empty{padding:28px;text-align:center;color:#94a3b8;line-height:1.8}
-  .status{margin-top:12px;font-size:13px;color:#67e8f9;display:none}
+  .empty{padding:28px;text-align:center;color:var(--text-dim);line-height:1.8}
+  .status{margin-top:12px;font-size:13px;color:var(--accent);display:none}
   .error{margin-top:12px;font-size:13px;color:#fca5a5;display:none}
-  .top-link{display:inline-block;margin-top:10px;font-size:13px;color:#67e8f9;text-decoration:none}
+  .top-link{display:inline-block;margin-top:10px;font-size:13px;color:var(--accent);text-decoration:none}
   .top-link:hover{text-decoration:underline}
   @media(max-width:900px){
     .queue,.grid{grid-template-columns:1fr}
   }
-</style>
-</head>
-<body>
+`,
+    content: `<main class="site-shell reviewer-shell">
   <div class="wrap">
     <h1>Certification Reviewer Dashboard</h1>
     <p class="sub">Internal operations surface for DJD Certify. Start a short-lived reviewer session with the admin key, inspect score and profile context, then approve, request more information, reject, or issue a certification from an approved review.</p>
@@ -589,6 +583,7 @@ async function initDashboard(){
 
 initDashboard();
 </script>
-</body>
-</html>`
+  </div>
+</main>`,
+  })
 }

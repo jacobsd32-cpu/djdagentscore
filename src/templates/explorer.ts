@@ -7,6 +7,7 @@
  */
 
 import type { EcosystemStats } from '../db/queries.js'
+import { renderPublicFooter, renderPublicHeadStart, renderPublicNav } from './publicPage.js'
 
 export function explorerDashboardHtml(stats: EcosystemStats): string {
   const tierOrder = ['Elite', 'Trusted', 'Established', 'Emerging', 'Unverified']
@@ -33,32 +34,33 @@ export function explorerDashboardHtml(stats: EcosystemStats): string {
     })
     .join('')
 
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Explorer - DJD Agent Score</title>
-<meta name="description" content="Live dashboard for DJD trust infrastructure on Base. Explore wallets, certified agents, and the scoring network before your agent transacts.">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+  return `${renderPublicHeadStart({
+    title: 'Explorer - DJD Agent Score',
+    description:
+      'Live dashboard for DJD trust infrastructure on Base. Explore wallets, certified agents, and the scoring network before your agent transacts.',
+    path: '/explorer',
+  })}
 <style>
 :root {
-  --bg:#090d16;--bg2:#10151f;--surface:#1a2030;--surface2:#1f2738;
-  --border:#1c2536;--border-hi:#2a3548;
-  --text:#e2e8f0;--dim:#94a3b8;--muted:#4b5c73;
-  --accent:#22d3ee;--green:#34d399;--yellow:#fbbf24;--orange:#fb923c;--red:#f87171;--purple:#a78bfa;
+  --bg:#07111f;--bg2:#0d1b2d;--surface:#11233a;--surface2:#182b46;
+  --border:rgba(129,140,248,0.14);--border-hi:rgba(129,140,248,0.26);
+  --text:#eef2ff;--dim:#a7b7ce;--muted:#6c7b92;
+  --accent:#7dd3fc;--green:#34d399;--yellow:#fbbf24;--orange:#fb923c;--red:#f87171;--purple:#818cf8;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+body{
+  background:
+    radial-gradient(circle at top left, rgba(129,140,248,0.18), transparent 28%),
+    radial-gradient(circle at top right, rgba(125,211,252,0.16), transparent 30%),
+    linear-gradient(180deg, #07111f 0%, #091728 42%, #060d18 100%);
+  color:var(--text);
+  font-family:'DM Sans',sans-serif;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh
+}
 .mono{font-family:'JetBrains Mono',monospace}
 a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
-nav{padding:16px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)}
-.logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16px;color:var(--accent)}
-.logo span{color:var(--dim);font-weight:400}
-.nav-r{margin-left:auto;display:flex;gap:16px}
-.nav-r a{color:var(--muted);font-size:12px;font-family:'JetBrains Mono',monospace}
-.nav-r a:hover{color:var(--accent);text-decoration:none}
-.wrap{max-width:960px;margin:0 auto;padding:32px 24px}
+.wrap{max-width:1080px;margin:0 auto;padding:56px 28px 32px}
 
 /* ── Ecosystem Overview ── */
 .eco-panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:28px;margin-bottom:28px}
@@ -217,8 +219,6 @@ td{padding:10px 14px;font-size:13px;vertical-align:middle}
 .loading{text-align:center;padding:40px;color:var(--muted);font-size:14px}
 .updated-at{font-size:11px;color:var(--muted);margin-top:10px;text-align:right;font-family:'JetBrains Mono',monospace}
 
-footer{text-align:center;padding:36px 24px;color:var(--muted);font-size:12px;border-top:1px solid var(--border);margin-top:40px;font-family:'JetBrains Mono',monospace}
-footer a{color:var(--muted)}
 @media(max-width:640px){
   .panel-hdr{flex-direction:column;align-items:center;text-align:center}
   .sc-bar-bg,.age-col,.sig{display:none}
@@ -227,19 +227,7 @@ footer a{color:var(--muted)}
   .eco-row{flex-direction:column}
 }
 </style>
-</head>
-<body>
-<nav>
-  <a class="logo" href="/">DJD <span>Agent Score</span></a>
-  <div class="nav-r">
-    <a href="/">Home</a>
-    <a href="/explorer">Explorer</a>
-    <a href="/certify">Certify</a>
-    <a href="/docs">API Docs</a>
-    <a href="/pricing">Pricing</a>
-    <a href="/methodology">Methodology</a>
-  </div>
-</nav>
+${renderPublicNav('explorer', '/pricing', 'View Pricing')}
 <div class="wrap">
 
   <!-- ── Ecosystem Overview (server-rendered) ── -->
@@ -734,6 +722,7 @@ async function loadLB() {
   });
 })();
 </script>
-</body>
-</html>`
+${renderPublicFooter({
+  copy: 'Explorer is the live dashboard view into DJD trust infrastructure on Base. It keeps the same brand system as the pricing and certification surfaces while preserving its operational layout.',
+})}`
 }

@@ -512,11 +512,15 @@ nav{
   .stat-grid{grid-template-columns:1fr}
 }
 @media(max-width:760px){
+  .nav-outer{position:sticky}
   nav,
   .site-shell,
   .site-footer-inner{padding-left:20px;padding-right:20px}
-  nav{height:auto;min-height:68px;padding-top:12px;padding-bottom:12px;align-items:flex-start}
-  .nav-links{width:100%;justify-content:flex-start}
+  nav{height:auto;min-height:68px;padding-top:12px;padding-bottom:12px;align-items:flex-start;flex-wrap:wrap}
+  .logo{width:100%}
+  .nav-links{width:100%;justify-content:flex-start;gap:8px}
+  .nav-link{padding:7px 10px}
+  .nav-cta{margin-top:4px}
   .hero{padding-top:56px}
   .article-shell{margin-top:56px;padding:20px}
 }
