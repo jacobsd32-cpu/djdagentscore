@@ -24,6 +24,15 @@ import {
 } from '../db.js'
 import { makeBadge } from '../utils/badgeGenerator.js'
 import { normalizeWallet } from '../utils/walletUtils.js'
+import {
+  getCertificationApplyPath,
+  getCertificationTier,
+  getCertificationTierByStoredValue,
+  getDefaultCertificationTier,
+  listCertificationTiers,
+  type CertificationTierDefinition,
+  type CertificationTierKey,
+} from './certificationTiers.js'
 
 export interface CertificationApplyError {
   ok: false
@@ -33,6 +42,7 @@ export interface CertificationApplyError {
     | 'cert_requirements_not_met'
     | 'cert_score_too_low'
     | 'cert_not_registered'
+    | 'cert_invalid_tier'
     | 'cert_already_active'
     | 'cert_not_found'
     | 'cert_review_not_found'
@@ -50,10 +60,22 @@ interface CertificationSuccess<T> {
 
 export type CertificationResult<T> = CertificationApplyError | CertificationSuccess<T>
 
+export interface CertificationTierView {
+  key: CertificationTierKey
+  label: CertificationTierDefinition['label']
+  level: CertificationTierDefinition['level']
+  minimum_score: number
+  price_usdc: number
+  summary: string
+  controls: string[]
+  apply_endpoint: string
+}
+
 export interface CertificationStatusView {
   wallet: string
   tier: string
   score_at_certification: number
+  price_paid_usdc: number
   granted_at: string
   expires_at: string
   is_valid: true
@@ -127,6 +149,13 @@ export interface CertificationDirectoryView {
 export interface CertificationReadinessView {
   wallet: string
   can_apply: boolean
+  requested_tier: CertificationTierView
+  eligible_tiers: Array<
+    CertificationTierView & {
+      eligible: boolean
+      score_gap: number
+    }
+  >
   status:
     | 'eligible'
     | 'already_certified'
@@ -247,7 +276,46 @@ export interface CertificationIssuedFromReviewView {
   message: string
 }
 
-const applyForCertificationTxn = db.transaction((wallet: string): CertificationApplyResult => {
+function buildCertificationTierView(tier: CertificationTierDefinition): CertificationTierView {
+  return {
+    key: tier.key,
+    label: tier.label,
+    level: tier.level,
+    minimum_score: tier.minimumScore,
+    price_usdc: tier.priceUsd,
+    summary: tier.summary,
+    controls: [...tier.controls],
+    apply_endpoint: buildPublicUrl(getCertificationApplyPath(tier.key)),
+  }
+}
+
+function resolveCertificationTier(
+  rawTier: string | null | undefined,
+): CertificationResult<CertificationTierDefinition> {
+  if (rawTier == null || rawTier.trim().length === 0) {
+    return {
+      ok: true,
+      data: getDefaultCertificationTier(),
+    }
+  }
+
+  const tier = getCertificationTier(rawTier)
+  if (tier) {
+    return {
+      ok: true,
+      data: tier,
+    }
+  }
+
+  return {
+    ok: false,
+    code: 'cert_invalid_tier',
+    message: 'Certification tier must be operational, transactional, or autonomous',
+    status: 400,
+  }
+}
+
+const applyForCertificationTxn = db.transaction((wallet: string, tier: CertificationTierDefinition): CertificationApplyResult => {
   const scoreRow = getScore(wallet)
   if (!scoreRow || scoreRow.expires_at <= new Date().toISOString()) {
     return {
@@ -258,13 +326,17 @@ const applyForCertificationTxn = db.transaction((wallet: string): CertificationA
     }
   }
 
-  if (scoreRow.composite_score < 75) {
+  if (scoreRow.composite_score < tier.minimumScore) {
     return {
       ok: false,
       code: 'cert_score_too_low',
-      message: 'Composite score must be >= 75 for certification',
+      message: `${tier.label} certification requires a score of at least ${tier.minimumScore}`,
       status: 400,
-      details: { current_score: scoreRow.composite_score },
+      details: {
+        current_score: scoreRow.composite_score,
+        requested_tier: tier.label,
+        minimum_score: tier.minimumScore,
+      },
     }
   }
 
@@ -291,7 +363,9 @@ const applyForCertificationTxn = db.transaction((wallet: string): CertificationA
   return {
     ok: true,
     status: 201,
-    data: buildCertificationApplyView(insertCertification(wallet, scoreRow.tier, scoreRow.composite_score)),
+    data: buildCertificationApplyView(
+      insertCertification(wallet, tier.label, scoreRow.composite_score, tier.priceUsd),
+    ),
   }
 })
 
@@ -347,23 +421,27 @@ function buildCertificationLinks(wallet: string): CertificationStatusView['links
   }
 }
 
-function buildCertificationReadinessLinks(wallet: string): CertificationReadinessView['links'] {
+function buildCertificationReadinessLinks(
+  wallet: string,
+  tier: CertificationTierDefinition,
+): CertificationReadinessView['links'] {
   return {
     ...buildCertificationLinks(wallet),
     certification_status: buildPublicUrl(`/v1/certification/${wallet}`),
     certify_overview: buildPublicUrl(`/certify?wallet=${wallet}`),
     certified_directory: buildPublicUrl('/directory'),
-    apply_endpoint: buildPublicUrl('/v1/certification/apply'),
-    review_status: buildPublicUrl(`/v1/certification/review?wallet=${wallet}`),
+    apply_endpoint: buildPublicUrl(getCertificationApplyPath(tier.key)),
+    review_status: buildPublicUrl(`/v1/certification/review?wallet=${wallet}&tier=${tier.key}`),
   }
 }
 
-function buildCertificationReviewLinks(wallet: string): CertificationReviewLinks {
+function buildCertificationReviewLinks(wallet: string, requestedTier?: string | null): CertificationReviewLinks {
+  const tier = getCertificationTierByStoredValue(requestedTier) ?? getDefaultCertificationTier()
   return {
     agent_profile: buildPublicUrl(`/agent/${wallet}`),
-    readiness: buildPublicUrl(`/v1/certification/readiness?wallet=${wallet}`),
-    review_status: buildPublicUrl(`/v1/certification/review?wallet=${wallet}`),
-    apply_endpoint: buildPublicUrl('/v1/certification/apply'),
+    readiness: buildPublicUrl(`/v1/certification/readiness?wallet=${wallet}&tier=${tier.key}`),
+    review_status: buildPublicUrl(`/v1/certification/review?wallet=${wallet}&tier=${tier.key}`),
+    apply_endpoint: buildPublicUrl(getCertificationApplyPath(tier.key)),
     certified_directory: buildPublicUrl('/directory'),
   }
 }
@@ -373,6 +451,7 @@ function buildCertificationStatusView(cert: CertificationRow): CertificationStat
     wallet: cert.wallet,
     tier: cert.tier,
     score_at_certification: cert.score_at_certification,
+    price_paid_usdc: cert.price_paid_usdc,
     granted_at: cert.granted_at,
     expires_at: cert.expires_at,
     is_valid: true,
@@ -470,7 +549,7 @@ function buildCertificationReviewView(row: CertificationReviewRequestRow): Certi
       website_url: row.website_url,
       github_verified: row.github_verified === 1,
     },
-    links: buildCertificationReviewLinks(row.wallet),
+    links: buildCertificationReviewLinks(row.wallet, row.requested_tier),
     message: buildCertificationReviewMessage(row.status as CertificationReviewStatus),
   }
 }
@@ -542,20 +621,37 @@ export function getCertificationStatus(wallet: string): CertificationRow | null 
 
 export function getCertificationReadinessView(
   rawWallet: string | null | undefined,
+  rawTier?: string | null | undefined,
 ): CertificationResult<CertificationReadinessView> {
   const wallet = normalizeWallet(rawWallet)
   if (!wallet) {
     return invalidWalletError('Valid Ethereum wallet address required')
   }
 
+  const resolvedTier = resolveCertificationTier(rawTier)
+  if (!resolvedTier.ok) {
+    return resolvedTier
+  }
+
+  const requestedTier = resolvedTier.data
+
   const registration = getRegistration(wallet)
   const score = getScore(wallet)
   const certification = getActiveCertification(wallet)
   const review = getLatestCertificationReviewRequest(wallet)
   const nowIso = new Date().toISOString()
-  const links = buildCertificationReadinessLinks(wallet)
+  const links = buildCertificationReadinessLinks(wallet, requestedTier)
   const scoreIsFresh = !!score && score.expires_at > nowIso
-  const scoreMeetsThreshold = !!score && score.composite_score >= 75
+  const scoreMeetsThreshold = !!score && score.composite_score >= requestedTier.minimumScore
+  const requestedTierView = buildCertificationTierView(requestedTier)
+  const eligibleTiers = listCertificationTiers().map((tier) => {
+    const eligible = !!score && scoreIsFresh && score.composite_score >= tier.minimumScore
+    return {
+      ...buildCertificationTierView(tier),
+      eligible,
+      score_gap: score ? Math.max(0, tier.minimumScore - score.composite_score) : tier.minimumScore,
+    }
+  })
 
   let status: CertificationReadinessView['status'] = 'eligible'
   let canApply = false
@@ -610,7 +706,7 @@ export function getCertificationReadinessView(
     status = 'score_too_low'
     blockers.push({
       code: 'cert_score_too_low',
-      message: `Certification requires a score of at least 75. This wallet is currently ${score.composite_score}.`,
+      message: `${requestedTier.label} certification requires a score of at least ${requestedTier.minimumScore}. This wallet is currently ${score.composite_score}.`,
     })
     nextSteps = [
       { code: 'review_profile', label: 'Review agent profile', href: links.agent_profile },
@@ -674,6 +770,8 @@ export function getCertificationReadinessView(
     data: {
       wallet,
       can_apply: canApply,
+      requested_tier: requestedTierView,
+      eligible_tiers: eligibleTiers,
       status,
       requirements: {
         registration: {
@@ -681,7 +779,7 @@ export function getCertificationReadinessView(
         },
         score: {
           met: !!score && scoreIsFresh && scoreMeetsThreshold,
-          minimum_score: 75,
+          minimum_score: requestedTier.minimumScore,
           current_score: score?.composite_score ?? null,
           current_tier: score?.tier ?? null,
           confidence: score?.confidence ?? null,
@@ -707,7 +805,7 @@ export function getCertificationReadinessView(
       next_steps: nextSteps,
       payment: {
         protocol: 'x402',
-        amount_usdc: 99,
+        amount_usdc: requestedTier.priceUsd,
         endpoint: links.apply_endpoint,
       },
       links,
@@ -742,11 +840,19 @@ export function getCertificationReviewStatusView(
 export function submitCertificationReviewRequest(params: {
   wallet: string | null | undefined
   note?: string | null | undefined
+  tier?: string | null | undefined
 }): CertificationResult<CertificationReviewRequestView> {
   const wallet = normalizeWallet(params.wallet)
   if (!wallet) {
     return invalidWalletError('Valid Ethereum wallet address required')
   }
+
+  const resolvedTier = resolveCertificationTier(params.tier)
+  if (!resolvedTier.ok) {
+    return resolvedTier
+  }
+
+  const requestedTier = resolvedTier.data
 
   const latestReview = getLatestCertificationReviewRequest(wallet)
   if (latestReview?.status === 'approved') {
@@ -782,13 +888,17 @@ export function submitCertificationReviewRequest(params: {
     }
   }
 
-  if (score.composite_score < 75) {
+  if (score.composite_score < requestedTier.minimumScore) {
     return {
       ok: false,
       code: 'cert_score_too_low',
-      message: 'Composite score must be >= 75 before a review request can be submitted',
+      message: `${requestedTier.label} certification requires a score of at least ${requestedTier.minimumScore} before a review request can be submitted`,
       status: 400,
-      details: { current_score: score.composite_score },
+      details: {
+        current_score: score.composite_score,
+        requested_tier: requestedTier.label,
+        minimum_score: requestedTier.minimumScore,
+      },
     }
   }
 
@@ -813,7 +923,7 @@ export function submitCertificationReviewRequest(params: {
   const reviewRequest = insertCertificationReviewRequest(
     wallet,
     wallet,
-    score.tier,
+    requestedTier.label,
     score.composite_score,
     score.confidence ?? null,
     score.expires_at ?? null,
@@ -940,7 +1050,7 @@ export function issueCertificationFromReviewRequest(params: {
     }
   }
 
-  const issuance = applyForCertification(review.wallet)
+  const issuance = applyForCertification(review.wallet, review.requested_tier)
   if (!issuance.ok) {
     return issuance
   }
@@ -1038,9 +1148,27 @@ export function getCertificationBadgeView(rawWallet: string | null | undefined):
   }
 }
 
-export function applyForCertification(wallet: string): CertificationApplyResult {
+export function getCertificationTierCatalogView(): CertificationResult<{
+  tiers: CertificationTierView[]
+  default_tier: CertificationTierKey
+}> {
+  return {
+    ok: true,
+    data: {
+      tiers: listCertificationTiers().map(buildCertificationTierView),
+      default_tier: getDefaultCertificationTier().key,
+    },
+  }
+}
+
+export function applyForCertification(wallet: string, rawTier?: string | null | undefined): CertificationApplyResult {
+  const resolvedTier = resolveCertificationTier(rawTier)
+  if (!resolvedTier.ok) {
+    return resolvedTier
+  }
+
   try {
-    return applyForCertificationTxn(wallet)
+    return applyForCertificationTxn(wallet, resolvedTier.data)
   } catch (err) {
     if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
       return {
@@ -1054,13 +1182,16 @@ export function applyForCertification(wallet: string): CertificationApplyResult 
   }
 }
 
-export function applyForCertificationByPayer(rawWallet: string | null | undefined): CertificationApplyResult {
+export function applyForCertificationByPayer(
+  rawWallet: string | null | undefined,
+  rawTier?: string | null | undefined,
+): CertificationApplyResult {
   const wallet = normalizeWallet(rawWallet)
   if (!wallet) {
     return invalidWalletError('Valid Ethereum wallet address required')
   }
 
-  return applyForCertification(wallet)
+  return applyForCertification(wallet, rawTier)
 }
 
 export function listCertificationRecords(): CertificationAdminRecordView[] {

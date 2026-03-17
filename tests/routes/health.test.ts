@@ -66,6 +66,7 @@ describe('GET /health', () => {
     delete process.env.ENABLE_HOURLY_REFRESH
     delete process.env.GITHUB_TOKEN
     delete process.env.PUBLISHER_PRIVATE_KEY
+    delete process.env.ORACLE_SIGNER_PRIVATE_KEY
 
     const { resetHealthPayloadCache } = await import('../../src/services/opsService.js')
     resetHealthPayloadCache()
@@ -116,6 +117,10 @@ describe('GET /health', () => {
         code: 'publisher_private_key_missing',
         message: 'PUBLISHER_PRIVATE_KEY not set — ERC-8004 on-chain publication is disabled.',
       },
+      {
+        code: 'oracle_signer_missing',
+        message: 'No oracle signing key configured',
+      },
     ])
     expect(body.runtime).toEqual({
       mode: 'combined',
@@ -145,6 +150,12 @@ describe('GET /health', () => {
       erc8004Publisher: {
         configured: false,
         active: false,
+      },
+      evaluatorOracleSigner: {
+        configured: false,
+        active: false,
+        source: 'unconfigured',
+        address: null,
       },
     })
     expect(body.database).toBeDefined()
@@ -242,7 +253,8 @@ describe('GET /health', () => {
 
   it('reports authenticated GitHub verification and active publisher when configured', async () => {
     process.env.GITHUB_TOKEN = 'github-token'
-    process.env.PUBLISHER_PRIVATE_KEY = '0xabc123'
+    process.env.PUBLISHER_PRIVATE_KEY =
+      '0x59c6995e998f97a5a0044966f094538c5f43e8e66b5b4bafee8a8b3eabeed4e4'
 
     const { Hono } = await import('hono')
     const { default: healthRoute } = await import('../../src/routes/health.js')
@@ -265,6 +277,12 @@ describe('GET /health', () => {
       erc8004Publisher: {
         configured: true,
         active: true,
+      },
+      evaluatorOracleSigner: {
+        configured: true,
+        active: true,
+        source: 'publisher_fallback',
+        address: '0x93007Bb5B756B3f39BFef520787Eb3B9C2faC8f1',
       },
     })
   })

@@ -17,6 +17,15 @@ const FREE_ENDPOINTS = new Set([
   '/v1/analytics/event',
   '/v1/leaderboard',
   '/v1/score/basic',
+  '/v1/score/evaluator/verifier',
+  '/v1/score/evaluator/networks',
+  '/v1/score/evaluator/deployments',
+  '/v1/score/evaluator/promotion',
+  '/v1/score/evaluator/artifacts',
+  '/v1/score/evaluator/proof',
+  '/v1/score/evaluator/escrow',
+  '/v1/score/evaluator/deploy',
+  '/v1/score/evaluator/deploy/bundle',
   '/v1/badge',
   '/v1/agent/register',
   '/v1/data/economy',
@@ -49,6 +58,7 @@ const ONCHAIN_FEE_ENDPOINTS = new Set([
 function tierFromEndpoint(endpoint: string): string {
   if (endpoint.includes('/score/basic')) return 'basic'
   if (endpoint.includes('/score/full')) return 'full'
+  if (endpoint.includes('/score/evaluator')) return 'evaluator'
   if (endpoint.includes('/score/risk')) return 'risk'
   if (endpoint.includes('/score/refresh')) return 'refresh'
   if (endpoint.includes('/score/batch')) return 'batch'

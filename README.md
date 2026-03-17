@@ -14,6 +14,82 @@ DJD Agent Score is the trust and governance layer for agent wallets on Base. Tod
 
 ---
 
+## Local and operator setup
+
+Copy [`.env.example`](./.env.example) to `.env`. The repo now uses two env groups:
+
+- **Runtime envs** power the API itself: `ADMIN_KEY`, `PAY_TO`, `BASE_RPC_URL`, `PUBLIC_BASE_URL`, Stripe, GitHub, and signing keys.
+- **`DJD_*` contract-ops envs** power the deploy pipeline in [`scripts/`](./scripts): preflight, deploy, verify, smoke, stage, publish, and promote.
+
+For normal local API work, the minimum is usually:
+
+```bash
+cp .env.example .env
+# then set at least:
+# ADMIN_KEY=...
+# PAY_TO=0x...
+# BASE_RPC_URL=https://...
+```
+
+Start the combined runtime:
+
+```bash
+npm install
+npm run dev
+```
+
+### Evaluator contract staging
+
+The evaluator/onchain pipeline is file- and API-driven. The cleanest Base Sepolia path is:
+
+```bash
+# required for a real public stage run
+export DJD_NETWORK=base-sepolia
+export DJD_BASE_SEPOLIA_RPC_URL=https://...
+export DJD_DEPLOYER_PRIVATE_KEY=0x...
+export DJD_API_BASE_URL=https://your-runtime.example
+export DJD_VERDICT_ID=verdict_...
+```
+
+The `contracts:*` npm commands now auto-load `.env` if it exists, so you can either export these in your shell or keep them in the repo-local `.env`.
+
+Optional but commonly needed:
+
+```bash
+export ORACLE_SIGNER_PRIVATE_KEY=0x...
+export DJD_EVALUATOR_DEPLOYMENTS_PATH=data/evaluator-deployments.json
+export DJD_STAGE_PUBLISH_REGISTRY=true
+export DJD_STAGE_PROMOTE=true
+export DJD_STAGE_REPORT_PATH=.tmp/djd-stage-report.json
+export DJD_PROMOTION_OUTPUT_PATH=.tmp/djd-promotion.json
+export DJD_PROMOTION_DOTENV_PATH=.tmp/djd-promotion.env
+export DJD_PROMOTION_SHELL_PATH=.tmp/djd-promotion.sh
+```
+
+Then run:
+
+```bash
+npm run contracts:bootstrap-env
+npm run contracts:preflight
+npm run contracts:stage
+```
+
+`contracts:bootstrap-env` is the quickest way to generate a ready-to-fill network-specific env snippet before you try a real stage run.
+
+If you only want the env/export bundle for the active published deployment:
+
+```bash
+npm run contracts:promote
+```
+
+Important env naming detail:
+
+- `BASE_RPC_URL` is used by the runtime/indexer side of the app.
+- `DJD_BASE_RPC_URL` and `DJD_BASE_SEPOLIA_RPC_URL` are used by the contract deployment scripts.
+- `ADMIN_KEY` secures the app; `DJD_ADMIN_KEY` is an optional alias for post-deploy health checks.
+
+---
+
 ## Start here: gate an x402 route
 
 If you run a paid Hono endpoint, this is the best first integration.

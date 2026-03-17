@@ -437,22 +437,26 @@ export interface ReputationPublication {
   wallet: string
   composite_score: number
   model_version: string
+  endpoint: string | null
+  feedback_hash: string | null
   tx_hash: string | null
   published_at: string
 }
 
 const stmtGetPublication = db.prepare<[string], ReputationPublication>(`
-  SELECT wallet, composite_score, model_version, tx_hash, published_at
+  SELECT wallet, composite_score, model_version, endpoint, feedback_hash, tx_hash, published_at
   FROM reputation_publications
   WHERE wallet = ?
 `)
 
 const stmtUpsertPublication = db.prepare(`
-  INSERT INTO reputation_publications (wallet, composite_score, model_version, tx_hash, published_at)
-  VALUES (@wallet, @composite_score, @model_version, @tx_hash, @published_at)
+  INSERT INTO reputation_publications (wallet, composite_score, model_version, endpoint, feedback_hash, tx_hash, published_at)
+  VALUES (@wallet, @composite_score, @model_version, @endpoint, @feedback_hash, @tx_hash, @published_at)
   ON CONFLICT(wallet) DO UPDATE SET
     composite_score = excluded.composite_score,
     model_version   = excluded.model_version,
+    endpoint        = excluded.endpoint,
+    feedback_hash   = excluded.feedback_hash,
     tx_hash         = excluded.tx_hash,
     published_at    = excluded.published_at
 `)
@@ -461,12 +465,16 @@ export function upsertPublication(pub: {
   wallet: string
   composite_score: number
   model_version: string
+  endpoint: string
+  feedback_hash: string
   tx_hash: string | null
 }): void {
   stmtUpsertPublication.run({
     wallet: pub.wallet,
     composite_score: pub.composite_score,
     model_version: pub.model_version,
+    endpoint: pub.endpoint,
+    feedback_hash: pub.feedback_hash,
     tx_hash: pub.tx_hash,
     published_at: new Date().toISOString(),
   })

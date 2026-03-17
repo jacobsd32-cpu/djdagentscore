@@ -364,7 +364,7 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
             agent_id: '123456789',
             standard: 'erc-8004-compatible',
             reputation: { composite_score: 78, tier: 'Established', confidence: 0.82 },
-            certification: { active: true, tier: 'Trusted' },
+            certification: { active: true, tier: 'Transactional' },
           },
         },
       },
@@ -373,16 +373,28 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
         method: 'GET',
         price: 0,
         description:
-          'Free certification readiness check that tells a wallet whether it can apply, what is blocking it, and what to do next.',
-        input: { query: { wallet: { type: 'string', required: true, description: 'Ethereum wallet address' } } },
+          'Free certification readiness check that tells a wallet whether it can apply for a requested certification tier, what is blocking it, and what to do next.',
+        input: {
+          query: {
+            wallet: { type: 'string', required: true, description: 'Ethereum wallet address' },
+            tier: { type: 'string', required: false, description: 'operational, transactional, or autonomous' },
+          },
+        },
         output: {
           example: {
             wallet: '0x…',
             can_apply: true,
             status: 'eligible',
-            payment: { protocol: 'x402', amount_usdc: 99 },
+            requested_tier: { key: 'transactional', label: 'Transactional', minimum_score: 75, price_usdc: 200 },
+            payment: { protocol: 'x402', amount_usdc: 200 },
           },
         },
+      },
+      {
+        path: '/v1/certification/tiers',
+        method: 'GET',
+        price: 0,
+        description: 'Free certification tier catalog with score thresholds, x402 prices, and tier metadata.',
       },
       {
         path: '/v1/certification/review',
@@ -392,13 +404,17 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
           'Free certification review queue surface for submitting a review request or reading the latest reviewer status for a wallet.',
         input: {
           query: { wallet: { type: 'string', required: true, description: 'Ethereum wallet address' } },
-          body: { wallet: { type: 'string', required: true }, note: { type: 'string', required: false } },
+          body: {
+            wallet: { type: 'string', required: true },
+            note: { type: 'string', required: false },
+            tier: { type: 'string', required: false, description: 'operational, transactional, or autonomous' },
+          },
         },
         output: {
           example: {
             wallet: '0x…',
             status: 'pending',
-            requested_tier: 'Trusted',
+            requested_tier: 'Transactional',
             requested_score: 82,
           },
         },
@@ -419,6 +435,24 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
         },
       },
       {
+        path: '/v1/certification/apply/operational',
+        method: 'POST',
+        price: ENDPOINT_PRICING['/v1/certification/apply/operational'],
+        description: 'Paid Tier 1 / Operational certification issuance for the payer wallet.',
+      },
+      {
+        path: '/v1/certification/apply/transactional',
+        method: 'POST',
+        price: ENDPOINT_PRICING['/v1/certification/apply/transactional'],
+        description: 'Paid Tier 2 / Transactional certification issuance for the payer wallet.',
+      },
+      {
+        path: '/v1/certification/apply/autonomous',
+        method: 'POST',
+        price: ENDPOINT_PRICING['/v1/certification/apply/autonomous'],
+        description: 'Paid Tier 3 / Autonomous certification issuance for the payer wallet.',
+      },
+      {
         path: '/v1/score/full',
         method: 'GET',
         price: ENDPOINT_PRICING['/v1/score/full'],
@@ -430,8 +464,92 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
         method: 'GET',
         price: ENDPOINT_PRICING['/v1/score/evaluator'],
         description:
-          'ERC-8183 evaluator prototype that returns an approve, review, or reject recommendation for settlement readiness.',
+          'ERC-8183 evaluator prototype that returns an approve, review, or reject recommendation for settlement readiness, plus links into standards and forensics surfaces.',
         input: { query: { wallet: { type: 'string', required: true } } },
+      },
+      {
+        path: '/v1/score/evaluator/evidence',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/score/evaluator/evidence'],
+        description:
+          'ERC-8183 evaluator evidence packet that packages the settlement verdict with certification baseline, forensics summary, and traceable evidence artifacts.',
+        input: { query: { wallet: { type: 'string', required: true } } },
+      },
+      {
+        path: '/v1/score/evaluator/oracle',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/score/evaluator/oracle'],
+        description:
+          'ERC-8183 oracle-style verdict endpoint that persists a compact settlement decision with recommendation, forensic trace id, and a signed EIP-712 attestation when a signer is configured.',
+        input: {
+          query: {
+            wallet: { type: 'string', required: true },
+            counterparty_wallet: { type: 'string' },
+            escrow_id: { type: 'string' },
+          },
+        },
+      },
+      {
+        path: '/v1/score/evaluator/verdict',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/score/evaluator/verdict'],
+        description: 'Fetch a previously issued evaluator oracle verdict record by id, including its attestation metadata.',
+        input: { query: { id: { type: 'string', required: true } } },
+      },
+      {
+        path: '/v1/score/evaluator/verdicts',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/score/evaluator/verdicts'],
+        description: 'List recent persisted evaluator verdicts for a wallet, including approval and dispute mix.',
+        input: { query: { wallet: { type: 'string', required: true }, limit: { type: 'integer' } } },
+      },
+      {
+        path: '/v1/score/evaluator/callback',
+        method: 'GET',
+        price: ENDPOINT_PRICING['/v1/score/evaluator/callback'],
+        description:
+          'Convert a stored evaluator verdict into ABI-backed callback calldata for a relayer or escrow contract. Returns a ready=false envelope when the verdict attestation is unsigned.',
+        input: { query: { id: { type: 'string', required: true }, target_contract: { type: 'string' } } },
+      },
+      {
+        path: '/v1/score/evaluator/proof',
+        method: 'GET',
+        price: 0,
+        description:
+          'Free verifier calldata package for a stored verdict. If target_contract is omitted and a published verifier deployment exists for the requested network, the transaction envelope targets that live verifier automatically.',
+        input: { query: { id: { type: 'string', required: true }, target_contract: { type: 'string' } } },
+      },
+      {
+        path: '/v1/score/evaluator/escrow',
+        method: 'GET',
+        price: 0,
+        description:
+          'Free escrow-settlement calldata package for a stored verdict. If escrow_contract is omitted and a published escrow deployment exists for the requested network, the transaction envelope targets that live escrow automatically.',
+        input: { query: { id: { type: 'string', required: true }, escrow_contract: { type: 'string' } } },
+      },
+      {
+        path: '/v1/score/evaluator/deploy',
+        method: 'GET',
+        price: 0,
+        description:
+          'Free verifier and escrow deployment plan. If verifier_contract is omitted and a published verifier deployment exists for the requested network, the plan reuses that live verifier automatically.',
+        input: { query: { id: { type: 'string', required: true }, verifier_contract: { type: 'string' } } },
+      },
+      {
+        path: '/v1/score/evaluator/deployments',
+        method: 'GET',
+        price: 0,
+        description:
+          'Live deployment registry for DJD evaluator verifier and escrow contracts, keyed by network for consumers that need the currently published onchain addresses.',
+        input: { query: { network: { type: 'string', enum: ['base', 'base-sepolia'] } } },
+      },
+      {
+        path: '/v1/score/evaluator/promotion',
+        method: 'GET',
+        price: 0,
+        description:
+          'Ready-to-consume env bundle for the currently published verifier and escrow deployment on a network, including dotenv, shell export, and GitHub output formats.',
+        input: { query: { network: { type: 'string', enum: ['base', 'base-sepolia'] } } },
       },
       {
         path: '/v1/score/risk',

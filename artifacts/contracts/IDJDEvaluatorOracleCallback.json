@@ -1,0 +1,216 @@
+{
+  "contract": "IDJDEvaluatorOracleCallback",
+  "artifact_kind": "interface",
+  "source_path": "contracts/IDJDEvaluatorOracleCallback.sol",
+  "source_sha256": "57633f63db8ec8c9ae01227abe5b84c6434137ebbf6c75b2cd92ac8d5ef36230",
+  "compiler": {
+    "name": "solc",
+    "version": "0.8.34+commit.80d5c536.Emscripten.clang",
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "via_ir": true
+  },
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "escrowIdHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "address",
+          "name": "provider",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "counterparty",
+          "type": "address"
+        },
+        {
+          "internalType": "uint8",
+          "name": "decisionCode",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint8",
+          "name": "recommendationCode",
+          "type": "uint8"
+        },
+        {
+          "internalType": "bool",
+          "name": "approved",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint16",
+          "name": "confidence",
+          "type": "uint16"
+        },
+        {
+          "internalType": "uint16",
+          "name": "agentScoreProvider",
+          "type": "uint16"
+        },
+        {
+          "internalType": "bool",
+          "name": "certificationValid",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint16",
+          "name": "riskScore",
+          "type": "uint16"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "packetHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "attestationDigest",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes",
+          "name": "attestationSignature",
+          "type": "bytes"
+        }
+      ],
+      "name": "receiveVerdict",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployed_bytecode": "0x",
+  "method_identifiers": {
+    "receiveVerdict(bytes32,address,address,uint8,uint8,bool,uint16,uint16,bool,uint16,bytes32,bytes32,bytes)": "807f6017"
+  },
+  "constructor": null,
+  "metadata": {
+    "compiler": {
+      "version": "0.8.34+commit.80d5c536"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "escrowIdHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "address",
+              "name": "provider",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "counterparty",
+              "type": "address"
+            },
+            {
+              "internalType": "uint8",
+              "name": "decisionCode",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint8",
+              "name": "recommendationCode",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bool",
+              "name": "approved",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint16",
+              "name": "confidence",
+              "type": "uint16"
+            },
+            {
+              "internalType": "uint16",
+              "name": "agentScoreProvider",
+              "type": "uint16"
+            },
+            {
+              "internalType": "bool",
+              "name": "certificationValid",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint16",
+              "name": "riskScore",
+              "type": "uint16"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "packetHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "attestationDigest",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes",
+              "name": "attestationSignature",
+              "type": "bytes"
+            }
+          ],
+          "name": "receiveVerdict",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {},
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {},
+        "version": 1
+      }
+    },
+    "settings": {
+      "compilationTarget": {
+        "IDJDEvaluatorOracleCallback.sol": "IDJDEvaluatorOracleCallback"
+      },
+      "evmVersion": "osaka",
+      "libraries": {},
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "remappings": [],
+      "viaIR": true
+    },
+    "sources": {
+      "IDJDEvaluatorOracleCallback.sol": {
+        "keccak256": "0xf2d2144fec0bf5f2e5e918a8b8d34e7456d55fe90ae0a22899665b560fbdef91",
+        "license": "MIT",
+        "urls": [
+          "bzz-raw://904a62dba021a5a7abc4015cd744e3ce5c4cd66897e3a76c066491ba7e70047c",
+          "dweb:/ipfs/QmdEtYVFRaSWsmn52eJQnLMmgUDA816G4znexoYmBNtK5a"
+        ]
+      }
+    },
+    "version": 1
+  }
+}

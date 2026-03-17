@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('../src/blockchain.js', () => ({
   usdcToFloat: (raw: bigint) => Number(raw) / 1_000_000,
   estimateWalletAgeDays: vi.fn(() => Promise.resolve(0)),
+  checkERC8004Registration: vi.fn(() => Promise.resolve(false)),
   getPublicClient: vi.fn(),
 }))
 

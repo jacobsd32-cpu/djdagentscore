@@ -2,6 +2,7 @@
  * Certified Agent Badge — Phase B monetization
  *
  * Public (free):
+ *   GET  /tiers        — inspect the certification tier catalog
  *   GET  /readiness    — check whether a wallet can apply for certification
  *   GET  /review       — inspect the latest certification review request for a wallet
  *   POST /review       — submit a certification review request
@@ -9,15 +10,18 @@
  *   GET  /:wallet       — check certification status
  *   GET  /badge/:wallet — SVG badge (green if certified, gray if not)
  *
- * Paid ($99 USDC via x402):
- *   POST /apply         — apply for certification
+ * Paid (tier-priced x402):
+ *   POST /apply                  — legacy transactional apply path
+ *   POST /apply/operational      — Tier 1 / Operational
+ *   POST /apply/transactional    — Tier 2 / Transactional
+ *   POST /apply/autonomous       — Tier 3 / Autonomous
  *
  * Admin (X-ADMIN-KEY):
  *   GET  /admin/all          — list all certifications
  *   POST /admin/:id/revoke   — revoke a certification
  *   GET  /admin/revenue      — revenue summary
  */
-import { Hono } from 'hono'
+import { Hono, type Context } from 'hono'
 import type { AppEnv } from '../types/hono-env.js'
 import { errorResponse } from '../errors.js'
 import { adminAuth } from '../middleware/adminAuth.js'
@@ -26,6 +30,7 @@ import {
   getCertificationRevenue,
   getCertificationBadgeView,
   getCertificationDirectoryView,
+  getCertificationTierCatalogView,
   issueCertificationFromReviewRequest,
   getCertificationReadinessView,
   getCertificationReviewStatusView,
@@ -44,8 +49,17 @@ const certification = new Hono<AppEnv>()
 
 // ── Public: Certified directory ─────────────────────────────────────────────
 
+certification.get('/tiers', (c) => {
+  const outcome = getCertificationTierCatalogView()
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
+  }
+
+  return c.json(outcome.data)
+})
+
 certification.get('/readiness', (c) => {
-  const outcome = getCertificationReadinessView(c.req.query('wallet'))
+  const outcome = getCertificationReadinessView(c.req.query('wallet'), c.req.query('tier'))
   if (!outcome.ok) {
     return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
   }
@@ -77,27 +91,17 @@ certification.get('/review', (c) => {
 })
 
 certification.post('/review', async (c) => {
-  const body = await c.req.json<{ wallet?: string; note?: string }>().catch(() => null)
+  const body = await c.req.json<{ wallet?: string; note?: string; tier?: string }>().catch(() => null)
   const outcome = submitCertificationReviewRequest({
     wallet: body?.wallet,
     note: body?.note,
+    tier: body?.tier,
   })
   if (!outcome.ok) {
     return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
   }
 
   return c.json(outcome.data, outcome.status ?? 201)
-})
-
-// ── Public: Check certification status ──────────────────────────────────────
-
-certification.get('/:wallet', (c) => {
-  const outcome = getCertificationStatusView(c.req.param('wallet'))
-  if (!outcome.ok) {
-    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
-  }
-
-  return c.json(outcome.data)
 })
 
 // ── Public: SVG badge ───────────────────────────────────────────────────────
@@ -114,29 +118,70 @@ certification.get('/badge/:wallet', (c) => {
   return c.body(outcome.data.svg)
 })
 
-// ── Paid: Apply for certification ($99 USDC) ───────────────────────────────
-// Certification requires x402 payment of $99 USDC. API key auth alone is NOT
+// ── Paid: Apply for certification ───────────────────────────────────────────
+// Certification requires tier-specific x402 payment. API key auth alone is NOT
 // sufficient — the key bypasses per-request x402 fees but certification is a
 // one-time purchase that must be paid via x402.
 
-certification.post('/apply', (c) => {
+function ensureCertificationPayment(c: Context<AppEnv>) {
   const paymentHeader = c.req.header('X-PAYMENT') ?? c.req.header('x-payment')
   if (c.get('apiKeyId') && !paymentHeader) {
     return c.json(
       errorResponse(
         'payment_required',
-        'Certification requires $99 USDC payment via x402. API key authentication alone is not sufficient for this endpoint.',
+        'Certification requires tier-priced x402 payment. API key authentication alone is not sufficient for this endpoint.',
       ),
       402,
     )
   }
 
-  const outcome = applyForCertificationByPayer(getPayerWallet(c))
+  return null
+}
+
+function handleCertificationApply(c: Context<AppEnv>, tier?: string) {
+  const paymentError = ensureCertificationPayment(c)
+  if (paymentError) {
+    return paymentError
+  }
+
+  const outcome = applyForCertificationByPayer(getPayerWallet(c), tier)
   if (!outcome.ok) {
     return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
   }
 
   return c.json(outcome.data, outcome.status ?? 201)
+}
+
+certification.post('/apply', (c) => {
+  return handleCertificationApply(c)
+})
+
+certification.post('/apply/operational', (c) => {
+  return handleCertificationApply(c, 'operational')
+})
+
+certification.post('/apply/transactional', (c) => {
+  return handleCertificationApply(c, 'transactional')
+})
+
+certification.post('/apply/autonomous', (c) => {
+  return handleCertificationApply(c, 'autonomous')
+})
+
+// Keep a flexible path for internal callers and future route expansion.
+certification.post('/apply/:tier', (c) => {
+  return handleCertificationApply(c, c.req.param('tier'))
+})
+
+// ── Public: Check certification status ──────────────────────────────────────
+
+certification.get('/:wallet', (c) => {
+  const outcome = getCertificationStatusView(c.req.param('wallet'))
+  if (!outcome.ok) {
+    return c.json(errorResponse(outcome.code, outcome.message, outcome.details), outcome.status)
+  }
+
+  return c.json(outcome.data)
 })
 
 // ── Admin: List all certifications ──────────────────────────────────────────

@@ -1,0 +1,505 @@
+{
+  "contract": "IDJDEvaluatorVerdictVerifier",
+  "artifact_kind": "interface",
+  "source_path": "contracts/DJDEvaluatorEscrowSettlementExample.sol",
+  "source_sha256": "ce744e5e3b43b266ac50e5176279fb44cb12f6f14ddbaca028fe39d31ea00fbb",
+  "compiler": {
+    "name": "solc",
+    "version": "0.8.34+commit.80d5c536.Emscripten.clang",
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "via_ir": true
+  },
+  "abi": [
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "string",
+              "name": "verdictId",
+              "type": "string"
+            },
+            {
+              "internalType": "address",
+              "name": "wallet",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "counterpartyWallet",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "escrowId",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "decision",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "recommendation",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "approved",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint16",
+              "name": "confidence",
+              "type": "uint16"
+            },
+            {
+              "internalType": "uint16",
+              "name": "agentScoreProvider",
+              "type": "uint16"
+            },
+            {
+              "internalType": "string",
+              "name": "scoreModelVersion",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "certificationValid",
+              "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "certificationTier",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "riskLevel",
+              "type": "string"
+            },
+            {
+              "internalType": "uint16",
+              "name": "riskScore",
+              "type": "uint16"
+            },
+            {
+              "internalType": "string",
+              "name": "forensicTraceId",
+              "type": "string"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "packetHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "string",
+              "name": "generatedAt",
+              "type": "string"
+            }
+          ],
+          "internalType": "struct IDJDEvaluatorVerdictVerifier.EvaluatorVerdict",
+          "name": "verdict",
+          "type": "tuple"
+        }
+      ],
+      "name": "hashVerdict",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "string",
+              "name": "verdictId",
+              "type": "string"
+            },
+            {
+              "internalType": "address",
+              "name": "wallet",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "counterpartyWallet",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "escrowId",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "decision",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "recommendation",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "approved",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint16",
+              "name": "confidence",
+              "type": "uint16"
+            },
+            {
+              "internalType": "uint16",
+              "name": "agentScoreProvider",
+              "type": "uint16"
+            },
+            {
+              "internalType": "string",
+              "name": "scoreModelVersion",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "certificationValid",
+              "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "certificationTier",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "riskLevel",
+              "type": "string"
+            },
+            {
+              "internalType": "uint16",
+              "name": "riskScore",
+              "type": "uint16"
+            },
+            {
+              "internalType": "string",
+              "name": "forensicTraceId",
+              "type": "string"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "packetHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "string",
+              "name": "generatedAt",
+              "type": "string"
+            }
+          ],
+          "internalType": "struct IDJDEvaluatorVerdictVerifier.EvaluatorVerdict",
+          "name": "verdict",
+          "type": "tuple"
+        },
+        {
+          "internalType": "bytes",
+          "name": "signature",
+          "type": "bytes"
+        }
+      ],
+      "name": "verifyVerdict",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployed_bytecode": "0x",
+  "method_identifiers": {
+    "hashVerdict((string,address,address,string,string,string,bool,uint16,uint16,string,bool,string,string,uint16,string,bytes32,string))": "c8729649",
+    "verifyVerdict((string,address,address,string,string,string,bool,uint16,uint16,string,bool,string,string,uint16,string,bytes32,string),bytes)": "3f2edd60"
+  },
+  "constructor": null,
+  "metadata": {
+    "compiler": {
+      "version": "0.8.34+commit.80d5c536"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "components": [
+                {
+                  "internalType": "string",
+                  "name": "verdictId",
+                  "type": "string"
+                },
+                {
+                  "internalType": "address",
+                  "name": "wallet",
+                  "type": "address"
+                },
+                {
+                  "internalType": "address",
+                  "name": "counterpartyWallet",
+                  "type": "address"
+                },
+                {
+                  "internalType": "string",
+                  "name": "escrowId",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "decision",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "recommendation",
+                  "type": "string"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "approved",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "uint16",
+                  "name": "confidence",
+                  "type": "uint16"
+                },
+                {
+                  "internalType": "uint16",
+                  "name": "agentScoreProvider",
+                  "type": "uint16"
+                },
+                {
+                  "internalType": "string",
+                  "name": "scoreModelVersion",
+                  "type": "string"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "certificationValid",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "string",
+                  "name": "certificationTier",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "riskLevel",
+                  "type": "string"
+                },
+                {
+                  "internalType": "uint16",
+                  "name": "riskScore",
+                  "type": "uint16"
+                },
+                {
+                  "internalType": "string",
+                  "name": "forensicTraceId",
+                  "type": "string"
+                },
+                {
+                  "internalType": "bytes32",
+                  "name": "packetHash",
+                  "type": "bytes32"
+                },
+                {
+                  "internalType": "string",
+                  "name": "generatedAt",
+                  "type": "string"
+                }
+              ],
+              "internalType": "struct IDJDEvaluatorVerdictVerifier.EvaluatorVerdict",
+              "name": "verdict",
+              "type": "tuple"
+            }
+          ],
+          "name": "hashVerdict",
+          "outputs": [
+            {
+              "internalType": "bytes32",
+              "name": "",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "components": [
+                {
+                  "internalType": "string",
+                  "name": "verdictId",
+                  "type": "string"
+                },
+                {
+                  "internalType": "address",
+                  "name": "wallet",
+                  "type": "address"
+                },
+                {
+                  "internalType": "address",
+                  "name": "counterpartyWallet",
+                  "type": "address"
+                },
+                {
+                  "internalType": "string",
+                  "name": "escrowId",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "decision",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "recommendation",
+                  "type": "string"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "approved",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "uint16",
+                  "name": "confidence",
+                  "type": "uint16"
+                },
+                {
+                  "internalType": "uint16",
+                  "name": "agentScoreProvider",
+                  "type": "uint16"
+                },
+                {
+                  "internalType": "string",
+                  "name": "scoreModelVersion",
+                  "type": "string"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "certificationValid",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "string",
+                  "name": "certificationTier",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "riskLevel",
+                  "type": "string"
+                },
+                {
+                  "internalType": "uint16",
+                  "name": "riskScore",
+                  "type": "uint16"
+                },
+                {
+                  "internalType": "string",
+                  "name": "forensicTraceId",
+                  "type": "string"
+                },
+                {
+                  "internalType": "bytes32",
+                  "name": "packetHash",
+                  "type": "bytes32"
+                },
+                {
+                  "internalType": "string",
+                  "name": "generatedAt",
+                  "type": "string"
+                }
+              ],
+              "internalType": "struct IDJDEvaluatorVerdictVerifier.EvaluatorVerdict",
+              "name": "verdict",
+              "type": "tuple"
+            },
+            {
+              "internalType": "bytes",
+              "name": "signature",
+              "type": "bytes"
+            }
+          ],
+          "name": "verifyVerdict",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {},
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {},
+        "version": 1
+      }
+    },
+    "settings": {
+      "compilationTarget": {
+        "DJDEvaluatorEscrowSettlementExample.sol": "IDJDEvaluatorVerdictVerifier"
+      },
+      "evmVersion": "osaka",
+      "libraries": {},
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "remappings": [],
+      "viaIR": true
+    },
+    "sources": {
+      "DJDEvaluatorEscrowSettlementExample.sol": {
+        "keccak256": "0x98006613eae5a6a381694b1239012fb612570fabdb3f7c65e47ab97db423773c",
+        "license": "MIT",
+        "urls": [
+          "bzz-raw://9d340946ca258e8dafd7d38b0cf7a11b890e8c2a8f990ffdb0650f3c5a091268",
+          "dweb:/ipfs/QmUAauzgKMyA8X5i5MRAga5V263AP5aaf4doAXHWct38G5"
+        ]
+      }
+    },
+    "version": 1
+  }
+}

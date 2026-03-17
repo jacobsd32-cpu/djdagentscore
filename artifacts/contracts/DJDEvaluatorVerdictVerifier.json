@@ -1,0 +1,869 @@
+{
+  "contract": "DJDEvaluatorVerdictVerifier",
+  "artifact_kind": "contract",
+  "source_path": "contracts/DJDEvaluatorVerdictVerifier.sol",
+  "source_sha256": "fc870e0df4939fc1072369814d9357c2385973af55e9162b907114828a512eb5",
+  "compiler": {
+    "name": "solc",
+    "version": "0.8.34+commit.80d5c536.Emscripten.clang",
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "via_ir": true
+  },
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "initialSigner",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidOwner",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidSigner",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousSigner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newSigner",
+          "type": "address"
+        }
+      ],
+      "name": "OracleSignerUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "EIP712_DOMAIN_TYPEHASH",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "EVALUATOR_VERDICT_TYPEHASH",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "domainSeparator",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "string",
+              "name": "verdictId",
+              "type": "string"
+            },
+            {
+              "internalType": "address",
+              "name": "wallet",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "counterpartyWallet",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "escrowId",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "decision",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "recommendation",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "approved",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint16",
+              "name": "confidence",
+              "type": "uint16"
+            },
+            {
+              "internalType": "uint16",
+              "name": "agentScoreProvider",
+              "type": "uint16"
+            },
+            {
+              "internalType": "string",
+              "name": "scoreModelVersion",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "certificationValid",
+              "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "certificationTier",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "riskLevel",
+              "type": "string"
+            },
+            {
+              "internalType": "uint16",
+              "name": "riskScore",
+              "type": "uint16"
+            },
+            {
+              "internalType": "string",
+              "name": "forensicTraceId",
+              "type": "string"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "packetHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "string",
+              "name": "generatedAt",
+              "type": "string"
+            }
+          ],
+          "internalType": "struct DJDEvaluatorVerdictVerifier.EvaluatorVerdict",
+          "name": "verdict",
+          "type": "tuple"
+        }
+      ],
+      "name": "hashVerdict",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "oracleSigner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newSigner",
+          "type": "address"
+        }
+      ],
+      "name": "setOracleSigner",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "digest",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes",
+          "name": "signature",
+          "type": "bytes"
+        }
+      ],
+      "name": "verifyDigest",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "string",
+              "name": "verdictId",
+              "type": "string"
+            },
+            {
+              "internalType": "address",
+              "name": "wallet",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "counterpartyWallet",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "escrowId",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "decision",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "recommendation",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "approved",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint16",
+              "name": "confidence",
+              "type": "uint16"
+            },
+            {
+              "internalType": "uint16",
+              "name": "agentScoreProvider",
+              "type": "uint16"
+            },
+            {
+              "internalType": "string",
+              "name": "scoreModelVersion",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "certificationValid",
+              "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "certificationTier",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "riskLevel",
+              "type": "string"
+            },
+            {
+              "internalType": "uint16",
+              "name": "riskScore",
+              "type": "uint16"
+            },
+            {
+              "internalType": "string",
+              "name": "forensicTraceId",
+              "type": "string"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "packetHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "string",
+              "name": "generatedAt",
+              "type": "string"
+            }
+          ],
+          "internalType": "struct DJDEvaluatorVerdictVerifier.EvaluatorVerdict",
+          "name": "verdict",
+          "type": "tuple"
+        },
+        {
+          "internalType": "bytes",
+          "name": "signature",
+          "type": "bytes"
+        }
+      ],
+      "name": "verifyVerdict",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x60a080604052346101a857602081610a69803803809161001f82856101ac565b8339810103126101a857516001600160a01b038116908190036101a8578015610199575f80546001600160a01b031990811633179091556001805490911682179055604080519061007090826101ac565b601581527f444a44204576616c7561746f7220566572646963740000000000000000000000602090910152604080517f055a119ad2a5c0700f8493076ff9de198d1c63b90d350b68795c7a8477790cb7916100cb90826101ac565b600181526020810190603160f81b82525190206040519060208201927fc2f8787176b8ac6bf7215b4adcc1e069bf4ab82d9ab1df05a57a91d425935b6e8452604083015260608201524660808201526080815261012960a0826101ac565b51902060805260405190335f7f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e08180a35f7f53484eb5c3028cc71fda017d41e647dea2740218d0f723d84cf7e98476459a8e8180a361088590816101e4823960805181818160a101526106950152f35b632057875960e21b5f5260045ffd5b5f80fd5b601f909101601f19168101906001600160401b038211908210176101cf57604052565b634e487b7160e01b5f52604160045260245ffdfe60e0806040526004361015610012575f80fd5b5f3560e01c9081631709a61b146103755750806328bff9db146102e65780633f2edd601461027a5780638da5cb5b14610253578063c3b5b74d14610219578063c7977be7146101df578063c872964914610197578063e8a32a8c1461014e578063f2fde38b146100c85763f698da251461008a575f80fd5b346100c4575f3660031901126100c45760206040517f00000000000000000000000000000000000000000000000000000000000000008152f35b5f80fd5b346100c45760203660031901126100c4576004356001600160a01b038116908190036100c4575f546001600160a01b038116903382900361013f57821561013f576001600160a01b03191682175f9081557f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09080a3005b6349e27cff60e01b5f5260045ffd5b346100c45760403660031901126100c45760243567ffffffffffffffff81116100c45761018d6101846020923690600401610398565b906004356106d3565b6040519015158152f35b346100c45760203660031901126100c45760043567ffffffffffffffff81116100c45761022060031982360301126100c4576101d76020916004016103fc565b604051908152f35b346100c4575f3660031901126100c45760206040517fc2f8787176b8ac6bf7215b4adcc1e069bf4ab82d9ab1df05a57a91d425935b6e8152f35b346100c4575f3660031901126100c45760206040517fc2651a786e263353da90b55db746aaacb23c82c82b850d9a77aae53acf8e6e018152f35b346100c4575f3660031901126100c4575f546040516001600160a01b039091168152602090f35b346100c45760403660031901126100c45760043567ffffffffffffffff81116100c45761022060031982360301126100c4576024359067ffffffffffffffff82116100c4576102e161018d916102d66020943690600401610398565b9290916004016103fc565b6106d3565b346100c45760203660031901126100c4576004356001600160a01b038116908190036100c4575f546001600160a01b0316330361013f57801561036657600180546001600160a01b0319811683179091556001600160a01b03167f53484eb5c3028cc71fda017d41e647dea2740218d0f723d84cf7e98476459a8e5f80a3005b632057875960e21b5f5260045ffd5b346100c4575f3660031901126100c4576001546001600160a01b03168152602090f35b9181601f840112156100c45782359167ffffffffffffffff83116100c457602083818601950101116100c457565b90601f8019910116810190811067ffffffffffffffff8211176103e857604052565b634e487b7160e01b5f52604160045260245ffd5b806104078180610707565b36906104129261073a565b805190602001206020820161042690610780565b60c05261043560408301610780565b6104426060840184610707565b369061044d9261073a565b80519060200120608084016104629085610707565b369061046d9261073a565b8051906020012060a085016104829086610707565b369061048d9261073a565b8051906020012060c086016104a190610794565b6104ad60e088016107a1565b6104ba61010089016107a1565b916104c96101208a018a610707565b36906104d49261073a565b80519060200120936101408a016104ea90610794565b956104f96101608c018c610707565b36906105049261073a565b80519060200120976101808c0161051b908d610707565b36906105269261073a565b80519060200120996101a08d0161053c906107a1565b9b61054b6101c08f018f610707565b36906105569261073a565b805190602001209d610200810161056c91610707565b36906105779261073a565b8051906020012060805260405160a05260a0516020017fc2651a786e263353da90b55db746aaacb23c82c82b850d9a77aae53acf8e6e01905260a05160400152600160a01b6001900360c0511660a05160600152600160a01b600190031660a0516080015260a05160a0015260a05160c0015260a05160e00152151560a051610100015261ffff1660a051610120015261ffff1660a051610140015260a0516101600152151560a051610180015260a0516101a0015260a0516101c0015261ffff1660a0516101e0015260a05161020001526101e0013560a051610220015260805160a051610240015260a051610240905260a051610260610678916103c6565b60a0515160a05160200120604051602081019161190160f01b83527f000000000000000000000000000000000000000000000000000000000000000060228301526042820152604281526106cd6062826103c6565b51902090565b6001600160a01b03926106e79290916107b0565b1680151590816106f5575090565b6001546001600160a01b031614919050565b903590601e19813603018212156100c4570180359067ffffffffffffffff82116100c4576020019181360383136100c457565b92919267ffffffffffffffff82116103e85760405191610764601f8201601f1916602001846103c6565b8294818452818301116100c4578281602093845f960137010152565b356001600160a01b03811681036100c45790565b3580151581036100c45790565b3561ffff811681036100c45790565b91604019016108495760208101359160408201355f1a907f7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0841161083657601b8214158061083e575b610836576020935f9360809360405193845286840152356040830152606082015282805260015afa1561082b575f5190565b6040513d5f823e3d90fd5b505050505f90565b50601c8214156107f9565b50505f9056fea2646970667358221220da3bde2da8d5d0963c879de6b1ec00b42e08c217daf0a52cb2610ebd6d88ff7864736f6c63430008220033",
+  "deployed_bytecode": "0x60e0806040526004361015610012575f80fd5b5f3560e01c9081631709a61b146103755750806328bff9db146102e65780633f2edd601461027a5780638da5cb5b14610253578063c3b5b74d14610219578063c7977be7146101df578063c872964914610197578063e8a32a8c1461014e578063f2fde38b146100c85763f698da251461008a575f80fd5b346100c4575f3660031901126100c45760206040517f00000000000000000000000000000000000000000000000000000000000000008152f35b5f80fd5b346100c45760203660031901126100c4576004356001600160a01b038116908190036100c4575f546001600160a01b038116903382900361013f57821561013f576001600160a01b03191682175f9081557f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09080a3005b6349e27cff60e01b5f5260045ffd5b346100c45760403660031901126100c45760243567ffffffffffffffff81116100c45761018d6101846020923690600401610398565b906004356106d3565b6040519015158152f35b346100c45760203660031901126100c45760043567ffffffffffffffff81116100c45761022060031982360301126100c4576101d76020916004016103fc565b604051908152f35b346100c4575f3660031901126100c45760206040517fc2f8787176b8ac6bf7215b4adcc1e069bf4ab82d9ab1df05a57a91d425935b6e8152f35b346100c4575f3660031901126100c45760206040517fc2651a786e263353da90b55db746aaacb23c82c82b850d9a77aae53acf8e6e018152f35b346100c4575f3660031901126100c4575f546040516001600160a01b039091168152602090f35b346100c45760403660031901126100c45760043567ffffffffffffffff81116100c45761022060031982360301126100c4576024359067ffffffffffffffff82116100c4576102e161018d916102d66020943690600401610398565b9290916004016103fc565b6106d3565b346100c45760203660031901126100c4576004356001600160a01b038116908190036100c4575f546001600160a01b0316330361013f57801561036657600180546001600160a01b0319811683179091556001600160a01b03167f53484eb5c3028cc71fda017d41e647dea2740218d0f723d84cf7e98476459a8e5f80a3005b632057875960e21b5f5260045ffd5b346100c4575f3660031901126100c4576001546001600160a01b03168152602090f35b9181601f840112156100c45782359167ffffffffffffffff83116100c457602083818601950101116100c457565b90601f8019910116810190811067ffffffffffffffff8211176103e857604052565b634e487b7160e01b5f52604160045260245ffd5b806104078180610707565b36906104129261073a565b805190602001206020820161042690610780565b60c05261043560408301610780565b6104426060840184610707565b369061044d9261073a565b80519060200120608084016104629085610707565b369061046d9261073a565b8051906020012060a085016104829086610707565b369061048d9261073a565b8051906020012060c086016104a190610794565b6104ad60e088016107a1565b6104ba61010089016107a1565b916104c96101208a018a610707565b36906104d49261073a565b80519060200120936101408a016104ea90610794565b956104f96101608c018c610707565b36906105049261073a565b80519060200120976101808c0161051b908d610707565b36906105269261073a565b80519060200120996101a08d0161053c906107a1565b9b61054b6101c08f018f610707565b36906105569261073a565b805190602001209d610200810161056c91610707565b36906105779261073a565b8051906020012060805260405160a05260a0516020017fc2651a786e263353da90b55db746aaacb23c82c82b850d9a77aae53acf8e6e01905260a05160400152600160a01b6001900360c0511660a05160600152600160a01b600190031660a0516080015260a05160a0015260a05160c0015260a05160e00152151560a051610100015261ffff1660a051610120015261ffff1660a051610140015260a0516101600152151560a051610180015260a0516101a0015260a0516101c0015261ffff1660a0516101e0015260a05161020001526101e0013560a051610220015260805160a051610240015260a051610240905260a051610260610678916103c6565b60a0515160a05160200120604051602081019161190160f01b83527f000000000000000000000000000000000000000000000000000000000000000060228301526042820152604281526106cd6062826103c6565b51902090565b6001600160a01b03926106e79290916107b0565b1680151590816106f5575090565b6001546001600160a01b031614919050565b903590601e19813603018212156100c4570180359067ffffffffffffffff82116100c4576020019181360383136100c457565b92919267ffffffffffffffff82116103e85760405191610764601f8201601f1916602001846103c6565b8294818452818301116100c4578281602093845f960137010152565b356001600160a01b03811681036100c45790565b3580151581036100c45790565b3561ffff811681036100c45790565b91604019016108495760208101359160408201355f1a907f7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0841161083657601b8214158061083e575b610836576020935f9360809360405193845286840152356040830152606082015282805260015afa1561082b575f5190565b6040513d5f823e3d90fd5b505050505f90565b50601c8214156107f9565b50505f9056fea2646970667358221220da3bde2da8d5d0963c879de6b1ec00b42e08c217daf0a52cb2610ebd6d88ff7864736f6c63430008220033",
+  "method_identifiers": {
+    "EIP712_DOMAIN_TYPEHASH()": "c7977be7",
+    "EVALUATOR_VERDICT_TYPEHASH()": "c3b5b74d",
+    "domainSeparator()": "f698da25",
+    "hashVerdict((string,address,address,string,string,string,bool,uint16,uint16,string,bool,string,string,uint16,string,bytes32,string))": "c8729649",
+    "oracleSigner()": "1709a61b",
+    "owner()": "8da5cb5b",
+    "setOracleSigner(address)": "28bff9db",
+    "transferOwnership(address)": "f2fde38b",
+    "verifyDigest(bytes32,bytes)": "e8a32a8c",
+    "verifyVerdict((string,address,address,string,string,string,bool,uint16,uint16,string,bool,string,string,uint16,string,bytes32,string),bytes)": "3f2edd60"
+  },
+  "constructor": {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "initialSigner",
+        "type": "address"
+      }
+    ]
+  },
+  "metadata": {
+    "compiler": {
+      "version": "0.8.34+commit.80d5c536"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "initialSigner",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "constructor"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidOwner",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidSigner",
+          "type": "error"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "previousSigner",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "newSigner",
+              "type": "address"
+            }
+          ],
+          "name": "OracleSignerUpdated",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "previousOwner",
+              "type": "address"
+            },
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "newOwner",
+              "type": "address"
+            }
+          ],
+          "name": "OwnershipTransferred",
+          "type": "event"
+        },
+        {
+          "inputs": [],
+          "name": "EIP712_DOMAIN_TYPEHASH",
+          "outputs": [
+            {
+              "internalType": "bytes32",
+              "name": "",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "EVALUATOR_VERDICT_TYPEHASH",
+          "outputs": [
+            {
+              "internalType": "bytes32",
+              "name": "",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "domainSeparator",
+          "outputs": [
+            {
+              "internalType": "bytes32",
+              "name": "",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "components": [
+                {
+                  "internalType": "string",
+                  "name": "verdictId",
+                  "type": "string"
+                },
+                {
+                  "internalType": "address",
+                  "name": "wallet",
+                  "type": "address"
+                },
+                {
+                  "internalType": "address",
+                  "name": "counterpartyWallet",
+                  "type": "address"
+                },
+                {
+                  "internalType": "string",
+                  "name": "escrowId",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "decision",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "recommendation",
+                  "type": "string"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "approved",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "uint16",
+                  "name": "confidence",
+                  "type": "uint16"
+                },
+                {
+                  "internalType": "uint16",
+                  "name": "agentScoreProvider",
+                  "type": "uint16"
+                },
+                {
+                  "internalType": "string",
+                  "name": "scoreModelVersion",
+                  "type": "string"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "certificationValid",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "string",
+                  "name": "certificationTier",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "riskLevel",
+                  "type": "string"
+                },
+                {
+                  "internalType": "uint16",
+                  "name": "riskScore",
+                  "type": "uint16"
+                },
+                {
+                  "internalType": "string",
+                  "name": "forensicTraceId",
+                  "type": "string"
+                },
+                {
+                  "internalType": "bytes32",
+                  "name": "packetHash",
+                  "type": "bytes32"
+                },
+                {
+                  "internalType": "string",
+                  "name": "generatedAt",
+                  "type": "string"
+                }
+              ],
+              "internalType": "struct DJDEvaluatorVerdictVerifier.EvaluatorVerdict",
+              "name": "verdict",
+              "type": "tuple"
+            }
+          ],
+          "name": "hashVerdict",
+          "outputs": [
+            {
+              "internalType": "bytes32",
+              "name": "",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "oracleSigner",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "owner",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "newSigner",
+              "type": "address"
+            }
+          ],
+          "name": "setOracleSigner",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "newOwner",
+              "type": "address"
+            }
+          ],
+          "name": "transferOwnership",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "bytes32",
+              "name": "digest",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes",
+              "name": "signature",
+              "type": "bytes"
+            }
+          ],
+          "name": "verifyDigest",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "components": [
+                {
+                  "internalType": "string",
+                  "name": "verdictId",
+                  "type": "string"
+                },
+                {
+                  "internalType": "address",
+                  "name": "wallet",
+                  "type": "address"
+                },
+                {
+                  "internalType": "address",
+                  "name": "counterpartyWallet",
+                  "type": "address"
+                },
+                {
+                  "internalType": "string",
+                  "name": "escrowId",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "decision",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "recommendation",
+                  "type": "string"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "approved",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "uint16",
+                  "name": "confidence",
+                  "type": "uint16"
+                },
+                {
+                  "internalType": "uint16",
+                  "name": "agentScoreProvider",
+                  "type": "uint16"
+                },
+                {
+                  "internalType": "string",
+                  "name": "scoreModelVersion",
+                  "type": "string"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "certificationValid",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "string",
+                  "name": "certificationTier",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "riskLevel",
+                  "type": "string"
+                },
+                {
+                  "internalType": "uint16",
+                  "name": "riskScore",
+                  "type": "uint16"
+                },
+                {
+                  "internalType": "string",
+                  "name": "forensicTraceId",
+                  "type": "string"
+                },
+                {
+                  "internalType": "bytes32",
+                  "name": "packetHash",
+                  "type": "bytes32"
+                },
+                {
+                  "internalType": "string",
+                  "name": "generatedAt",
+                  "type": "string"
+                }
+              ],
+              "internalType": "struct DJDEvaluatorVerdictVerifier.EvaluatorVerdict",
+              "name": "verdict",
+              "type": "tuple"
+            },
+            {
+              "internalType": "bytes",
+              "name": "signature",
+              "type": "bytes"
+            }
+          ],
+          "name": "verifyVerdict",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {},
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {},
+        "version": 1
+      }
+    },
+    "settings": {
+      "compilationTarget": {
+        "DJDEvaluatorVerdictVerifier.sol": "DJDEvaluatorVerdictVerifier"
+      },
+      "evmVersion": "osaka",
+      "libraries": {},
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "remappings": [],
+      "viaIR": true
+    },
+    "sources": {
+      "DJDEvaluatorVerdictVerifier.sol": {
+        "keccak256": "0x4c0cab75a23b9cab397196fd7775de46c86d89c4a11d83cd94cbbd5012854ed2",
+        "license": "MIT",
+        "urls": [
+          "bzz-raw://bf1c87dbccc047c8753590b93bdc42d6a69cb154fa3de5703d054e81b738351e",
+          "dweb:/ipfs/QmUoLwZBrizCN79niUs9gSiBLCFwTrxAdJ76SfxwpPDUyG"
+        ]
+      }
+    },
+    "version": 1
+  }
+}

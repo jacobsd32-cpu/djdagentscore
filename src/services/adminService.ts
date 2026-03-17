@@ -37,6 +37,7 @@ const RESETTABLE_TABLES = [
   'subscriptions',
   'monitoring_subscriptions',
   'certifications',
+  'evaluator_verdicts',
   'reputation_publications',
   'webhook_deliveries',
   'webhooks',

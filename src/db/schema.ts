@@ -613,6 +613,7 @@ db.exec(`
     wallet      TEXT NOT NULL,
     tier        TEXT NOT NULL,
     score_at_certification INTEGER NOT NULL,
+    price_paid_usdc REAL NOT NULL DEFAULT 200,
     granted_at  TEXT NOT NULL DEFAULT (datetime('now')),
     expires_at  TEXT NOT NULL,
     is_active   INTEGER NOT NULL DEFAULT 1,
@@ -626,6 +627,7 @@ addColumnIfMissing('certifications', 'is_active', 'INTEGER NOT NULL DEFAULT 1')
 addColumnIfMissing('certifications', 'tx_hash', 'TEXT')
 addColumnIfMissing('certifications', 'revoked_at', 'TEXT')
 addColumnIfMissing('certifications', 'revocation_reason', 'TEXT')
+addColumnIfMissing('certifications', 'price_paid_usdc', 'REAL NOT NULL DEFAULT 99')
 
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_certs_wallet ON certifications(wallet);
@@ -654,7 +656,7 @@ db.exec(`
 `)
 
 addColumnIfMissing('certification_review_requests', 'requested_by_wallet', 'TEXT NOT NULL DEFAULT ""')
-addColumnIfMissing('certification_review_requests', 'requested_tier', 'TEXT NOT NULL DEFAULT "Trusted"')
+addColumnIfMissing('certification_review_requests', 'requested_tier', 'TEXT NOT NULL DEFAULT "Transactional"')
 addColumnIfMissing('certification_review_requests', 'requested_score', 'INTEGER NOT NULL DEFAULT 0')
 addColumnIfMissing('certification_review_requests', 'requested_confidence', 'REAL')
 addColumnIfMissing('certification_review_requests', 'score_expires_at', 'TEXT')
@@ -677,9 +679,59 @@ db.exec(`
     wallet          TEXT PRIMARY KEY,
     composite_score INTEGER NOT NULL,
     model_version   TEXT NOT NULL,
+    endpoint        TEXT,
+    feedback_hash   TEXT,
     tx_hash         TEXT,
     published_at    TEXT NOT NULL DEFAULT (datetime('now'))
   );
+`)
+addColumnIfMissing('reputation_publications', 'endpoint', 'TEXT')
+addColumnIfMissing('reputation_publications', 'feedback_hash', 'TEXT')
+
+// ── Evaluator Verdict Records ───────────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS evaluator_verdicts (
+    id                   TEXT PRIMARY KEY,
+    wallet               TEXT NOT NULL,
+    counterparty_wallet  TEXT,
+    escrow_id            TEXT,
+    baseline_profile     TEXT NOT NULL,
+    certification_floor  TEXT NOT NULL,
+    current_score        INTEGER NOT NULL,
+    current_tier         TEXT NOT NULL,
+    score_confidence     REAL NOT NULL,
+    risk_score           INTEGER NOT NULL,
+    risk_level           TEXT NOT NULL,
+    certification_active INTEGER NOT NULL DEFAULT 0,
+    certification_tier   TEXT,
+    decision             TEXT NOT NULL,
+    recommendation       TEXT NOT NULL,
+    approved             INTEGER NOT NULL DEFAULT 0,
+    confidence           REAL NOT NULL,
+    packet_hash          TEXT NOT NULL,
+    forensic_trace_id    TEXT NOT NULL,
+    attestation_scheme   TEXT NOT NULL DEFAULT 'eip712',
+    attestation_status   TEXT NOT NULL DEFAULT 'unsigned',
+    attestation_digest   TEXT NOT NULL DEFAULT '',
+    attestation_signature TEXT,
+    attestation_signer   TEXT,
+    attestation_reason   TEXT,
+    attested_at          TEXT,
+    payload_json         TEXT NOT NULL,
+    created_at           TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`)
+addColumnIfMissing('evaluator_verdicts', 'attestation_scheme', 'TEXT NOT NULL DEFAULT "eip712"')
+addColumnIfMissing('evaluator_verdicts', 'attestation_status', 'TEXT NOT NULL DEFAULT "unsigned"')
+addColumnIfMissing('evaluator_verdicts', 'attestation_digest', 'TEXT NOT NULL DEFAULT ""')
+addColumnIfMissing('evaluator_verdicts', 'attestation_signature', 'TEXT')
+addColumnIfMissing('evaluator_verdicts', 'attestation_signer', 'TEXT')
+addColumnIfMissing('evaluator_verdicts', 'attestation_reason', 'TEXT')
+addColumnIfMissing('evaluator_verdicts', 'attested_at', 'TEXT')
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_evaluator_verdicts_wallet ON evaluator_verdicts(wallet, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_evaluator_verdicts_escrow ON evaluator_verdicts(escrow_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_evaluator_verdicts_decision ON evaluator_verdicts(decision, created_at DESC);
 `)
 
 // ── Stripe Billing ──────────────────────────────────────────────────────────

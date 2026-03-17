@@ -14,6 +14,7 @@ import { getIndexerStatus } from '../jobs/blockchainIndexer.js'
 import { jobStats } from '../jobs/jobStats.js'
 import { getHttpCounters, uptimeSeconds } from '../metrics.js'
 import { MODEL_VERSION } from '../scoring/responseBuilders.js'
+import { getEvaluatorAttestationSignerStatus } from './evaluatorAttestationService.js'
 
 interface PublicHealthPayload {
   status: 'ok'
@@ -57,6 +58,12 @@ interface DetailedHealthPayload extends PublicHealthPayload {
     erc8004Publisher: {
       configured: boolean
       active: boolean
+    }
+    evaluatorOracleSigner: {
+      configured: boolean
+      active: boolean
+      source: 'oracle_signer' | 'publisher_fallback' | 'unconfigured' | 'invalid_key'
+      address: string | null
     }
   }
   database: {
@@ -121,6 +128,7 @@ function buildDetailedHealthPayload(): DetailedHealthPayload {
   const hourlyRefreshEnabled = envEnabled('ENABLE_HOURLY_REFRESH')
   const githubTokenConfigured = Boolean(process.env.GITHUB_TOKEN)
   const publisherConfigured = Boolean(process.env.PUBLISHER_PRIVATE_KEY)
+  const oracleSigner = getEvaluatorAttestationSignerStatus()
   const warnings: DetailedHealthPayload['warnings'] = []
 
   if (!githubTokenConfigured) {
@@ -134,6 +142,15 @@ function buildDetailedHealthPayload(): DetailedHealthPayload {
     warnings.push({
       code: 'publisher_private_key_missing',
       message: 'PUBLISHER_PRIVATE_KEY not set — ERC-8004 on-chain publication is disabled.',
+    })
+  }
+
+  if (!oracleSigner.configured) {
+    warnings.push({
+      code: oracleSigner.source === 'invalid_key' ? 'oracle_signer_invalid' : 'oracle_signer_missing',
+      message:
+        oracleSigner.reason ??
+        'Neither ORACLE_SIGNER_PRIVATE_KEY nor a valid PUBLISHER_PRIVATE_KEY is set — signed evaluator verdicts are disabled.',
     })
   }
 
@@ -170,6 +187,12 @@ function buildDetailedHealthPayload(): DetailedHealthPayload {
       erc8004Publisher: {
         configured: publisherConfigured,
         active: workerEnabled && publisherConfigured,
+      },
+      evaluatorOracleSigner: {
+        configured: oracleSigner.configured,
+        active: workerEnabled && oracleSigner.configured,
+        source: oracleSigner.source,
+        address: oracleSigner.address,
       },
     },
     database: {
