@@ -10,9 +10,9 @@ data/
 __pycache__/
 .serena/
 .claude/
+.worktrees/
 x402/
 server.json
-docs/plans/
 DEPLOY.md
 evaluate.sh
 program.md
