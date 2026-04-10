@@ -422,12 +422,12 @@ ${
       </div>
       <div class="cert-copy">${
         certifyReadiness === 'eligible'
-          ? 'This wallet meets the visible prerequisites for DJD certification: registration plus a fresh score of 75 or higher. The next step is the one-time x402 certification purchase.'
+          ? 'This wallet meets the visible prerequisites for DJD certification. The default transactional lane starts at 75, with operational at 60 and autonomous at 90.'
           : certifyReadiness === 'register'
             ? 'Certification starts with identity context. Register the agent first so counterparties can inspect project metadata instead of a bare wallet address.'
             : certifyReadiness === 'refresh'
               ? 'Certification requires a fresh score snapshot. Re-score this wallet before applying so the certification decision is based on current data.'
-              : 'DJD certification currently requires a composite score of 75 or higher. Improve the trust profile, then apply once the wallet is in the Trusted band.'
+              : 'DJD certification is tiered: Operational starts at 60, Transactional at 75, and Autonomous at 90. Improve the trust profile, then apply for the highest eligible lane.'
       }</div>
       <div class="surface-links">
         <a class="surface-link" href="${esc(certifyUrl)}">

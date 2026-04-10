@@ -14,6 +14,11 @@ import { buildPublicUrl } from './public.js'
 export const ENDPOINT_PRICING: Record<string, number> = {
   '/v1/score/full': 0.1,
   '/v1/score/evaluator': 0.35,
+  '/v1/score/evaluator/evidence': 0.45,
+  '/v1/score/evaluator/oracle': 0.6,
+  '/v1/score/evaluator/verdict': 0.12,
+  '/v1/score/evaluator/verdicts': 0.3,
+  '/v1/score/evaluator/callback': 0.2,
   '/v1/score/risk': 0.5,
   '/v1/score/refresh': 0.25,
   '/v1/report': 0.02,
@@ -35,7 +40,10 @@ export const ENDPOINT_PRICING: Record<string, number> = {
   '/v1/forensics/reports': 0.15,
   '/v1/forensics/watchlist': 0.25,
   '/v1/forensics/timeline': 0.2,
-  '/v1/certification/apply': 99.0,
+  '/v1/certification/apply': 200.0,
+  '/v1/certification/apply/operational': 50.0,
+  '/v1/certification/apply/transactional': 200.0,
+  '/v1/certification/apply/autonomous': 500.0,
 }
 
 // ── Tier Configuration ──────────────────────────────────────────────────────
@@ -243,8 +251,6 @@ export const REPUTATION_PUBLISHER_CONFIG = {
   INTER_TX_DELAY_MS: 3_000,
   /** Min ETH balance required to publish (0.001 ETH) */
   MIN_ETH_BALANCE: 1_000_000_000_000_000n,
-  /** Full score endpoint URL embedded in on-chain record */
-  SCORE_ENDPOINT: buildPublicUrl('/v1/score/full'),
 } as const
 
 // ── Anomaly Detector ────────────────────────────────────────────────────

@@ -10,6 +10,28 @@ const indexHtmlTemplate = readFileSync(join(__dirname, '../../index.html'), 'utf
 
 const legal = new Hono()
 
+const publicSitemapPaths = [
+  '/',
+  '/leaderboard',
+  '/terms',
+  '/privacy',
+  '/certify',
+  '/directory',
+  '/docs',
+  '/pricing',
+  '/blog',
+  '/methodology',
+] as const
+
+function escapeXml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&apos;')
+}
+
 function renderLandingPageHtml(): string {
   return indexHtmlTemplate
     .replaceAll('__DJD_PUBLIC_BASE_URL__', buildPublicUrl())
@@ -47,7 +69,22 @@ legal.get('/robots.txt', (c) => {
       'Disallow: /portal\n' +
       'Disallow: /reviewer\n' +
       '\n' +
-      `Sitemap: ${buildPublicUrl('/openapi.json')}\n`,
+      `Sitemap: ${buildPublicUrl('/sitemap.xml')}\n`,
+  )
+})
+
+// ── sitemap.xml ─────────────────────────────────────────────────────
+legal.get('/sitemap.xml', (c) => {
+  c.header('Content-Type', 'application/xml; charset=UTF-8')
+  c.header('Cache-Control', 'public, max-age=86400')
+
+  const urls = publicSitemapPaths.map((path) => `  <url><loc>${escapeXml(buildPublicUrl(path))}</loc></url>`).join('\n')
+
+  return c.body(
+    `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+      `${urls}\n` +
+      `</urlset>\n`,
   )
 })
 

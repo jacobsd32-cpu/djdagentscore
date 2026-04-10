@@ -4,9 +4,9 @@
  */
 import type { MiddlewareHandler } from 'hono'
 
+import { MODEL_VERSION } from '../config/modelVersion.js'
 import { getPublicOrigin } from '../config/public.js'
 import { getReleaseMetadata, getRuntimeMode } from '../config/runtimeMetadata.js'
-import { MODEL_VERSION } from '../scoring/responseBuilders.js'
 export { MODEL_VERSION }
 
 const PUBLIC_SITE_ORIGIN = getPublicOrigin()

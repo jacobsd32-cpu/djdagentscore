@@ -260,7 +260,7 @@ export function pricingPageHtml(plans: PricingPlan[]): string {
   <section class="section" id="plans">
     <div class="section-header section-center">
       <div class="section-label">Plans</div>
-      <h2 class="section-title">From free screening to production trust infrastructure</h2>
+      <h2 class="section-title">From free screening to production wallet controls</h2>
       <p class="section-copy">Human teams usually pay by subscription and use a standard Bearer API key. Autonomous agents can still pay per request with x402. Same platform, same scoring engine, same certified directory and evaluator surfaces.</p>
     </div>
     <div class="plans">
@@ -271,6 +271,11 @@ export function pricingPageHtml(plans: PricingPlan[]): string {
         <ul class="plan-features">
           <li>Basic score endpoint</li>
           <li>ERC-8004-compatible trust document</li>
+          <li>Verifier ABI and Solidity package endpoint</li>
+          <li>Compiled contract artifact endpoint</li>
+          <li>Escrow settlement calldata endpoint</li>
+          <li>Verifier and escrow deploy plan endpoint</li>
+          <li>One-shot deploy bundle endpoint</li>
           <li>Score, tier, and recommendation</li>
           <li>IP-based rate limit</li>
           <li>No API key needed</li>
@@ -307,6 +312,9 @@ export function pricingPageHtml(plans: PricingPlan[]): string {
           <li>Batch scoring for 20 wallets</li>
           <li>Certification applications</li>
           <li>ERC-8183 evaluator preview endpoint</li>
+          <li>ERC-8183 evaluator evidence packet endpoint</li>
+          <li>ERC-8183 oracle verdict endpoint</li>
+          <li>Oracle callback calldata endpoint</li>
           <li>Force-refresh scores</li>
           <li>Priority support</li>
         </ul>
@@ -454,6 +462,6 @@ async function startCheckout(plan) {
 }
 </script>`,
     footerCopy:
-      'DJD Agent Score LLC provides trust infrastructure for agent marketplaces, payouts, and settlement flows on Base.',
+      'DJD Agent Score LLC provides wallet screening and trust signals for payouts, paid routes, and settlement flows on Base.',
   })
 }

@@ -1,0 +1,766 @@
+{
+  "contract": "DJDEvaluatorEscrowSettlementExample",
+  "artifact_kind": "contract",
+  "source_path": "contracts/DJDEvaluatorEscrowSettlementExample.sol",
+  "source_sha256": "ce744e5e3b43b266ac50e5176279fb44cb12f6f14ddbaca028fe39d31ea00fbb",
+  "compiler": {
+    "name": "solc",
+    "version": "0.8.34+commit.80d5c536.Emscripten.clang",
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "via_ir": true
+  },
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "verifier_",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "provider_",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "counterparty_",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "escrowIdHash_",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "AlreadySettled",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "CounterpartyMismatch",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "EscrowIdMismatch",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidProvider",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidVerdictSignature",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidVerifier",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ProviderMismatch",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "verdictDigest",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "packetHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "enum DJDEvaluatorEscrowSettlementExample.SettlementOutcome",
+          "name": "outcome",
+          "type": "uint8"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "approved",
+          "type": "bool"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "provider",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "counterparty",
+          "type": "address"
+        }
+      ],
+      "name": "VerdictSettled",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "counterparty",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "escrowIdHash",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "lastPacketHash",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "lastVerdictDigest",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "outcome",
+      "outputs": [
+        {
+          "internalType": "enum DJDEvaluatorEscrowSettlementExample.SettlementOutcome",
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "provider",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "releaseAuthorized",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "string",
+              "name": "verdictId",
+              "type": "string"
+            },
+            {
+              "internalType": "address",
+              "name": "wallet",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "counterpartyWallet",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "escrowId",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "decision",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "recommendation",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "approved",
+              "type": "bool"
+            },
+            {
+              "internalType": "uint16",
+              "name": "confidence",
+              "type": "uint16"
+            },
+            {
+              "internalType": "uint16",
+              "name": "agentScoreProvider",
+              "type": "uint16"
+            },
+            {
+              "internalType": "string",
+              "name": "scoreModelVersion",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "certificationValid",
+              "type": "bool"
+            },
+            {
+              "internalType": "string",
+              "name": "certificationTier",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "riskLevel",
+              "type": "string"
+            },
+            {
+              "internalType": "uint16",
+              "name": "riskScore",
+              "type": "uint16"
+            },
+            {
+              "internalType": "string",
+              "name": "forensicTraceId",
+              "type": "string"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "packetHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "string",
+              "name": "generatedAt",
+              "type": "string"
+            }
+          ],
+          "internalType": "struct IDJDEvaluatorVerdictVerifier.EvaluatorVerdict",
+          "name": "verdict",
+          "type": "tuple"
+        },
+        {
+          "internalType": "bytes",
+          "name": "signature",
+          "type": "bytes"
+        }
+      ],
+      "name": "settleWithDJDVerdict",
+      "outputs": [
+        {
+          "internalType": "enum DJDEvaluatorEscrowSettlementExample.SettlementOutcome",
+          "name": "resolvedOutcome",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "settled",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "verifier",
+      "outputs": [
+        {
+          "internalType": "contract IDJDEvaluatorVerdictVerifier",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x610100346100fe57601f610b5438819003918201601f19168301916001600160401b03831184841017610102578084926080946040528339810103126100fe5761004881610116565b9061005560208201610116565b606061006360408401610116565b920151926001600160a01b031680156100ef576001600160a01b038216156100e05760805260a05260c05260e052604051610a29908161012b82396080518181816102070152610619015260a051818181610167015261069e015260c051818181610191015261055d015260e0518181816101ca01526105a30152f35b633b136dc160e11b5f5260045ffd5b63baa3de5f60e01b5f5260045ffd5b5f80fd5b634e487b7160e01b5f52604160045260245ffd5b51906001600160a01b03821682036100fe5756fe6080806040526004361015610012575f80fd5b5f3560e01c908163085d48831461068c575080630c2280471461066f57806327793f87146106485780632b7ac3f31461060457806373c3c702146105e75780638f775839146105c6578063c08e7a7e1461058c578063c3df654614610548578063df5b527a146100d15763f79106361461008a575f80fd5b346100cd575f3660031901126100cd5760ff5f5460081c1660058110156100b957602090600160405191148152f35b634e487b7160e01b5f52602160045260245ffd5b5f80fd5b346100cd5760403660031901126100cd5760043567ffffffffffffffff81116100cd578060040161022060031983360301126100cd5760243567ffffffffffffffff81116100cd57366023820112156100cd57806004013567ffffffffffffffff81116100cd5736602482840101116100cd575f549160ff831661053a57602485019061015d826106da565b6001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000811691160361052b577f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316801515908161050c575b506104fd577f000000000000000000000000000000000000000000000000000000000000000080151590816104dc575b506104cd5760206102629160018060a01b037f0000000000000000000000000000000000000000000000000000000000000000169460405193849283926301f976eb60e51b8452604060048501526024610250604486018d61081f565b858103600319018287015292016107cf565b0381865afa9081156103d6575f91610492575b50156104835761029261028b60a48701866106ee565b3691610757565b602081519101209260c48601936102a8856109e6565b80610457575b156103e157506001945b60058610156100b9576102fe93600160209361ff008960081b169061ffff191617175f55604051808096819463c872964960e01b8352866004840152602483019061081f565b03915afa9182156103d6575f9261039f575b5060807f5afa00b213e4bd9e5433522c786b8e106c2868dca359646ff98deb1288fcb6c89160209684600155610364604461035d6103576101e4850135998a6002556109e6565b946106da565b92016106da565b9060405192610373848a6106cd565b1515838a01526001600160a01b039081166040840152166060820152a361039d60405180926106cd565bf35b9491506020853d6020116103ce575b816103bb60209383610721565b810103126100cd57935190936080610310565b3d91506103ae565b6040513d5f823e3d90fd5b6040600d602082516103f38482610721565b828152016c6d616e75616c5f72657669657760981b81522082145f1461041d5750506002946102b8565b602060079161042e81519182610721565b82815201666469737075746560c81b815220145f1461044f576003946102b8565b6004946102b8565b506007602060405161046a604082610721565b828152016672656c6561736560c81b81522081146102ae565b6338f16e3360e11b5f5260045ffd5b90506020813d6020116104c5575b816104ad60209383610721565b810103126100cd575180151581036100cd5786610275565b3d91506104a0565b63afdffb6560e01b5f5260045ffd5b90506104ee61028b60648901886106ee565b602081519101201415876101f3565b6305a7febd60e31b5f5260045ffd5b90506001600160a01b03610522604489016106da565b161415876101c3565b633943fc0360e11b5f5260045ffd5b62560ff960e81b5f5260045ffd5b346100cd575f3660031901126100cd576040517f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03168152602090f35b346100cd575f3660031901126100cd5760206040517f00000000000000000000000000000000000000000000000000000000000000008152f35b346100cd575f3660031901126100cd57602060ff5f54166040519015158152f35b346100cd575f3660031901126100cd576020600254604051908152f35b346100cd575f3660031901126100cd576040517f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03168152602090f35b346100cd575f3660031901126100cd57602060ff5f5460081c1661039d60405180926106cd565b346100cd575f3660031901126100cd576020600154604051908152f35b346100cd575f3660031901126100cd577f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03168152602090f35b9060058210156100b95752565b356001600160a01b03811681036100cd5790565b903590601e19813603018212156100cd570180359067ffffffffffffffff82116100cd576020019181360383136100cd57565b90601f8019910116810190811067ffffffffffffffff82111761074357604052565b634e487b7160e01b5f52604160045260245ffd5b92919267ffffffffffffffff82116107435760405191610781601f8201601f191660200184610721565b8294818452818301116100cd578281602093845f960137010152565b9035601e19823603018112156100cd57016020813591019167ffffffffffffffff82116100cd5781360383136100cd57565b908060209392818452848401375f828201840152601f01601f1916010190565b35906001600160a01b03821682036100cd57565b359081151582036100cd57565b359061ffff821682036100cd57565b6109e3916109d46109bc61098861096b6109396108dd6108c26108a76108586108488b8061079d565b6102208c526102208c01916107cf565b6001600160a01b0361086c60208d016107ef565b1660208b01526001600160a01b0361088660408d016107ef565b1660408b015261089960608c018c61079d565b908b830360608d01526107cf565b6108b460808b018b61079d565b908a830360808c01526107cf565b6108cf60a08a018a61079d565b9089830360a08b01526107cf565b6108e960c08901610803565b151560c088015261ffff6108ff60e08a01610810565b1660e088015261ffff6109156101008a01610810565b1661010088015261092a61012089018961079d565b908883036101208a01526107cf565b6109466101408801610803565b151561014087015261095c61016088018861079d565b908783036101608901526107cf565b61097961018087018761079d565b908683036101808801526107cf565b61ffff6109986101a08701610810565b166101a08501526109ad6101c086018661079d565b908583036101c08701526107cf565b926101e08101356101e084015261020081019061079d565b916102008185039101526107cf565b90565b3580151581036100cd579056fea264697066735822122083886c7bf401a3d682ef75d66229e5e42dfee202f878320290266da974d48ed364736f6c63430008220033",
+  "deployed_bytecode": "0x6080806040526004361015610012575f80fd5b5f3560e01c908163085d48831461068c575080630c2280471461066f57806327793f87146106485780632b7ac3f31461060457806373c3c702146105e75780638f775839146105c6578063c08e7a7e1461058c578063c3df654614610548578063df5b527a146100d15763f79106361461008a575f80fd5b346100cd575f3660031901126100cd5760ff5f5460081c1660058110156100b957602090600160405191148152f35b634e487b7160e01b5f52602160045260245ffd5b5f80fd5b346100cd5760403660031901126100cd5760043567ffffffffffffffff81116100cd578060040161022060031983360301126100cd5760243567ffffffffffffffff81116100cd57366023820112156100cd57806004013567ffffffffffffffff81116100cd5736602482840101116100cd575f549160ff831661053a57602485019061015d826106da565b6001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000811691160361052b577f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316801515908161050c575b506104fd577f000000000000000000000000000000000000000000000000000000000000000080151590816104dc575b506104cd5760206102629160018060a01b037f0000000000000000000000000000000000000000000000000000000000000000169460405193849283926301f976eb60e51b8452604060048501526024610250604486018d61081f565b858103600319018287015292016107cf565b0381865afa9081156103d6575f91610492575b50156104835761029261028b60a48701866106ee565b3691610757565b602081519101209260c48601936102a8856109e6565b80610457575b156103e157506001945b60058610156100b9576102fe93600160209361ff008960081b169061ffff191617175f55604051808096819463c872964960e01b8352866004840152602483019061081f565b03915afa9182156103d6575f9261039f575b5060807f5afa00b213e4bd9e5433522c786b8e106c2868dca359646ff98deb1288fcb6c89160209684600155610364604461035d6103576101e4850135998a6002556109e6565b946106da565b92016106da565b9060405192610373848a6106cd565b1515838a01526001600160a01b039081166040840152166060820152a361039d60405180926106cd565bf35b9491506020853d6020116103ce575b816103bb60209383610721565b810103126100cd57935190936080610310565b3d91506103ae565b6040513d5f823e3d90fd5b6040600d602082516103f38482610721565b828152016c6d616e75616c5f72657669657760981b81522082145f1461041d5750506002946102b8565b602060079161042e81519182610721565b82815201666469737075746560c81b815220145f1461044f576003946102b8565b6004946102b8565b506007602060405161046a604082610721565b828152016672656c6561736560c81b81522081146102ae565b6338f16e3360e11b5f5260045ffd5b90506020813d6020116104c5575b816104ad60209383610721565b810103126100cd575180151581036100cd5786610275565b3d91506104a0565b63afdffb6560e01b5f5260045ffd5b90506104ee61028b60648901886106ee565b602081519101201415876101f3565b6305a7febd60e31b5f5260045ffd5b90506001600160a01b03610522604489016106da565b161415876101c3565b633943fc0360e11b5f5260045ffd5b62560ff960e81b5f5260045ffd5b346100cd575f3660031901126100cd576040517f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03168152602090f35b346100cd575f3660031901126100cd5760206040517f00000000000000000000000000000000000000000000000000000000000000008152f35b346100cd575f3660031901126100cd57602060ff5f54166040519015158152f35b346100cd575f3660031901126100cd576020600254604051908152f35b346100cd575f3660031901126100cd576040517f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03168152602090f35b346100cd575f3660031901126100cd57602060ff5f5460081c1661039d60405180926106cd565b346100cd575f3660031901126100cd576020600154604051908152f35b346100cd575f3660031901126100cd577f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03168152602090f35b9060058210156100b95752565b356001600160a01b03811681036100cd5790565b903590601e19813603018212156100cd570180359067ffffffffffffffff82116100cd576020019181360383136100cd57565b90601f8019910116810190811067ffffffffffffffff82111761074357604052565b634e487b7160e01b5f52604160045260245ffd5b92919267ffffffffffffffff82116107435760405191610781601f8201601f191660200184610721565b8294818452818301116100cd578281602093845f960137010152565b9035601e19823603018112156100cd57016020813591019167ffffffffffffffff82116100cd5781360383136100cd57565b908060209392818452848401375f828201840152601f01601f1916010190565b35906001600160a01b03821682036100cd57565b359081151582036100cd57565b359061ffff821682036100cd57565b6109e3916109d46109bc61098861096b6109396108dd6108c26108a76108586108488b8061079d565b6102208c526102208c01916107cf565b6001600160a01b0361086c60208d016107ef565b1660208b01526001600160a01b0361088660408d016107ef565b1660408b015261089960608c018c61079d565b908b830360608d01526107cf565b6108b460808b018b61079d565b908a830360808c01526107cf565b6108cf60a08a018a61079d565b9089830360a08b01526107cf565b6108e960c08901610803565b151560c088015261ffff6108ff60e08a01610810565b1660e088015261ffff6109156101008a01610810565b1661010088015261092a61012089018961079d565b908883036101208a01526107cf565b6109466101408801610803565b151561014087015261095c61016088018861079d565b908783036101608901526107cf565b61097961018087018761079d565b908683036101808801526107cf565b61ffff6109986101a08701610810565b166101a08501526109ad6101c086018661079d565b908583036101c08701526107cf565b926101e08101356101e084015261020081019061079d565b916102008185039101526107cf565b90565b3580151581036100cd579056fea264697066735822122083886c7bf401a3d682ef75d66229e5e42dfee202f878320290266da974d48ed364736f6c63430008220033",
+  "method_identifiers": {
+    "counterparty()": "c3df6546",
+    "escrowIdHash()": "c08e7a7e",
+    "lastPacketHash()": "73c3c702",
+    "lastVerdictDigest()": "0c228047",
+    "outcome()": "27793f87",
+    "provider()": "085d4883",
+    "releaseAuthorized()": "f7910636",
+    "settleWithDJDVerdict((string,address,address,string,string,string,bool,uint16,uint16,string,bool,string,string,uint16,string,bytes32,string),bytes)": "df5b527a",
+    "settled()": "8f775839",
+    "verifier()": "2b7ac3f3"
+  },
+  "constructor": {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "verifier_",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "provider_",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "counterparty_",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "escrowIdHash_",
+        "type": "bytes32"
+      }
+    ]
+  },
+  "metadata": {
+    "compiler": {
+      "version": "0.8.34+commit.80d5c536"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "verifier_",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "provider_",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "counterparty_",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "escrowIdHash_",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "constructor"
+        },
+        {
+          "inputs": [],
+          "name": "AlreadySettled",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "CounterpartyMismatch",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "EscrowIdMismatch",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidProvider",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidVerdictSignature",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "InvalidVerifier",
+          "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "ProviderMismatch",
+          "type": "error"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "bytes32",
+              "name": "verdictDigest",
+              "type": "bytes32"
+            },
+            {
+              "indexed": true,
+              "internalType": "bytes32",
+              "name": "packetHash",
+              "type": "bytes32"
+            },
+            {
+              "indexed": false,
+              "internalType": "enum DJDEvaluatorEscrowSettlementExample.SettlementOutcome",
+              "name": "outcome",
+              "type": "uint8"
+            },
+            {
+              "indexed": false,
+              "internalType": "bool",
+              "name": "approved",
+              "type": "bool"
+            },
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "provider",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "counterparty",
+              "type": "address"
+            }
+          ],
+          "name": "VerdictSettled",
+          "type": "event"
+        },
+        {
+          "inputs": [],
+          "name": "counterparty",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "escrowIdHash",
+          "outputs": [
+            {
+              "internalType": "bytes32",
+              "name": "",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "lastPacketHash",
+          "outputs": [
+            {
+              "internalType": "bytes32",
+              "name": "",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "lastVerdictDigest",
+          "outputs": [
+            {
+              "internalType": "bytes32",
+              "name": "",
+              "type": "bytes32"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "outcome",
+          "outputs": [
+            {
+              "internalType": "enum DJDEvaluatorEscrowSettlementExample.SettlementOutcome",
+              "name": "",
+              "type": "uint8"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "provider",
+          "outputs": [
+            {
+              "internalType": "address",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "releaseAuthorized",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "components": [
+                {
+                  "internalType": "string",
+                  "name": "verdictId",
+                  "type": "string"
+                },
+                {
+                  "internalType": "address",
+                  "name": "wallet",
+                  "type": "address"
+                },
+                {
+                  "internalType": "address",
+                  "name": "counterpartyWallet",
+                  "type": "address"
+                },
+                {
+                  "internalType": "string",
+                  "name": "escrowId",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "decision",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "recommendation",
+                  "type": "string"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "approved",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "uint16",
+                  "name": "confidence",
+                  "type": "uint16"
+                },
+                {
+                  "internalType": "uint16",
+                  "name": "agentScoreProvider",
+                  "type": "uint16"
+                },
+                {
+                  "internalType": "string",
+                  "name": "scoreModelVersion",
+                  "type": "string"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "certificationValid",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "string",
+                  "name": "certificationTier",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "riskLevel",
+                  "type": "string"
+                },
+                {
+                  "internalType": "uint16",
+                  "name": "riskScore",
+                  "type": "uint16"
+                },
+                {
+                  "internalType": "string",
+                  "name": "forensicTraceId",
+                  "type": "string"
+                },
+                {
+                  "internalType": "bytes32",
+                  "name": "packetHash",
+                  "type": "bytes32"
+                },
+                {
+                  "internalType": "string",
+                  "name": "generatedAt",
+                  "type": "string"
+                }
+              ],
+              "internalType": "struct IDJDEvaluatorVerdictVerifier.EvaluatorVerdict",
+              "name": "verdict",
+              "type": "tuple"
+            },
+            {
+              "internalType": "bytes",
+              "name": "signature",
+              "type": "bytes"
+            }
+          ],
+          "name": "settleWithDJDVerdict",
+          "outputs": [
+            {
+              "internalType": "enum DJDEvaluatorEscrowSettlementExample.SettlementOutcome",
+              "name": "resolvedOutcome",
+              "type": "uint8"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "settled",
+          "outputs": [
+            {
+              "internalType": "bool",
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
+          "name": "verifier",
+          "outputs": [
+            {
+              "internalType": "contract IDJDEvaluatorVerdictVerifier",
+              "name": "",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {},
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {},
+        "version": 1
+      }
+    },
+    "settings": {
+      "compilationTarget": {
+        "DJDEvaluatorEscrowSettlementExample.sol": "DJDEvaluatorEscrowSettlementExample"
+      },
+      "evmVersion": "osaka",
+      "libraries": {},
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "remappings": [],
+      "viaIR": true
+    },
+    "sources": {
+      "DJDEvaluatorEscrowSettlementExample.sol": {
+        "keccak256": "0x98006613eae5a6a381694b1239012fb612570fabdb3f7c65e47ab97db423773c",
+        "license": "MIT",
+        "urls": [
+          "bzz-raw://9d340946ca258e8dafd7d38b0cf7a11b890e8c2a8f990ffdb0650f3c5a091268",
+          "dweb:/ipfs/QmUAauzgKMyA8X5i5MRAga5V263AP5aaf4doAXHWct38G5"
+        ]
+      }
+    },
+    "version": 1
+  }
+}

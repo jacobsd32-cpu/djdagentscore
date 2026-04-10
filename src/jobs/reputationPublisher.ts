@@ -20,6 +20,7 @@ import { privateKeyToAccount } from 'viem/accounts'
 import { base } from 'viem/chains'
 import { ERC8004_REPUTATION_REGISTRY, getPublicClient } from '../blockchain.js'
 import { REPUTATION_PUBLISHER_CONFIG } from '../config/constants.js'
+import { buildPublicUrl } from '../config/public.js'
 import { getScoresNeedingPublication, upsertPublication } from '../db.js'
 import { log } from '../logger.js'
 import { withRetry } from '../utils/retry.js'
@@ -28,7 +29,7 @@ import { withRetry } from '../utils/retry.js'
 
 const TAG = 'erc8004-publisher'
 
-const { MIN_CONFIDENCE, SCORE_DELTA, BATCH_LIMIT, TX_TIMEOUT_MS, INTER_TX_DELAY_MS, MIN_ETH_BALANCE, SCORE_ENDPOINT } =
+const { MIN_CONFIDENCE, SCORE_DELTA, BATCH_LIMIT, TX_TIMEOUT_MS, INTER_TX_DELAY_MS, MIN_ETH_BALANCE } =
   REPUTATION_PUBLISHER_CONFIG
 
 const GIVE_FEEDBACK_ABI = parseAbi([
@@ -119,6 +120,7 @@ export async function runReputationPublisher(): Promise<void> {
       const modelVersion = score.model_version ?? 'v1'
 
       // Build the off-chain payload that feedbackHash commits to
+      const endpoint = buildPublicUrl(`/v1/score/erc8004?wallet=${score.wallet}`)
       const offChainPayload = {
         wallet: score.wallet,
         composite_score: score.composite_score,
@@ -126,6 +128,7 @@ export async function runReputationPublisher(): Promise<void> {
         confidence: score.confidence,
         tier: score.tier,
         calculated_at: score.calculated_at,
+        endpoint,
       }
       const feedbackHash = buildFeedbackHash(offChainPayload)
 
@@ -144,7 +147,7 @@ export async function runReputationPublisher(): Promise<void> {
               0, // valueDecimals — score is an integer 0-100
               'djd-composite',
               modelVersion,
-              SCORE_ENDPOINT,
+              endpoint,
               '', // feedbackURI — all data available at the endpoint
               feedbackHash,
             ],
@@ -165,6 +168,8 @@ export async function runReputationPublisher(): Promise<void> {
           wallet: score.wallet,
           composite_score: score.composite_score,
           model_version: modelVersion,
+          endpoint,
+          feedback_hash: feedbackHash,
           tx_hash: txHash,
         })
         published++

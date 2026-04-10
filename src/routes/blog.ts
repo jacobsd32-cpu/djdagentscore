@@ -13,6 +13,7 @@ const blogHead = (title: string, description: string, slug = '') =>
     description,
     path: `/blog${slug ? `/${slug}` : ''}`,
     ogType: slug ? 'article' : 'website',
+    canonicalUrl: buildPublicUrl(`/blog${slug ? `/${slug}` : ''}`),
     extraHead: `<link rel="alternate" type="application/rss+xml" title="DJD Agent Score Blog" href="${BLOG_RSS_URL}">`,
   })}
 .blog-shell{max-width:1180px;margin:0 auto;padding:0 28px 0}
@@ -36,10 +37,10 @@ const blogHead = (title: string, description: string, slug = '') =>
   .post-card{grid-template-columns:1fr;padding:24px}
 }`
 
-const blogNav = renderPublicNav('blog', '/pricing', 'Get Started')
+const blogNav = renderPublicNav('blog', '/#lookup', 'Screen wallets')
 
 const blogFooter = renderPublicFooter({
-  copy: 'Research, release notes, and field reports from DJD Agent Score as we build trust infrastructure for apps, marketplaces, and agent networks.',
+  copy: 'Research, release notes, and field reports from DJD Agent Score as we build wallet screening for payouts, paid routes, and agent networks.',
 })
 
 // ─── Shared article CSS (used by all blog posts) ───
@@ -87,7 +88,7 @@ const blogPostHead = (title: string, description: string, slug: string, extraCss
 
 const listingHtml = `${blogHead(
   'Blog',
-  'Insights on wallet scoring, sybil detection, standards, and trust infrastructure for the autonomous agent economy.',
+  'Insights on wallet screening, sybil detection, standards, and payout-safe agent workflows.',
 )}
 .blog-hero{max-width:1080px;margin:0 auto;padding:120px 32px 60px;text-align:center}
 .blog-hero .chip{display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:var(--accent);background:var(--accent-dim);border:1px solid var(--border-hi);padding:6px 16px;border-radius:100px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:24px}
@@ -114,8 +115,8 @@ ${blogNav}
 
 <div class="blog-hero">
   <div class="chip">Insights</div>
-  <h1>Building trust infrastructure<br>in the open</h1>
-  <p>Research, analysis, and updates from the DJD Agent Score team on wallet scoring, sybil detection, standards, and the agent economy.</p>
+  <h1>Wallet screening research<br>and release notes</h1>
+  <p>Research, analysis, and updates from the DJD Agent Score team on screening wallets before payouts, paid routes, and autonomous settlement.</p>
 </div>
 
 <div class="posts">
@@ -794,7 +795,7 @@ const rssXml = `<?xml version="1.0" encoding="UTF-8"?>
 <channel>
   <title>DJD Agent Score Blog</title>
   <link>${BLOG_URL}</link>
-  <description>Insights on wallet scoring, sybil detection, standards, and trust infrastructure for the autonomous agent economy.</description>
+  <description>Insights on wallet screening, sybil detection, standards, and payout-safe agent workflows.</description>
   <language>en-us</language>
   <lastBuildDate>${blogPosts[0].date}</lastBuildDate>
   <atom:link href="${BLOG_RSS_URL}" rel="self" type="application/rss+xml"/>

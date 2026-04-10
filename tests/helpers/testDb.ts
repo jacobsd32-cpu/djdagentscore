@@ -414,9 +414,44 @@ export function createTestDb(): Database.Database {
       wallet          TEXT PRIMARY KEY,
       composite_score INTEGER NOT NULL,
       model_version   TEXT NOT NULL,
+      endpoint        TEXT,
+      feedback_hash   TEXT,
       tx_hash         TEXT,
       published_at    TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS evaluator_verdicts (
+      id                   TEXT PRIMARY KEY,
+      wallet               TEXT NOT NULL,
+      counterparty_wallet  TEXT,
+      escrow_id            TEXT,
+      baseline_profile     TEXT NOT NULL,
+      certification_floor  TEXT NOT NULL,
+      current_score        INTEGER NOT NULL,
+      current_tier         TEXT NOT NULL,
+      score_confidence     REAL NOT NULL,
+      risk_score           INTEGER NOT NULL,
+      risk_level           TEXT NOT NULL,
+      certification_active INTEGER NOT NULL DEFAULT 0,
+      certification_tier   TEXT,
+      decision             TEXT NOT NULL,
+      recommendation       TEXT NOT NULL,
+      approved             INTEGER NOT NULL DEFAULT 0,
+      confidence           REAL NOT NULL,
+      packet_hash          TEXT NOT NULL,
+      forensic_trace_id    TEXT NOT NULL,
+      attestation_scheme   TEXT NOT NULL DEFAULT 'eip712',
+      attestation_status   TEXT NOT NULL DEFAULT 'unsigned',
+      attestation_digest   TEXT NOT NULL DEFAULT '',
+      attestation_signature TEXT,
+      attestation_signer   TEXT,
+      attestation_reason   TEXT,
+      attested_at          TEXT,
+      payload_json         TEXT NOT NULL,
+      created_at           TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_evaluator_verdicts_wallet ON evaluator_verdicts(wallet, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_evaluator_verdicts_escrow ON evaluator_verdicts(escrow_id, created_at DESC);
   `)
 
   return db

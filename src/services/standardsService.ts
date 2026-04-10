@@ -1,3 +1,5 @@
+import { getERC8004RegistryStatus } from '../blockchain.js'
+import { REPUTATION_PUBLISHER_CONFIG } from '../config/constants.js'
 import { buildPublicUrl } from '../config/public.js'
 import { getActiveCertification, getRegistration, getReputationPublication } from '../db.js'
 import { ErrorCodes } from '../errors.js'
@@ -42,6 +44,9 @@ export interface Erc8004CompatibleScoreView {
   }
   identity: {
     registered: boolean
+    erc8004_registered: boolean
+    erc8004_registry_configured: boolean
+    erc8004_registry_contract: string | null
     name: string | null
     description: string | null
     github_url: string | null
@@ -61,11 +66,17 @@ export interface Erc8004CompatibleScoreView {
   publication: {
     published: boolean
     registry: 'erc-8004'
+    network: 'base'
+    chain_id: number
+    registry_contract: string
     endpoint: string
     tx_hash: string | null
+    feedback_hash: string | null
     published_at: string | null
     score_at_publication: number | null
     model_version: string | null
+    eligible_now: boolean
+    eligibility_reasons: string[]
   }
   links: {
     basic_score: string
@@ -102,6 +113,26 @@ export async function getErc8004CompatibleScoreView(
   const registration = getRegistration(wallet)
   const certification = getActiveCertification(wallet)
   const publication = getReputationPublication(wallet)
+  const registryStatus = getERC8004RegistryStatus()
+  const currentDocumentUrl = buildPublicUrl(`/v1/score/erc8004?wallet=${wallet}`)
+  const erc8004Registered = score.dimensions.identity.data?.erc8004Registered === true
+  const publicationDelta = publication ? Math.abs(score.score - publication.composite_score) : null
+  const eligibilityReasons: string[] = []
+  let eligibleNow = true
+
+  if (score.confidence < REPUTATION_PUBLISHER_CONFIG.MIN_CONFIDENCE) {
+    eligibleNow = false
+    eligibilityReasons.push('confidence_below_threshold')
+  }
+
+  if (publication && publicationDelta !== null && publicationDelta < REPUTATION_PUBLISHER_CONFIG.SCORE_DELTA) {
+    eligibleNow = false
+    eligibilityReasons.push('score_change_below_threshold')
+  }
+
+  if (eligibleNow) {
+    eligibilityReasons.push(publication ? 'republish_ready' : 'first_publication_ready')
+  }
 
   return {
     ok: true,
@@ -127,6 +158,9 @@ export async function getErc8004CompatibleScoreView(
       },
       identity: {
         registered: registration !== undefined,
+        erc8004_registered: erc8004Registered,
+        erc8004_registry_configured: registryStatus.identity_registry_configured,
+        erc8004_registry_contract: registryStatus.identity_registry,
         name: registration?.name ?? null,
         description: registration?.description ?? null,
         github_url: registration?.github_url ?? null,
@@ -146,11 +180,17 @@ export async function getErc8004CompatibleScoreView(
       publication: {
         published: publication !== undefined,
         registry: 'erc-8004',
-        endpoint: buildPublicUrl(`/v1/score/full?wallet=${wallet}`),
+        network: registryStatus.network,
+        chain_id: registryStatus.chain_id,
+        registry_contract: registryStatus.reputation_registry,
+        endpoint: publication?.endpoint ?? currentDocumentUrl,
         tx_hash: publication?.tx_hash ?? null,
+        feedback_hash: publication?.feedback_hash ?? null,
         published_at: publication?.published_at ?? null,
         score_at_publication: publication?.composite_score ?? null,
         model_version: publication?.model_version ?? null,
+        eligible_now: eligibleNow,
+        eligibility_reasons: eligibilityReasons,
       },
       links: {
         basic_score: buildPublicUrl(`/v1/score/basic?wallet=${wallet}`),

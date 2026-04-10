@@ -49,6 +49,27 @@ describe('GET /.well-known/x402', () => {
     expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/score/evaluator' && endpoint.price === 0.35)).toBe(
       true,
     )
+    expect(
+      body.endpoints.some((endpoint) => endpoint.path === '/v1/score/evaluator/evidence' && endpoint.price === 0.45),
+    ).toBe(true)
+    expect(
+      body.endpoints.some((endpoint) => endpoint.path === '/v1/score/evaluator/oracle' && endpoint.price === 0.6),
+    ).toBe(true)
+    expect(
+      body.endpoints.some((endpoint) => endpoint.path === '/v1/score/evaluator/verdict' && endpoint.price === 0.12),
+    ).toBe(true)
+    expect(
+      body.endpoints.some((endpoint) => endpoint.path === '/v1/score/evaluator/verdicts' && endpoint.price === 0.3),
+    ).toBe(true)
+    expect(
+      body.endpoints.some((endpoint) => endpoint.path === '/v1/score/evaluator/callback' && endpoint.price === 0.2),
+    ).toBe(true)
+    expect(
+      body.endpoints.some((endpoint) => endpoint.path === '/v1/score/evaluator/deployments' && endpoint.price === 0),
+    ).toBe(true)
+    expect(
+      body.endpoints.some((endpoint) => endpoint.path === '/v1/score/evaluator/promotion' && endpoint.price === 0),
+    ).toBe(true)
     expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/score/risk' && endpoint.price === 0.5)).toBe(true)
     expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/cluster' && endpoint.price === 0.15)).toBe(true)
     expect(body.endpoints.some((endpoint) => endpoint.path === '/v1/rate' && endpoint.price === 0.01)).toBe(true)

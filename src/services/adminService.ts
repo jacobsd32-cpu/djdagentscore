@@ -1,3 +1,4 @@
+import { MODEL_VERSION } from '../config/modelVersion.js'
 import {
   adjustScoreByStakeBoost,
   countFraudDisputes,
@@ -16,7 +17,6 @@ import {
 import { ErrorCodes } from '../errors.js'
 import { queueWebhookEvent } from '../jobs/webhookDelivery.js'
 import { generateCalibrationReport } from '../scoring/calibrationReport.js'
-import { MODEL_VERSION } from '../scoring/responseBuilders.js'
 import type { DisputeResolution, FraudDisputeResolutionBody } from '../types.js'
 import { normalizeWallet } from '../utils/walletUtils.js'
 import { getAdminGrowthFunnelView } from './growthService.js'
@@ -37,6 +37,7 @@ const RESETTABLE_TABLES = [
   'subscriptions',
   'monitoring_subscriptions',
   'certifications',
+  'evaluator_verdicts',
   'reputation_publications',
   'webhook_deliveries',
   'webhooks',

@@ -7,8 +7,8 @@ const stmtGetActiveCertification = db.prepare<[string], CertificationRow>(`
 `)
 
 const stmtInsertCertification = db.prepare(`
-  INSERT INTO certifications (wallet, tier, score_at_certification, expires_at)
-  VALUES (?, ?, ?, datetime('now', '+1 year'))
+  INSERT INTO certifications (wallet, tier, score_at_certification, price_paid_usdc, expires_at)
+  VALUES (?, ?, ?, ?, datetime('now', '+1 year'))
 `)
 
 const stmtGetCertificationById = db.prepare<[number], CertificationRow>(`
@@ -25,6 +25,7 @@ const stmtListActiveCertificationDirectory = db.prepare<[string | null, string |
     c.wallet,
     c.tier,
     c.score_at_certification,
+    c.price_paid_usdc,
     c.granted_at,
     c.expires_at,
     c.is_active,
@@ -162,8 +163,8 @@ const stmtCertificationRevenueByMonth = db.prepare<[], CertificationRevenueByMon
     strftime('%Y-%m', granted_at) as month,
     COUNT(*) as count,
     SUM(CASE WHEN revoked_at IS NOT NULL THEN 1 ELSE 0 END) as revoked_count,
-    SUM(99) as gross_revenue_usd,
-    SUM(CASE WHEN revoked_at IS NULL THEN 99 ELSE 0 END) as net_revenue_usd
+    SUM(price_paid_usdc) as gross_revenue_usd,
+    SUM(CASE WHEN revoked_at IS NULL THEN price_paid_usdc ELSE 0 END) as net_revenue_usd
   FROM certifications
   GROUP BY strftime('%Y-%m', granted_at)
   ORDER BY month DESC
@@ -174,6 +175,7 @@ export interface CertificationRow {
   wallet: string
   tier: string
   score_at_certification: number
+  price_paid_usdc: number
   granted_at: string
   expires_at: string
   is_active: number
@@ -240,8 +242,13 @@ export function getActiveCertification(wallet: string): CertificationRow | undef
   return stmtGetActiveCertification.get(wallet)
 }
 
-export function insertCertification(wallet: string, tier: string, scoreAtCertification: number): CertificationRow {
-  const result = stmtInsertCertification.run(wallet, tier, scoreAtCertification)
+export function insertCertification(
+  wallet: string,
+  tier: string,
+  scoreAtCertification: number,
+  pricePaidUsd = 99,
+): CertificationRow {
+  const result = stmtInsertCertification.run(wallet, tier, scoreAtCertification, pricePaidUsd)
   return stmtGetCertificationById.get(Number(result.lastInsertRowid))!
 }
 
@@ -262,14 +269,16 @@ export function getCertificationRevenueSummary(): CertificationRevenueSummary {
   const active = stmtCountActiveCertifications.get()!.count
   const revoked = stmtCountRevokedCertifications.get()!.count
   const byMonth = stmtCertificationRevenueByMonth.all()
+  const grossRevenue = byMonth.reduce((sum, row) => sum + row.gross_revenue_usd, 0)
+  const netRevenue = byMonth.reduce((sum, row) => sum + row.net_revenue_usd, 0)
 
   return {
     total_certifications: total,
     active_certifications: active,
     revoked_certifications: revoked,
-    gross_revenue_usd: total * 99,
-    net_revenue_usd: (total - revoked) * 99,
-    price_per_cert_usd: 99,
+    gross_revenue_usd: grossRevenue,
+    net_revenue_usd: netRevenue,
+    price_per_cert_usd: total > 0 ? Math.round((grossRevenue / total) * 100) / 100 : 0,
     by_month: byMonth,
   }
 }

@@ -43,6 +43,7 @@ const { testDb } = vi.hoisted(() => {
       wallet TEXT NOT NULL,
       tier TEXT NOT NULL,
       score_at_certification INTEGER NOT NULL,
+      price_paid_usdc REAL NOT NULL DEFAULT 99,
       granted_at TEXT NOT NULL DEFAULT (datetime('now')),
       expires_at TEXT NOT NULL,
       is_active INTEGER NOT NULL DEFAULT 1,
@@ -85,13 +86,13 @@ vi.mock('../../src/db.js', () => ({
        LIMIT 1`,
       )
       .get(wallet),
-  insertCertification: (wallet: string, tier: string, scoreAtCertification: number) => {
+  insertCertification: (wallet: string, tier: string, scoreAtCertification: number, pricePaidUsd = 99) => {
     const result = testDb
       .prepare(
-        `INSERT INTO certifications (wallet, tier, score_at_certification, expires_at)
-         VALUES (?, ?, ?, datetime('now', '+1 year'))`,
+        `INSERT INTO certifications (wallet, tier, score_at_certification, price_paid_usdc, expires_at)
+         VALUES (?, ?, ?, ?, datetime('now', '+1 year'))`,
       )
-      .run(wallet, tier, scoreAtCertification)
+      .run(wallet, tier, scoreAtCertification, pricePaidUsd)
     return testDb.prepare('SELECT * FROM certifications WHERE id = ?').get(Number(result.lastInsertRowid))
   },
   listCertifications: () => testDb.prepare('SELECT * FROM certifications ORDER BY granted_at DESC').all(),
@@ -308,21 +309,35 @@ vi.mock('../../src/db.js', () => ({
          strftime('%Y-%m', granted_at) as month,
          COUNT(*) as count,
          SUM(CASE WHEN revoked_at IS NOT NULL THEN 1 ELSE 0 END) as revoked_count,
-         SUM(99) as gross_revenue_usd,
-         SUM(CASE WHEN revoked_at IS NULL THEN 99 ELSE 0 END) as net_revenue_usd
+         SUM(price_paid_usdc) as gross_revenue_usd,
+         SUM(CASE WHEN revoked_at IS NULL THEN price_paid_usdc ELSE 0 END) as net_revenue_usd
        FROM certifications
        GROUP BY strftime('%Y-%m', granted_at)
        ORDER BY month DESC`,
       )
       .all()
 
+    const revenue = testDb
+      .prepare(
+        `SELECT
+          COALESCE(SUM(price_paid_usdc), 0) as gross_revenue_usd,
+          COALESCE(SUM(CASE WHEN revoked_at IS NULL THEN price_paid_usdc ELSE 0 END), 0) as net_revenue_usd,
+          COALESCE(AVG(price_paid_usdc), 0) as price_per_cert_usd
+        FROM certifications`,
+      )
+      .get() as {
+      gross_revenue_usd: number
+      net_revenue_usd: number
+      price_per_cert_usd: number
+    }
+
     return {
       total_certifications: total,
       active_certifications: active,
       revoked_certifications: revoked,
-      gross_revenue_usd: total * 99,
-      net_revenue_usd: (total - revoked) * 99,
-      price_per_cert_usd: 99,
+      gross_revenue_usd: revenue.gross_revenue_usd,
+      net_revenue_usd: revenue.net_revenue_usd,
+      price_per_cert_usd: revenue.price_per_cert_usd,
       by_month: byMonth,
     }
   },
@@ -406,13 +421,20 @@ function seedRegistration(
     )
 }
 
-function seedCertification(wallet: string) {
+function seedCertification(
+  wallet: string,
+  overrides: {
+    tier?: string
+    scoreAtCertification?: number
+    pricePaidUsdc?: number
+  } = {},
+) {
   testDb
     .prepare(`
-    INSERT INTO certifications (wallet, tier, score_at_certification, expires_at)
-    VALUES (?, 'Trusted', 82, datetime('now', '+1 year'))
+    INSERT INTO certifications (wallet, tier, score_at_certification, price_paid_usdc, expires_at)
+    VALUES (?, ?, ?, ?, datetime('now', '+1 year'))
   `)
-    .run(wallet)
+    .run(wallet, overrides.tier ?? 'Trusted', overrides.scoreAtCertification ?? 82, overrides.pricePaidUsdc ?? 99)
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────────
@@ -427,6 +449,22 @@ describe('Certification routes', () => {
   })
 
   describe('GET /v1/certification/readiness', () => {
+    it('returns the certification tier catalog', async () => {
+      const app = createApp()
+      const res = await app.request('/v1/certification/tiers')
+
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as {
+        default_tier: string
+        tiers: Array<{ key: string; label: string; price_usdc: number; minimum_score: number }>
+      }
+
+      expect(body.default_tier).toBe('transactional')
+      expect(body.tiers).toHaveLength(3)
+      expect(body.tiers.map((tier) => tier.key)).toEqual(['operational', 'transactional', 'autonomous'])
+      expect(body.tiers.map((tier) => tier.price_usdc)).toEqual([50, 200, 500])
+    })
+
     it('returns can_apply true for an eligible wallet', async () => {
       seedGoodScore(VALID_WALLET_LOWER)
       seedRegistration(VALID_WALLET_LOWER)
@@ -444,10 +482,11 @@ describe('Certification routes', () => {
 
       expect(body.can_apply).toBe(true)
       expect(body.status).toBe('eligible')
-      expect(body.payment.amount_usdc).toBe(99)
+      expect(body.payment.amount_usdc).toBe(200)
       expect(body.requirements.registration.met).toBe(true)
       expect(body.requirements.score.met).toBe(true)
       expect(body.requirements.score.current_score).toBe(82)
+      expect((body as { requested_tier?: { label: string } }).requested_tier?.label).toBe('Transactional')
     })
 
     it('returns not_registered when registration is missing', async () => {
@@ -546,6 +585,7 @@ describe('Certification routes', () => {
         wallet: string
         status: string
         requested_score: number
+        requested_tier: string
         request_note: string | null
         links: { review_status: string; apply_endpoint: string }
       }
@@ -553,9 +593,10 @@ describe('Certification routes', () => {
       expect(body.wallet).toBe(VALID_WALLET_LOWER)
       expect(body.status).toBe('pending')
       expect(body.requested_score).toBe(82)
+      expect(body.requested_tier).toBe('Transactional')
       expect(body.request_note).toContain('reviewer packet')
       expect(body.links.review_status).toContain(`/v1/certification/review?wallet=${VALID_WALLET_LOWER}`)
-      expect(body.links.apply_endpoint).toContain('/v1/certification/apply')
+      expect(body.links.apply_endpoint).toContain('/v1/certification/apply/transactional')
     })
 
     it('returns the existing pending review request for duplicate submissions', async () => {
@@ -728,7 +769,7 @@ describe('Certification routes', () => {
       expect(issueBody.message).toContain('issued from approved review')
       expect(issueBody.review.status).toBe('approved')
       expect(issueBody.certification.wallet).toBe(VALID_WALLET_LOWER)
-      expect(issueBody.certification.tier).toBe('Trusted')
+      expect(issueBody.certification.tier).toBe('Transactional')
     })
 
     it('rejects issuance when the review request is not approved', async () => {
@@ -776,8 +817,9 @@ describe('Certification routes', () => {
       expect(res.status).toBe(201)
       const body = (await res.json()) as Record<string, unknown>
       expect(body.wallet).toBe(VALID_WALLET_LOWER)
-      expect(body.tier).toBe('Trusted')
+      expect(body.tier).toBe('Transactional')
       expect(body.score_at_certification).toBe(82)
+      expect(body.price_paid_usdc).toBe(200)
       expect(body.is_active).toBe(true)
       expect(body.message).toContain('1 year')
       expect(body.granted_at).toBeDefined()
@@ -830,7 +872,25 @@ describe('Certification routes', () => {
       expect(res.status).toBe(402)
       const body = (await res.json()) as { error: { code: string; message: string } }
       expect(body.error.code).toBe('payment_required')
-      expect(body.error.message).toContain('requires $99 USDC payment via x402')
+      expect(body.error.message).toContain('tier-priced x402 payment')
+    })
+
+    it('grants operational certification on the tier-specific endpoint', async () => {
+      seedLowScore(VALID_WALLET_LOWER)
+      seedRegistration(VALID_WALLET_LOWER)
+
+      const app = createApp()
+      const res = await app.request('/v1/certification/apply/operational', {
+        method: 'POST',
+        headers: { 'x-payer-address': VALID_WALLET },
+      })
+
+      expect(res.status).toBe(201)
+      const body = (await res.json()) as Record<string, unknown>
+      expect(body.wallet).toBe(VALID_WALLET_LOWER)
+      expect(body.tier).toBe('Operational')
+      expect(body.score_at_certification).toBe(60)
+      expect(body.price_paid_usdc).toBe(50)
     })
 
     it('rejects with cert_already_active when wallet already certified', async () => {

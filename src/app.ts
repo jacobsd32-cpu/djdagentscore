@@ -204,7 +204,147 @@ const x402Middleware = paymentMiddlewareFromConfig(
               decision: 'review',
               confidence: 0.78,
               risk: { risk_level: 'watch', action: 'monitor' },
-              certification: { active: true, tier: 'Trusted' },
+              certification: { active: true, tier: 'Transactional' },
+            },
+          },
+        }),
+      },
+    },
+    '/v1/score/evaluator/evidence': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/score/evaluator/evidence'])],
+      description:
+        'ERC-8183 evaluator evidence packet for a wallet, packaging the settlement verdict with certification baseline, forensics summary, and traceable artifacts',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { wallet: '0x1234567890abcdef1234567890abcdef12345678' },
+          inputSchema: {
+            properties: {
+              wallet: { type: 'string', description: 'Wallet address to generate an evaluator evidence packet for' },
+            },
+            required: ['wallet'],
+          },
+          output: {
+            example: {
+              wallet: '0x1234...',
+              standard: 'erc-8183-evaluator-evidence-prototype',
+              packet_id: 'evidence_7f3a4d1c93a2bc10',
+              evaluator: { decision: 'review', confidence: 0.78 },
+              baseline: { profile: 'djd-transactional-settlement-v1', settlement_tier: 'Transactional' },
+            },
+          },
+        }),
+      },
+    },
+    '/v1/score/evaluator/oracle': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/score/evaluator/oracle'])],
+      description:
+        'ERC-8183 oracle-ready evaluator verdict for a wallet, persisting a compact settlement decision with traceable forensic metadata and a signed EIP-712 attestation when a signer is configured',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: {
+            wallet: '0x1234567890abcdef1234567890abcdef12345678',
+            counterparty_wallet: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+            escrow_id: 'escrow-123',
+          },
+          inputSchema: {
+            properties: {
+              wallet: { type: 'string', description: 'Provider wallet address to evaluate for settlement' },
+              counterparty_wallet: { type: 'string', description: 'Optional client or counterparty wallet' },
+              escrow_id: { type: 'string', description: 'Optional escrow or settlement reference id' },
+            },
+            required: ['wallet'],
+          },
+          output: {
+            example: {
+              standard: 'erc-8183-evaluator-oracle-prototype',
+              verdict_id: 'verdict_123e4567-e89b-42d3-a456-426614174000',
+              recommendation: 'manual_review',
+              approved: false,
+              confidence: 78,
+              forensic_trace_id: 'trace_7f3a4d1c93a2bc10',
+            },
+          },
+        }),
+      },
+    },
+    '/v1/score/evaluator/verdict': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/score/evaluator/verdict'])],
+      description: 'Fetch a previously issued evaluator oracle verdict by id, including its attestation envelope',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { id: 'verdict_123e4567-e89b-42d3-a456-426614174000' },
+          inputSchema: {
+            properties: {
+              id: { type: 'string', description: 'Stored evaluator verdict id returned by the oracle endpoint' },
+            },
+            required: ['id'],
+          },
+          output: {
+            example: {
+              verdict_id: 'verdict_123e4567-e89b-42d3-a456-426614174000',
+              recommendation: 'release',
+              recorded_at: '2026-03-12T02:00:00.000Z',
+            },
+          },
+        }),
+      },
+    },
+    '/v1/score/evaluator/verdicts': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/score/evaluator/verdicts'])],
+      description: 'List recent persisted evaluator verdicts for a wallet',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { wallet: '0x1234567890abcdef1234567890abcdef12345678', limit: 10 },
+          inputSchema: {
+            properties: {
+              wallet: { type: 'string', description: 'Wallet address to inspect for verdict history' },
+              limit: { type: 'integer', description: 'Max verdicts to return (default 10, max 50)' },
+            },
+            required: ['wallet'],
+          },
+          output: {
+            example: {
+              standard: 'djd-evaluator-verdict-history-v1',
+              wallet: '0x1234...',
+              total: 2,
+              summary: { approvals: 1, manual_review: 1, disputes: 0, rejects: 0 },
+            },
+          },
+        }),
+      },
+    },
+    '/v1/score/evaluator/callback': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/score/evaluator/callback'])],
+      description:
+        'Contract-ready callback payload for a stored evaluator verdict, returning ABI-backed calldata when the verdict attestation is signed',
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: {
+            id: 'verdict_123e4567-e89b-42d3-a456-426614174000',
+            target_contract: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+          },
+          inputSchema: {
+            properties: {
+              id: { type: 'string', description: 'Stored evaluator verdict id to convert into callback calldata' },
+              target_contract: {
+                type: 'string',
+                description: 'Optional target contract address to place into the returned transaction envelope',
+              },
+            },
+            required: ['id'],
+          },
+          output: {
+            example: {
+              standard: 'djd-evaluator-oracle-callback-v1',
+              ready: true,
+              callback: {
+                selector: '0x12345678',
+                calldata: '0x12345678deadbeef',
+              },
+              transaction: {
+                to: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+                value: '0',
+              },
             },
           },
         }),
@@ -781,25 +921,38 @@ const x402Middleware = paymentMiddlewareFromConfig(
     },
     '/v1/certification/apply': {
       accepts: [payment(ENDPOINT_PRICING['/v1/certification/apply'])],
-      description: 'Apply for annual DJD Certified Agent badge — verified on-chain reputation',
+      description: 'Legacy transactional certification apply path for the payer wallet',
       extensions: {
         ...declareDiscoveryExtension({
-          bodyType: 'json',
-          input: { wallet: '0x1234567890abcdef1234567890abcdef12345678' },
+          input: { payer_wallet: '0x1234567890abcdef1234567890abcdef12345678' },
           inputSchema: {
-            properties: { wallet: { type: 'string', description: 'Wallet to certify' } },
-            required: ['wallet'],
+            properties: {
+              payer_wallet: { type: 'string', description: 'Wallet inferred from x402 payment proof or payer header' },
+            },
+            required: ['payer_wallet'],
           },
           output: {
             example: {
               certificationId: 'cert_abc123',
-              tier: 'gold',
+              tier: 'Transactional',
               expiresAt: '2027-02-25',
               badgeUrl: '/v1/badge/0x1234...',
             },
           },
         }),
       },
+    },
+    '/v1/certification/apply/operational': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/certification/apply/operational'])],
+      description: 'Tier 1 / Operational certification for the payer wallet',
+    },
+    '/v1/certification/apply/transactional': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/certification/apply/transactional'])],
+      description: 'Tier 2 / Transactional certification for the payer wallet',
+    },
+    '/v1/certification/apply/autonomous': {
+      accepts: [payment(ENDPOINT_PRICING['/v1/certification/apply/autonomous'])],
+      description: 'Tier 3 / Autonomous certification for the payer wallet',
     },
   },
   facilitatorClient,
@@ -809,6 +962,11 @@ const x402Middleware = paymentMiddlewareFromConfig(
 const PAID_ROUTES = new Set([
   '/v1/score/full',
   '/v1/score/evaluator',
+  '/v1/score/evaluator/evidence',
+  '/v1/score/evaluator/oracle',
+  '/v1/score/evaluator/verdict',
+  '/v1/score/evaluator/verdicts',
+  '/v1/score/evaluator/callback',
   '/v1/score/risk',
   '/v1/cluster',
   '/v1/score/refresh',
@@ -831,6 +989,9 @@ const PAID_ROUTES = new Set([
   '/v1/forensics/reports',
   '/v1/forensics/timeline',
   '/v1/certification/apply',
+  '/v1/certification/apply/operational',
+  '/v1/certification/apply/transactional',
+  '/v1/certification/apply/autonomous',
 ])
 
 app.use(async (c, next) => {

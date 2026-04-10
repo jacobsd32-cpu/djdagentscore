@@ -97,6 +97,9 @@ export const ErrorCodes = {
   HISTORY_NOT_FOUND: 'history_not_found',
   FORENSICS_NOT_FOUND: 'forensics_not_found',
   INVALID_DATE_RANGE: 'invalid_date_range',
+  INVALID_NETWORK: 'invalid_network',
+  INVALID_EVALUATOR_VERDICT_ID: 'invalid_evaluator_verdict_id',
+  EVALUATOR_VERDICT_NOT_FOUND: 'evaluator_verdict_not_found',
 
   // Analytics
   INVALID_PERIOD: 'invalid_period',

@@ -37,7 +37,7 @@ export function explorerDashboardHtml(stats: EcosystemStats): string {
   return `${renderPublicHeadStart({
     title: 'Explorer - DJD Agent Score',
     description:
-      'Live dashboard for DJD trust infrastructure on Base. Explore wallets, certified agents, and the scoring network before your agent transacts.',
+      'Live dashboard for DJD wallet screening on Base. Explore wallets, certified agents, and the scoring network before your product pays or routes work.',
     path: '/explorer',
   })}
 <style>
@@ -723,6 +723,6 @@ async function loadLB() {
 })();
 </script>
 ${renderPublicFooter({
-  copy: 'Explorer is the live dashboard view into DJD trust infrastructure on Base. It keeps the same brand system as the pricing and certification surfaces while preserving its operational layout.',
+  copy: 'Explorer is the live dashboard view into DJD wallet screening on Base. It keeps the same brand system as the pricing and certification surfaces while preserving its operational layout.',
 })}`
 }

@@ -21,13 +21,15 @@ describe('production schema bootstrap', () => {
 
     const tables = db
       .prepare(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('scores', 'score_outcomes', 'certification_review_requests')",
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('scores', 'score_outcomes', 'certification_review_requests', 'evaluator_verdicts')",
       )
       .all() as Array<{ name: string }>
     const scoreOutcomeColumns = db.prepare('PRAGMA table_info(score_outcomes)').all() as Array<{ name: string }>
+    const evaluatorVerdictColumns = db.prepare('PRAGMA table_info(evaluator_verdicts)').all() as Array<{ name: string }>
 
     expect(tables.map((table) => table.name).sort()).toEqual([
       'certification_review_requests',
+      'evaluator_verdicts',
       'score_outcomes',
       'scores',
     ])
@@ -38,6 +40,17 @@ describe('production schema bootstrap', () => {
         'identity_at_query',
         'capability_at_query',
         'behavior_at_query',
+      ]),
+    )
+    expect(evaluatorVerdictColumns.map((column) => column.name)).toEqual(
+      expect.arrayContaining([
+        'attestation_scheme',
+        'attestation_status',
+        'attestation_digest',
+        'attestation_signature',
+        'attestation_signer',
+        'attestation_reason',
+        'attested_at',
       ]),
     )
   })

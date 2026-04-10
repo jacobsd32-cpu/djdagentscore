@@ -3,6 +3,7 @@ import {
   runPostDeploySmokeCheck,
   validateDetailedHealthPayload,
   validatePublicHealthPayload,
+  validatePublicMetricsLockdown,
 } from '../scripts/post-deploy-smoke.mjs'
 
 describe('post-deploy smoke helpers', () => {
@@ -25,6 +26,17 @@ describe('post-deploy smoke helpers', () => {
     ).not.toThrow()
   })
 
+  it('rejects public health payloads that leak detailed runtime fields', () => {
+    expect(() =>
+      validatePublicHealthPayload({
+        status: 'ok',
+        version: '2.5.0',
+        uptime: 12,
+        modelVersion: '2.5.0',
+      }),
+    ).toThrow(/leaked detailed field "modelVersion"/)
+  })
+
   it('accepts valid detailed health payloads for combined runtime', () => {
     expect(() =>
       validateDetailedHealthPayload(
@@ -43,19 +55,77 @@ describe('post-deploy smoke helpers', () => {
     ).not.toThrow()
   })
 
+  it('rejects public metrics that are exposed without auth', () => {
+    expect(() => validatePublicMetricsLockdown(200)).toThrow(/Public \/metrics returned HTTP 200/)
+    expect(() => validatePublicMetricsLockdown(401)).not.toThrow()
+  })
+
   it('retries through transient failures and succeeds once health is good', async () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-    let callCount = 0
-    const fetchMock = async (_url, init) => {
-      callCount += 1
-      if (callCount === 1) {
+    const fetchMock = async (url, init) => {
+      const target = typeof url === 'string' ? url : String(url)
+
+      if (target === 'https://example.test/health' && !init?.headers?.['x-admin-key']) {
+        fetchMock.publicHealthAttempts = (fetchMock.publicHealthAttempts ?? 0) + 1
+        if (fetchMock.publicHealthAttempts === 1) {
+          return {
+            ok: false,
+            status: 503,
+          }
+        }
+
         return {
-          ok: false,
-          status: 503,
+          ok: true,
+          json: async () => ({
+            status: 'ok',
+            version: '2.5.0',
+            uptime: 10,
+            release: {
+              sha: 'abcdef1234567890',
+              shaShort: 'abcdef1',
+              builtAt: '2026-03-13T02:30:00Z',
+            },
+          }),
         }
       }
 
-      if (init?.headers?.['x-admin-key']) {
+      if (target === 'https://example.test/metrics') {
+        return {
+          ok: false,
+          status: 401,
+        }
+      }
+
+      if (target === 'https://example.test/robots.txt') {
+        return {
+          ok: true,
+          text: async () => 'User-agent: *\nSitemap: https://example.test/sitemap.xml\n',
+        }
+      }
+
+      if (target === 'https://example.test/sitemap.xml') {
+        return {
+          ok: true,
+          text: async () =>
+            '<?xml version="1.0" encoding="UTF-8"?><urlset><url><loc>https://example.test/</loc></url></urlset>',
+        }
+      }
+
+      if (target === 'https://example.test/.well-known/agent.json') {
+        return {
+          ok: true,
+          json: async () => ({
+            url: 'https://example.test',
+            docs: 'https://example.test/docs',
+            openapi: 'https://example.test/openapi.json',
+            payment: {
+              discovery: 'https://example.test/.well-known/x402',
+            },
+          }),
+        }
+      }
+
+      if (target === 'https://example.test/health' && init?.headers?.['x-admin-key']) {
         return {
           ok: true,
           json: async () => ({
@@ -77,19 +147,7 @@ describe('post-deploy smoke helpers', () => {
         }
       }
 
-      return {
-        ok: true,
-        json: async () => ({
-          status: 'ok',
-          version: '2.5.0',
-          uptime: 10,
-          release: {
-            sha: 'abcdef1234567890',
-            shaShort: 'abcdef1',
-            builtAt: '2026-03-13T02:30:00Z',
-          },
-        }),
-      }
+      throw new Error(`Unexpected fetch target in smoke test: ${target}`)
     }
 
     const originalFetch = globalThis.fetch

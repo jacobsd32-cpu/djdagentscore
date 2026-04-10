@@ -1,0 +1,46 @@
+{
+  "standard": "djd-solidity-artifacts-v1",
+  "compiler": {
+    "name": "solc",
+    "version": "0.8.34+commit.80d5c536.Emscripten.clang",
+    "via_ir": true
+  },
+  "contracts": [
+    {
+      "contract": "DJDEvaluatorEscrowSettlementExample",
+      "artifact_kind": "contract",
+      "artifact_path": "artifacts/contracts/DJDEvaluatorEscrowSettlementExample.json",
+      "source_path": "contracts/DJDEvaluatorEscrowSettlementExample.sol",
+      "source_sha256": "ce744e5e3b43b266ac50e5176279fb44cb12f6f14ddbaca028fe39d31ea00fbb",
+      "bytecode_sha256": "195a9767a5da360483f30bdb8fbb05c5648059b1a3a64f2ef7d7ada3c5abfe70",
+      "deployed_bytecode_sha256": "1d1c4b6c7cc137a8220a15f2e92715f0cde19c4c60e2bd9bbd552eed908cc414"
+    },
+    {
+      "contract": "DJDEvaluatorVerdictVerifier",
+      "artifact_kind": "contract",
+      "artifact_path": "artifacts/contracts/DJDEvaluatorVerdictVerifier.json",
+      "source_path": "contracts/DJDEvaluatorVerdictVerifier.sol",
+      "source_sha256": "fc870e0df4939fc1072369814d9357c2385973af55e9162b907114828a512eb5",
+      "bytecode_sha256": "e55802cb4050bbfbfa9729a147c25712361e801ef46d1c10488f199b706f1f1f",
+      "deployed_bytecode_sha256": "47ede7828ff250ebffc01df20733af8801c058210e9d40fb2ee50953eee0f0fb"
+    },
+    {
+      "contract": "IDJDEvaluatorOracleCallback",
+      "artifact_kind": "interface",
+      "artifact_path": "artifacts/contracts/IDJDEvaluatorOracleCallback.json",
+      "source_path": "contracts/IDJDEvaluatorOracleCallback.sol",
+      "source_sha256": "57633f63db8ec8c9ae01227abe5b84c6434137ebbf6c75b2cd92ac8d5ef36230",
+      "bytecode_sha256": "a54942c8e365f3784f38b8d437f9d708290db60738b00cdcfb934c32d1be97f3",
+      "deployed_bytecode_sha256": "a54942c8e365f3784f38b8d437f9d708290db60738b00cdcfb934c32d1be97f3"
+    },
+    {
+      "contract": "IDJDEvaluatorVerdictVerifier",
+      "artifact_kind": "interface",
+      "artifact_path": "artifacts/contracts/IDJDEvaluatorVerdictVerifier.json",
+      "source_path": "contracts/DJDEvaluatorEscrowSettlementExample.sol",
+      "source_sha256": "ce744e5e3b43b266ac50e5176279fb44cb12f6f14ddbaca028fe39d31ea00fbb",
+      "bytecode_sha256": "a54942c8e365f3784f38b8d437f9d708290db60738b00cdcfb934c32d1be97f3",
+      "deployed_bytecode_sha256": "a54942c8e365f3784f38b8d437f9d708290db60738b00cdcfb934c32d1be97f3"
+    }
+  ]
+}

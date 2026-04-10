@@ -366,7 +366,7 @@ export function certifyPageHtml(): string {
       <article class="card">
         <div class="card-kicker">Evaluation</div>
         <div class="card-title">Evaluator-ready context</div>
-        <div class="card-copy">Certify pairs with the evaluator preview to help payout and settlement flows decide whether to approve, review, or reject before money moves.</div>
+        <div class="card-copy">Certify pairs with the evaluator preview and evidence packet to help payout and settlement flows decide whether to approve, review, or reject before money moves.</div>
       </article>
     </div>
   </section>
@@ -403,8 +403,16 @@ export function certifyPageHtml(): string {
       </div>
       <div class="endpoint-row">
         <div>
+          <div class="endpoint-path">GET /v1/certification/tiers</div>
+          <div class="endpoint-desc">Free catalog of the Operational, Transactional, and Autonomous certification tiers with score thresholds and x402 pricing.</div>
+        </div>
+        <div class="endpoint-price price-free">Free</div>
+        <div class="endpoint-method">GET</div>
+      </div>
+      <div class="endpoint-row">
+        <div>
           <div class="endpoint-path">GET /v1/certification/readiness</div>
-          <div class="endpoint-desc">Checks whether a wallet is ready for certification and returns blockers, review state, and next-step links.</div>
+          <div class="endpoint-desc">Checks whether a wallet is ready for a requested certification tier and returns blockers, review state, tier pricing, and next-step links.</div>
         </div>
         <div class="endpoint-price price-free">Free</div>
         <div class="endpoint-method">GET</div>
@@ -427,10 +435,34 @@ export function certifyPageHtml(): string {
       </div>
       <div class="endpoint-row">
         <div>
-          <div class="endpoint-path">POST /v1/certification/apply</div>
-          <div class="endpoint-desc">Final issuance endpoint for certification. Paid x402 route used when a wallet is actually ready to certify.</div>
+          <div class="endpoint-path">POST /v1/certification/apply/operational</div>
+          <div class="endpoint-desc">Tier 1 issuance path for bounded, operational agents.</div>
         </div>
-        <div class="endpoint-price price-paid">x402</div>
+        <div class="endpoint-price price-paid">$50</div>
+        <div class="endpoint-method">POST</div>
+      </div>
+      <div class="endpoint-row">
+        <div>
+          <div class="endpoint-path">POST /v1/certification/apply/transactional</div>
+          <div class="endpoint-desc">Tier 2 issuance path for agents handling financially sensitive work.</div>
+        </div>
+        <div class="endpoint-price price-paid">$200</div>
+        <div class="endpoint-method">POST</div>
+      </div>
+      <div class="endpoint-row">
+        <div>
+          <div class="endpoint-path">POST /v1/certification/apply/autonomous</div>
+          <div class="endpoint-desc">Tier 3 issuance path for high-consequence autonomous agents.</div>
+        </div>
+        <div class="endpoint-price price-paid">$500</div>
+        <div class="endpoint-method">POST</div>
+      </div>
+      <div class="endpoint-row">
+        <div>
+          <div class="endpoint-path">POST /v1/certification/apply</div>
+          <div class="endpoint-desc">Legacy transactional apply path kept for compatibility. Prefer the tier-specific routes above.</div>
+        </div>
+        <div class="endpoint-price price-paid">$200</div>
         <div class="endpoint-method">POST</div>
       </div>
       <div class="endpoint-row">
@@ -447,6 +479,86 @@ export function certifyPageHtml(): string {
           <div class="endpoint-desc">Paid evaluator preview that combines score, certification, risk, ratings, and staking into an approve/review/reject decision surface.</div>
         </div>
         <div class="endpoint-price price-paid">$x402</div>
+        <div class="endpoint-method">GET</div>
+      </div>
+      <div class="endpoint-row">
+        <div>
+          <div class="endpoint-path">GET /v1/score/evaluator/evidence?wallet=0x...</div>
+          <div class="endpoint-desc">Paid evaluator evidence packet that bundles the verdict with certification baseline, forensics summary, and traceable evidence links.</div>
+        </div>
+        <div class="endpoint-price price-paid">$0.45</div>
+        <div class="endpoint-method">GET</div>
+      </div>
+      <div class="endpoint-row">
+        <div>
+          <div class="endpoint-path">GET /v1/score/evaluator/oracle?wallet=0x...</div>
+          <div class="endpoint-desc">Compact oracle-style verdict endpoint that persists a settlement recommendation, forensic trace id, verdict record links, and a signed attestation when the DJD oracle signer is configured.</div>
+        </div>
+        <div class="endpoint-price price-paid">$0.60</div>
+        <div class="endpoint-method">GET</div>
+      </div>
+      <div class="endpoint-row">
+        <div>
+          <div class="endpoint-path">GET /v1/score/evaluator/callback?id=verdict_...</div>
+          <div class="endpoint-desc">Contract-ready callback envelope that turns a stored signed verdict into ABI-backed calldata for a relayer or escrow contract.</div>
+        </div>
+        <div class="endpoint-price price-paid">$0.20</div>
+        <div class="endpoint-method">GET</div>
+      </div>
+      <div class="endpoint-row">
+        <div>
+          <div class="endpoint-path">GET /v1/score/evaluator/verifier</div>
+          <div class="endpoint-desc">Free Solidity verifier package with ABI, selectors, typed-data schema, and source for Base or Base Sepolia integrations.</div>
+        </div>
+        <div class="endpoint-price price-free">Free</div>
+        <div class="endpoint-method">GET</div>
+      </div>
+      <div class="endpoint-row">
+        <div>
+          <div class="endpoint-path">GET /v1/score/evaluator/networks</div>
+          <div class="endpoint-desc">Free supported-network catalog for the DJD oracle stack, including Base mainnet, Base Sepolia, explorer links, and deploy bundle params.</div>
+        </div>
+        <div class="endpoint-price price-free">Free</div>
+        <div class="endpoint-method">GET</div>
+      </div>
+      <div class="endpoint-row">
+        <div>
+          <div class="endpoint-path">GET /v1/score/evaluator/artifacts</div>
+          <div class="endpoint-desc">Free compiled Solidity artifact package with ABI, bytecode, deployed bytecode, and constructor metadata for DJD onchain integrations.</div>
+        </div>
+        <div class="endpoint-price price-free">Free</div>
+        <div class="endpoint-method">GET</div>
+      </div>
+      <div class="endpoint-row">
+        <div>
+          <div class="endpoint-path">GET /v1/score/evaluator/proof?id=verdict_...</div>
+          <div class="endpoint-desc">Free verifier-proof envelope that turns a stored signed verdict into verifyVerdict calldata for the DJD Solidity verifier contract.</div>
+        </div>
+        <div class="endpoint-price price-free">Free</div>
+        <div class="endpoint-method">GET</div>
+      </div>
+      <div class="endpoint-row">
+        <div>
+          <div class="endpoint-path">GET /v1/score/evaluator/escrow?id=verdict_...</div>
+          <div class="endpoint-desc">Free escrow-settlement envelope that turns a stored signed verdict into settleWithDJDVerdict calldata for the reference DJD escrow consumer contract.</div>
+        </div>
+        <div class="endpoint-price price-free">Free</div>
+        <div class="endpoint-method">GET</div>
+      </div>
+      <div class="endpoint-row">
+        <div>
+          <div class="endpoint-path">GET /v1/score/evaluator/deploy?id=verdict_...</div>
+          <div class="endpoint-desc">Free deployment plan that maps a stored verdict into constructor args for the DJD verifier and reference escrow consumer contracts.</div>
+        </div>
+        <div class="endpoint-price price-free">Free</div>
+        <div class="endpoint-method">GET</div>
+      </div>
+      <div class="endpoint-row">
+        <div>
+          <div class="endpoint-path">GET /v1/score/evaluator/deploy/bundle?id=verdict_...</div>
+          <div class="endpoint-desc">Free deployment bundle that combines the verdict-driven constructor plan with the compiled verifier and escrow artifacts in one payload, locked to the verdict’s target network.</div>
+        </div>
+        <div class="endpoint-price price-free">Free</div>
         <div class="endpoint-method">GET</div>
       </div>
     </div>
@@ -467,8 +579,6 @@ export function certifyPageHtml(): string {
 <script>
 const CERT_READINESS_URL='${readinessUrl}';
 const CERT_REVIEW_URL='${reviewUrl}';
-const CERT_APPLY_URL='${buildPublicUrl('/v1/certification/apply')}';
-
 function certEsc(value){
   return String(value)
     .replace(/&/g,'&amp;')
@@ -598,8 +708,13 @@ function renderCertReadiness(data){
   var tierValue=data.requirements&&data.requirements.score&&data.requirements.score.current_tier?data.requirements.score.current_tier:'—';
   var expiryValue=data.requirements&&data.requirements.score&&data.requirements.score.expires_at?new Date(data.requirements.score.expires_at).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}):'—';
   var reviewValue=data.requirements&&data.requirements.review&&data.requirements.review.status?certReviewStatusLabel(data.requirements.review.status):'NONE';
+  var requestedTier=data.requested_tier&&data.requested_tier.label?data.requested_tier.label:'Transactional';
+  var requestedTierKey=data.requested_tier&&data.requested_tier.key?data.requested_tier.key:'transactional';
+  var requestedTierFloor=data.requested_tier&&data.requested_tier.minimum_score!=null?data.requested_tier.minimum_score:'—';
+  var requestedTierPrice=data.payment&&data.payment.amount_usdc!=null?data.payment.amount_usdc:'—';
+  var applyEndpoint=data.links&&data.links.apply_endpoint?data.links.apply_endpoint:'';
   var codeBlock=data.can_apply
-    ? '<div class="readiness-code"><div class="readiness-code-label">Apply via x402</div><pre>curl -X POST '+certEsc(CERT_APPLY_URL)+' \\\n  -H "X-PAYMENT: &lt;x402 payment proof&gt;"</pre></div>'
+    ? '<div class="readiness-code"><div class="readiness-code-label">Apply via x402</div><pre>curl -X POST '+certEsc(applyEndpoint)+' \\\n  -H "X-PAYMENT: &lt;x402 payment proof&gt;"</pre></div>'
     : '';
   var showReviewAction=!data.requirements.review||!data.requirements.review.exists||data.requirements.review.status==='needs_info'||data.requirements.review.status==='rejected';
   var reviewActionLabel=data.requirements.review&&data.requirements.review.exists?'Resubmit review packet':'Request review packet';
@@ -626,7 +741,10 @@ function renderCertReadiness(data){
         '<div class="readiness-metric"><div class="readiness-metric-label">Current score</div><div class="readiness-metric-value">'+certEsc(scoreValue)+' <span class="mono" style="font-size:11px;color:var(--text-muted)">'+certEsc(tierValue)+'</span></div></div>'+
         '<div class="readiness-metric"><div class="readiness-metric-label">Score expiry</div><div class="readiness-metric-value">'+certEsc(expiryValue)+'</div></div>'+
         '<div class="readiness-metric"><div class="readiness-metric-label">Review</div><div class="readiness-metric-value">'+certEsc(reviewValue)+'</div></div>'+
+        '<div class="readiness-metric"><div class="readiness-metric-label">Requested tier</div><div class="readiness-metric-value">'+certEsc(requestedTier)+' <span class="mono" style="font-size:11px;color:var(--text-muted)">score '+certEsc(requestedTierFloor)+'+</span></div></div>'+
+        '<div class="readiness-metric"><div class="readiness-metric-label">Tier price</div><div class="readiness-metric-value">$'+certEsc(requestedTierPrice)+'</div></div>'+
       '</div>'+
+      '<div class="readiness-note" style="margin-bottom:14px">Current readiness is being evaluated against the <span class="mono">'+certEsc(requestedTierKey)+'</span> certification path.</div>'+
       (blockers?'<ul class="readiness-list">'+blockers+'</ul>':'<div class="readiness-empty">No blockers. This wallet meets the visible prerequisites for certification.</div>')+
       '<div class="readiness-links">'+nextSteps+'</div>'+
       reviewAction+

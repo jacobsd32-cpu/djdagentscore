@@ -41,6 +41,7 @@
   "overrides": [
     {
       "includes": [
+        "src/scoring/**",
         "src/middleware/apiKeyAuth.ts",
         "src/middleware/paidRateLimit.ts",
         "src/routes/report.ts",

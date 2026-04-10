@@ -52,8 +52,17 @@ export function getPublicClient(): Client {
 
 export const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const
 
-// ERC-8004 Identity Registry — placeholder until deployed
-const ERC8004_REGISTRY = '0x0000000000000000000000000000000000000000' as const
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as const
+
+function resolveConfiguredAddress(rawAddress: string | undefined): `0x${string}` {
+  if (/^0x[a-fA-F0-9]{40}$/.test(rawAddress ?? '')) {
+    return rawAddress!.toLowerCase() as `0x${string}`
+  }
+  return ZERO_ADDRESS
+}
+
+// ERC-8004 Identity Registry — configurable for Base deployments as the spec matures.
+export const ERC8004_IDENTITY_REGISTRY = resolveConfiguredAddress(process.env.ERC8004_IDENTITY_REGISTRY)
 
 // ERC-8004 Reputation Registry — live on Base mainnet
 export const ERC8004_REPUTATION_REGISTRY = '0x8004BAa17C55a88189AE136b182e5fdA19dE9b63' as const
@@ -75,6 +84,23 @@ const ERC8004_ABI = [parseAbiItem('function isRegistered(address) view returns (
 const BLOCKS_PER_DAY = 43_200n
 const LOG_CHUNK_SIZE = 10_000n
 const LOG_PARALLEL_BATCH = 5
+
+export function getERC8004RegistryStatus(): {
+  identity_registry: string | null
+  identity_registry_configured: boolean
+  reputation_registry: string
+  network: 'base'
+  chain_id: number
+} {
+  const identityConfigured = ERC8004_IDENTITY_REGISTRY !== ZERO_ADDRESS
+  return {
+    identity_registry: identityConfigured ? ERC8004_IDENTITY_REGISTRY : null,
+    identity_registry_configured: identityConfigured,
+    reputation_registry: ERC8004_REPUTATION_REGISTRY,
+    network: 'base',
+    chain_id: base.id,
+  }
+}
 
 // ---------- Helpers ----------
 
@@ -225,12 +251,12 @@ export async function estimateWalletAgeDays(
  * Returns false if the registry contract is not deployed or the call fails.
  */
 export async function checkERC8004Registration(wallet: `0x${string}`): Promise<boolean> {
-  if (ERC8004_REGISTRY === '0x0000000000000000000000000000000000000000') {
+  if (ERC8004_IDENTITY_REGISTRY === ZERO_ADDRESS) {
     return false
   }
   try {
     const result = await getPublicClient().readContract({
-      address: ERC8004_REGISTRY,
+      address: ERC8004_IDENTITY_REGISTRY,
       abi: ERC8004_ABI,
       functionName: 'isRegistered',
       args: [wallet],
