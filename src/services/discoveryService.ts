@@ -317,7 +317,7 @@ ${renderPublicNav('docs', '/pricing', 'View Pricing')}
   </script>
   </main>
 ${renderPublicFooter({
-  copy: 'DJD documentation covers the current trust infrastructure product: score, Certify, evaluator, monitoring, and directory surfaces for apps and agent networks on Base.',
+  copy: 'DJD documentation covers the current wallet screening product: score, Certify, evaluator, monitoring, and directory surfaces for apps and agent networks on Base.',
 })}`
 }
 
@@ -336,7 +336,7 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
     service: {
       name: SERVICE_TITLE,
       description:
-        'Trust infrastructure for apps and agents on Base. ' +
+        'Wallet screening and trust signals for apps and agents on Base. ' +
         'Score wallets, publish public trust surfaces, and gate payouts or x402 routes before money moves.',
       version: SERVICE_VERSION,
       docs: `${baseUrl}/docs`,
@@ -349,7 +349,7 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
         price: 0,
         description: 'Free basic score (0–100) with tier and recommendation. 10/day per IP.',
         input: { query: { wallet: { type: 'string', required: true, description: 'Ethereum wallet address' } } },
-        output: { example: { wallet: '0x…', score: 78, tier: 'Established', recommendation: 'transact' } },
+        output: { example: { wallet: '0x…', score: 78, tier: 'Trusted', recommendation: 'proceed' } },
       },
       {
         path: '/v1/score/erc8004',
@@ -363,7 +363,7 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
             wallet: '0x…',
             agent_id: '123456789',
             standard: 'erc-8004-compatible',
-            reputation: { composite_score: 78, tier: 'Established', confidence: 0.82 },
+            reputation: { composite_score: 78, tier: 'Trusted', confidence: 0.85 },
             certification: { active: true, tier: 'Transactional' },
           },
         },

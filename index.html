@@ -3,16 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DJD Agent Score — Trust Infrastructure for the Agent Economy</title>
-<meta name="description" content="Score, certify, and evaluate agent wallets before money moves. DJD turns on-chain activity into trust surfaces, directories, and settlement-ready policy signals on Base.">
+<title>DJD Agent Score — Screen wallets before payout</title>
+<meta name="description" content="Score, certify, and evaluate agent wallets before money moves. DJD helps products screen wallets before payouts, paid routes, and autonomous settlement on Base.">
+<link rel="canonical" href="__DJD_PUBLIC_BASE_URL__/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="DJD Agent Score — Trust Infrastructure for the Agent Economy">
-<meta property="og:description" content="Score, certify, and evaluate agent wallets before money moves. DJD turns on-chain activity into trust surfaces, directories, and settlement-ready policy signals on Base.">
+<meta property="og:title" content="DJD Agent Score — Screen wallets before payout">
+<meta property="og:description" content="Score, certify, and evaluate agent wallets before money moves. DJD helps products screen wallets before payouts, paid routes, and autonomous settlement on Base.">
 <meta property="og:url" content="__DJD_PUBLIC_BASE_URL__/">
 <meta property="og:site_name" content="DJD Agent Score">
+<meta property="og:image" content="data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='630' viewBox='0 0 1200 630'%3E%3Crect width='1200' height='630' rx='40' fill='%2307111f'/%3E%3Ccircle cx='188' cy='118' r='250' fill='%237dd3fc' fill-opacity='.15'/%3E%3Ccircle cx='1046' cy='84' r='278' fill='%23818cf8' fill-opacity='.12'/%3E%3Crect x='40' y='40' width='1120' height='550' rx='32' fill='%230d1b2d' stroke='%237d8cf8' stroke-opacity='.18'/%3E%3Ctext x='84' y='166' fill='%237dd3fc' font-family='Inter,Arial,sans-serif' font-size='28' font-weight='700' letter-spacing='2'%3EDJD Agent Score%3C/text%3E%3Ctext x='84' y='268' fill='%23eef2ff' font-family='Georgia,serif' font-size='64' font-weight='400'%3EScreen wallets before payout%3C/text%3E%3Ctext x='84' y='340' fill='%23a7b7ce' font-family='Arial,sans-serif' font-size='28'%3ETrust signals for payouts, paid routes, and agent workflows%3C/text%3E%3C/svg%3E">
+<meta property="og:image:alt" content="DJD Agent Score cover image">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="DJD Agent Score — Trust Infrastructure for the Agent Economy">
-<meta name="twitter:description" content="Score, certify, and evaluate agent wallets before money moves. DJD turns on-chain activity into trust surfaces, directories, and settlement-ready policy signals on Base.">
+<meta name="twitter:title" content="DJD Agent Score — Screen wallets before payout">
+<meta name="twitter:description" content="Score, certify, and evaluate agent wallets before money moves. DJD helps products screen wallets before payouts, paid routes, and autonomous settlement on Base.">
+<meta name="twitter:image" content="data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='630' viewBox='0 0 1200 630'%3E%3Crect width='1200' height='630' rx='40' fill='%2307111f'/%3E%3Ccircle cx='188' cy='118' r='250' fill='%237dd3fc' fill-opacity='.15'/%3E%3Ccircle cx='1046' cy='84' r='278' fill='%23818cf8' fill-opacity='.12'/%3E%3Crect x='40' y='40' width='1120' height='550' rx='32' fill='%230d1b2d' stroke='%237d8cf8' stroke-opacity='.18'/%3E%3Ctext x='84' y='166' fill='%237dd3fc' font-family='Inter,Arial,sans-serif' font-size='28' font-weight='700' letter-spacing='2'%3EDJD Agent Score%3C/text%3E%3Ctext x='84' y='268' fill='%23eef2ff' font-family='Georgia,serif' font-size='64' font-weight='400'%3EScreen wallets before payout%3C/text%3E%3Ctext x='84' y='340' fill='%23a7b7ce' font-family='Arial,sans-serif' font-size='28'%3ETrust signals for payouts, paid routes, and agent workflows%3C/text%3E%3C/svg%3E">
+<meta name="twitter:image:alt" content="DJD Agent Score cover image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -327,13 +332,12 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
   <a class="logo" href="/"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAIAAAAiOjnJAAAE4UlEQVR42u3dzXEbORAGUBx9cwbKYC+OxDm4yvlvBLsJ2NL8oIHuxlN9R5GaAV59PZwSyfHt23eR6RmWQMASsAQsEbAELAFLBKxt+fX7X4sA1j0xc2NJB0ZrAhZMkIFVytNRwgZPhIHVzVNjYYMnwsA6glQPXgMpvMDaTOrHj594NYQVjWZW8CoDKzOjLdTAykVqsadoYWDtVDWRxcfHP9mQgbWa1AM0s7JeGFgrVK2XNMVZM1ujDalUmN4g68FrNFCV39MDYdVtjdKqynm6K6yerdGPVAlPt4RV5DXKqepHKo7XobAmqmpA6gqvQrZGFVWHkIrgdRCsKaoak/qSV35bQ1GprvKwFNU51TUKqTqW1Oe8ctoaCVUpqujqagKLqgNt5YKF1LKxWB4WVWfaGlSxVQzWY1WsvOe13dagiq0ysKhiaycsqvLYKgCLKrbmw6KKrfmwqGJrGyyqkttKB4sqtubDMgQNxG2wqDqqtAZVbEXYGlSxFWELLLDywaKKrT2wqKpuawOsu3VlUxPaiiutoa6UViJYVLEFlhSBRRVb+2HZwh5X8eGw1JXS2g/L5h1bWkNdgRVha6grtrLDUlftSysElrpSWtdtgSW5YVF1iK3JsNQVWLdsDZftEnEJP8xBiZiGwxyUiGk4zEGJmIbDHJSIaTjMQYmYhmBJSlhUmYZgSRpY5iBYz2yNTjca/rv5M/eZo4+h1k2H0WkOgpVnGoIFFlhggQUWWGCBBRZYYIEFFlhggQUWWGCBBRZYYFV/M8XcRxV6MwVYYIEFFlhggQWWgCVggQXWNlhsUfUQltICy4eCCFgCFlhg+QxSmaxqGyyl5SWhz3mXdXMQLMkKiy1zECzJBMs0BMs3rMr+Gw2+E1qi5qBvsZeQORgCiy1zcBospWUOPoRlGoJ1XdVMWGypK7AkEyyX8C7br1OZCUtpqasVsNhqVleBsJSWukoBi60z6+oJLKWlrlLAYuvAunoIiy2qwJJSsNiiahssV/ENrtk3wFJa6mobLLZKq9oGiy2qwAKrFCy2qIqCxRZVO2GxVUVVIlhKS11FwWKLqp2w2Go/BOfDYouqKFhsURUFiy2qNsNiK4mqMrDYOlxVICy2TlYVC+uNLbwek8qgKhwWW2eqWgGLrQNVpYP1R1t4XSF1S1UTWGydpmodrLu2jMWI8bdM1VJYU2ydzOt9US1TtRrWLFun8frbIqRVtQGW6updVJthqa6uRbUf1gNb5/CaRWqXqs2w5trqweuTsyukaj+sZ7Za8ppLaq+qFLCCeFUR9vkpVCSVC9ZjW1/yyinsy2N+vBpJdjMRrDe2rvDKIOzKQb5ZhDxbmQvWe14Xha1EdvF4Xp51tk3MCOu9reu8Ipzd/dPvTzbhDuYFNYvXA2Gf45v4bFPOLu3epYY1y1YEso2Y8qsqACuC17ph048//5bVgBXEK4ha6HFW2axKsBbw+hLfxr9ea5vqwdrOC6nOsA7hVXdrasNqzKv6pnSA1UlYm71oBauusH5b0BNWFWGNV745rJzCTljwU2BtR3baIp8IawE1SwrWPX8WASwBS8ASAUvAErBEwJI9+R8Q1gw8vPId5wAAAABJRU5ErkJggg==" alt="DJD" />DJD<span> Agent Score</span></a>
   <div class="nav-links">
     <a href="/explorer" data-track="cta_explorer">Explorer</a>
+    <a href="/directory" data-track="cta_directory">Directory</a>
     <a href="/certify" data-track="cta_certify">Certify</a>
-    <a href="/methodology" data-track="cta_methodology">Methodology</a>
     <a href="/blog" data-track="cta_blog">Blog</a>
     <a href="/pricing" data-track="cta_pricing">Pricing</a>
-    <a href="#api-ref" data-track="cta_api">API</a>
     <a href="/docs" data-track="cta_docs">Docs</a>
-    <a class="nav-cta" href="#x402-path" data-track="cta_x402_nav">Try x402 Gate</a>
+    <a class="nav-cta" href="#lookup" data-track="cta_screen_nav">Screen wallets</a>
   </div>
 </nav>
 </div>
@@ -343,23 +347,23 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 <!-- BANNER -->
 <div class="banner">
   <span class="ico">&#9888;</span>
-  <span><strong>Experimental.</strong> DJD Agent Score is an unvalidated algorithmic model. Scores are informational only, not financial advice or consumer reports. <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a></span>
+  <span><strong>Experimental.</strong> DJD Agent Score is an unvalidated algorithmic model. Scores are informational only, not financial advice or consumer reports. Use them to screen wallets before payouts or paid routes. <a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a></span>
 </div>
 
 <!-- HERO -->
 <div class="hero">
-  <div class="hero-chip"><span class="dot"></span> Live on Base &middot; Wallet trust for apps, marketplaces, and agents</div>
-  <h1>Know who an agent wallet is <em>before your app sends money.</em></h1>
-  <p class="hero-sub">DJD turns on-chain behavior into a trust layer. For humans, that means profiles, certification, and a public directory. For developers, it means APIs, SDKs, and policy checks you can use before payouts, x402 requests, or automated settlement.</p>
+  <div class="hero-chip"><span class="dot"></span> Live on Base &middot; Screen wallets before payout</div>
+  <h1>Know who a wallet is <em>before your app pays it.</em></h1>
+  <p class="hero-sub">DJD turns on-chain behavior into a screening layer. For humans, that means profiles, certification, and a public directory. For developers, it means APIs, SDKs, and policy checks you can use before payouts, paid routes, or automated settlement.</p>
   <div class="hero-actions">
     <a href="#lookup" class="btn btn-primary" data-track="cta_try_api">Try the live lookup</a>
     <a href="/docs" class="btn btn-ghost" data-track="cta_docs_home">Read developer docs</a>
     <a href="/directory" class="btn btn-ghost" data-track="cta_certified_directory">Browse certified agents</a>
   </div>
   <div class="hero-proof">
+    <span>Screen wallets before payouts</span>
     <span>Free basic wallet lookup</span>
     <span>API keys and SDKs for developers</span>
-    <span>Card billing for teams</span>
     <span>x402 support for autonomous agents</span>
   </div>
 </div>
@@ -548,7 +552,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 <!-- USE CASES -->
 <div class="sec" id="use-cases">
   <div class="sec-label">Built For</div>
-  <div class="sec-title">Use DJD when your product has to trust a wallet</div>
+  <div class="sec-title">Use DJD when your product has to screen a wallet before money moves</div>
   <div class="sec-desc">The first buyers are usually developers shipping payouts, marketplaces, or paid agent workflows. DJD sits between a wallet address and a money-moving decision.</div>
   <div class="steps steps-4">
     <div class="step">
@@ -715,7 +719,7 @@ footer{border-top:1px solid var(--border);padding:36px 0 48px;margin-top:40px}
 <!-- INTEGRATION -->
 <div class="sec" id="x402-path">
   <div class="sec-label">Integration</div>
-  <div class="sec-title">Start with the x402 gate</div>
+  <div class="sec-title">Start with the screening gate</div>
   <div class="sec-desc">If you are a developer, this is the fastest production wedge: check the payer wallet before your paid route does any work. Human teams can use API keys and card billing; autonomous agents can still pay per request with x402.</div>
   <div class="code"><div class="code-l">Hono + x402</div><pre><span class="k">import</span> { <span class="f">agentScoreGate</span> } <span class="k">from</span> <span class="s">'x402-agent-score'</span>
 
@@ -925,8 +929,8 @@ app.<span class="f">post</span>(<span class="s">'/premium/search'</span>, <span 
     <strong>Disclaimer:</strong> DJD Agent Score is experimental. All scores are algorithmically generated from publicly available blockchain data and unverified third-party submissions. Scores are not financial advice, credit assessments, investment recommendations, or guarantees. The scoring model is unvalidated and may produce inaccurate results. This service is not a "consumer report" as defined by the FCRA. By using this service you agree to the <a href="/terms">Terms of Service</a> and acknowledge the <a href="/privacy">Privacy Policy</a>.
   </div>
   <div class="ft-bot">
-    <div class="ft-l">&copy; 2026 DJD Agent Score LLC &middot; Trust infrastructure for agent payments and marketplaces on Base &middot; <a href="/pricing" style="color:var(--text-dim);text-decoration:underline">Pricing</a> &middot; Identity attestation by <a href="https://insumermodel.com" target="_blank" style="color:var(--text-dim);text-decoration:underline">Insumer Model</a></div>
-    <div class="ft-links"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/methodology">Methodology</a><a href="/blog">Blog</a><a href="/health">Status</a></div>
+    <div class="ft-l">&copy; 2026 DJD Agent Score LLC &middot; Wallet screening infrastructure for payouts and paid routes on Base &middot; <a href="/pricing" style="color:var(--text-dim);text-decoration:underline">Pricing</a> &middot; Identity attestation by <a href="https://insumermodel.com" target="_blank" style="color:var(--text-dim);text-decoration:underline">Insumer Model</a></div>
+    <div class="ft-links"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/directory">Directory</a><a href="/blog">Blog</a><a href="/health">Status</a></div>
   </div>
 </footer>
 

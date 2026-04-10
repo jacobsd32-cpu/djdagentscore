@@ -1,4 +1,5 @@
 import { envEnabled } from '../config/env.js'
+import { MODEL_VERSION } from '../config/modelVersion.js'
 import type { ReleaseMetadata } from '../config/runtimeMetadata.js'
 import { getReleaseMetadata, getRuntimeMode } from '../config/runtimeMetadata.js'
 import {
@@ -13,7 +14,6 @@ import {
 import { getIndexerStatus } from '../jobs/blockchainIndexer.js'
 import { jobStats } from '../jobs/jobStats.js'
 import { getHttpCounters, uptimeSeconds } from '../metrics.js'
-import { MODEL_VERSION } from '../scoring/responseBuilders.js'
 import { getEvaluatorAttestationSignerStatus } from './evaluatorAttestationService.js'
 
 interface PublicHealthPayload {

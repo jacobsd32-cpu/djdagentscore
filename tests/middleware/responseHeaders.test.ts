@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { describe, expect, it } from 'vitest'
+import { MODEL_VERSION } from '../../src/config/modelVersion.js'
 import { responseHeadersMiddleware } from '../../src/middleware/responseHeaders.js'
-import { MODEL_VERSION } from '../../src/scoring/responseBuilders.js'
 
 describe('responseHeadersMiddleware', () => {
   it('sets X-DJD-Model-Version to the canonical MODEL_VERSION', async () => {

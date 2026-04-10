@@ -6,8 +6,8 @@
  * for model validation.
  */
 import type { Database as DatabaseType } from 'better-sqlite3'
+import { MODEL_VERSION } from '../config/modelVersion.js'
 import { log } from '../logger.js'
-import { MODEL_VERSION } from '../scoring/responseBuilders.js'
 import { jobStats } from './jobStats.js'
 
 interface UnmatchedLookup {

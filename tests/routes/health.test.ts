@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { MODEL_VERSION } from '../../src/scoring/responseBuilders.js'
+import { MODEL_VERSION } from '../../src/config/modelVersion.js'
 
 const state = vi.hoisted(() => ({
   countCachedScores: vi.fn().mockReturnValue(0),

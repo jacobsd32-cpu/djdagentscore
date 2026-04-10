@@ -16,6 +16,9 @@ interface PublicHeadOptions {
   description: string
   path: string
   ogType?: 'website' | 'article'
+  canonicalUrl?: string
+  imageUrl?: string
+  imageAlt?: string
   extraHead?: string
 }
 
@@ -530,8 +533,49 @@ function navLink(href: string, label: string, key: PublicNavKey, active?: Public
   return `<a href="${href}" class="nav-link${active === key ? ' active' : ''}">${label}</a>`
 }
 
+function escapeXml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&apos;')
+}
+
+function buildDefaultSocialImage(title: string, description: string): string {
+  const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <defs>
+    <linearGradient id="g" x1="88" y1="80" x2="1112" y2="550" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7dd3fc" stop-opacity="0.24" />
+      <stop offset="0.55" stop-color="#818cf8" stop-opacity="0.18" />
+      <stop offset="1" stop-color="#07111f" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" rx="40" fill="#07111f" />
+  <rect x="40" y="40" width="1120" height="550" rx="32" fill="#0d1b2d" stroke="rgba(129,140,248,0.18)" />
+  <path d="M72 112C226 56 412 28 600 28C788 28 974 56 1128 112V548H72V112Z" fill="url(#g)" />
+  <text x="84" y="166" fill="#7dd3fc" font-family="Inter,Arial,sans-serif" font-size="28" font-weight="700" letter-spacing="2">DJD Agent Score</text>
+  <text x="84" y="268" fill="#eef2ff" font-family="Instrument Serif,Georgia,serif" font-size="64" font-weight="400">${escapeXml(title)}</text>
+  <text x="84" y="340" fill="#a7b7ce" font-family="DM Sans,Arial,sans-serif" font-size="28">${escapeXml(description)}</text>
+  <text x="84" y="442" fill="#7dd3fc" font-family="JetBrains Mono,monospace" font-size="22" font-weight="700">Screen wallets before payout</text>
+  <text x="84" y="494" fill="#6c7b92" font-family="DM Sans,Arial,sans-serif" font-size="22">Trust signals for payouts, paid routes, and agent workflows</text>
+</svg>`
+
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
+}
+
 export function renderPublicHeadStart(options: PublicHeadOptions): string {
-  const { title, description, path, ogType = 'website', extraHead = '' } = options
+  const {
+    title,
+    description,
+    path,
+    ogType = 'website',
+    canonicalUrl = buildPublicUrl(path),
+    imageUrl = buildDefaultSocialImage(title, description),
+    imageAlt = `${title} on DJD Agent Score`,
+    extraHead = '',
+  } = options
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -540,14 +584,19 @@ export function renderPublicHeadStart(options: PublicHeadOptions): string {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${title}</title>
 <meta name="description" content="${description}">
+<link rel="canonical" href="${canonicalUrl}">
 <meta property="og:type" content="${ogType}">
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${description}">
-<meta property="og:url" content="${buildPublicUrl(path)}">
+<meta property="og:url" content="${canonicalUrl}">
 <meta property="og:site_name" content="DJD Agent Score">
+<meta property="og:image" content="${imageUrl}">
+<meta property="og:image:alt" content="${imageAlt}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${title}">
 <meta name="twitter:description" content="${description}">
+<meta name="twitter:image" content="${imageUrl}">
+<meta name="twitter:image:alt" content="${imageAlt}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -590,7 +639,7 @@ export function renderPublicNav(
 export function renderPublicFooter(options: PublicFooterOptions = {}): string {
   const copy =
     options.copy ??
-    `DJD Agent Score is trust infrastructure for apps, marketplaces, and agent networks on Base. Questions? Contact ${getSupportEmail()}.`
+    `DJD Agent Score helps apps and agent operators screen wallets before payouts, paid routes, and settlement on Base. Questions? Contact ${getSupportEmail()}.`
 
   return `
 <footer class="site-footer">

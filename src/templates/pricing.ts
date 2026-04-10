@@ -260,7 +260,7 @@ export function pricingPageHtml(plans: PricingPlan[]): string {
   <section class="section" id="plans">
     <div class="section-header section-center">
       <div class="section-label">Plans</div>
-      <h2 class="section-title">From free screening to production trust infrastructure</h2>
+      <h2 class="section-title">From free screening to production wallet controls</h2>
       <p class="section-copy">Human teams usually pay by subscription and use a standard Bearer API key. Autonomous agents can still pay per request with x402. Same platform, same scoring engine, same certified directory and evaluator surfaces.</p>
     </div>
     <div class="plans">
@@ -462,6 +462,6 @@ async function startCheckout(plan) {
 }
 </script>`,
     footerCopy:
-      'DJD Agent Score LLC provides trust infrastructure for agent marketplaces, payouts, and settlement flows on Base.',
+      'DJD Agent Score LLC provides wallet screening and trust signals for payouts, paid routes, and settlement flows on Base.',
   })
 }

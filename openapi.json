@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "DJD Agent Score API",
-    "description": "Trust infrastructure for AI agent wallets on Base. DJD helps apps and agent operators score wallets, publish public trust surfaces, and enforce payout or settlement policy before money moves. Use it for agent marketplaces, payout and escrow flows, paid tools, and automated settlement decisions. Paid endpoints support x402 on Base or API-key access for developer teams; free endpoints require no authentication. Interactive docs available at /docs.",
-    "version": "2.0.0",
+    "description": "Wallet screening and trust signals for AI agent wallets on Base. DJD helps apps and agent operators score wallets, publish public trust surfaces, and enforce payout or settlement policy before money moves. Use it for payout and escrow flows, paid tools, agent marketplaces, and automated settlement decisions. Paid endpoints support x402 on Base or API-key access for developer teams; free endpoints require no authentication. Interactive docs available at /docs.",
+    "version": "2.5.0",
     "contact": {
       "email": "drewjacobs32@gmail.com"
     },
@@ -92,14 +92,14 @@
                 },
                 "example": {
                   "wallet": "0x3e4ef1f774857c69e33dddc471e110c7ac7bb528",
-                  "score": 13,
-                  "tier": "Unverified",
-                  "confidence": 0.1,
-                  "recommendation": "insufficient_history",
-                  "modelVersion": "1.0.0",
-                  "lastUpdated": "2026-02-21T20:00:00.000Z",
-                  "computedAt": "2026-02-21T20:00:00.000Z",
-                  "scoreFreshness": 0.85
+                  "score": 78,
+                  "tier": "Trusted",
+                  "confidence": 0.85,
+                  "recommendation": "proceed",
+                  "modelVersion": "2.5.0",
+                  "lastUpdated": "2026-04-10T00:00:00.000Z",
+                  "computedAt": "2026-04-10T00:00:00.000Z",
+                  "scoreFreshness": 1
                 }
               }
             }

@@ -14,13 +14,13 @@ describe('GET /', () => {
     const body = await res.text()
     expect(body).toContain('Browse certified agents')
     expect(body).toContain("See who's already certified")
-    expect(body).toContain('Trust Infrastructure for the Agent Economy')
-    expect(body).toContain('DJD turns on-chain behavior into a trust layer')
-    expect(body).toContain('Know who an agent wallet is')
-    expect(body).toContain('before your app sends money')
-    expect(body).toContain('A trust layer for AI agents and the apps around them')
+    expect(body).toContain('Screen wallets before payout')
+    expect(body).toContain('DJD turns on-chain behavior into a screening layer')
+    expect(body).toContain('Know who a wallet is')
+    expect(body).toContain('before your app pays it')
+    expect(body).toContain('Screen wallets before payouts')
     expect(body).toContain('One trust engine, packaged for humans and software')
-    expect(body).toContain('Use DJD when your product has to trust a wallet')
+    expect(body).toContain('Use DJD when your product has to screen a wallet before money moves')
     expect(body).toContain('Payout and escrow flows')
     expect(body).toContain('Ship the first version in one afternoon')
     expect(body).toContain('Screen counterparties during development')
@@ -33,7 +33,7 @@ describe('GET /', () => {
     expect(body).toContain('/v1/score/evaluator?wallet=')
   })
 
-  it('uses PUBLIC_BASE_URL for robots.txt and agent metadata', async () => {
+  it('uses PUBLIC_BASE_URL for robots.txt, sitemap.xml, and agent metadata', async () => {
     process.env.PUBLIC_BASE_URL = 'https://preview.djdagentscore.test'
     process.env.PUBLIC_SUPPORT_EMAIL = 'preview-support@djdagentscore.test'
 
@@ -51,9 +51,23 @@ describe('GET /', () => {
 
     const robotsRes = await app.request('/robots.txt')
     expect(robotsRes.status).toBe(200)
+    expect(robotsRes.headers.get('content-type')).toContain('text/plain')
     const robotsBody = await robotsRes.text()
     expect(robotsBody).toContain('Allow: /directory')
-    expect(robotsBody).toContain('Sitemap: https://preview.djdagentscore.test/openapi.json')
+    expect(robotsBody).toContain('Sitemap: https://preview.djdagentscore.test/sitemap.xml')
+
+    const sitemapRes = await app.request('/sitemap.xml')
+    expect(sitemapRes.status).toBe(200)
+    expect(sitemapRes.headers.get('content-type')).toContain('application/xml')
+    const sitemapBody = await sitemapRes.text()
+    expect(sitemapBody).toContain('<?xml version="1.0" encoding="UTF-8"?>')
+    expect(sitemapBody).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
+    expect(sitemapBody).toContain('<loc>https://preview.djdagentscore.test/</loc>')
+    expect(sitemapBody).toContain('<loc>https://preview.djdagentscore.test/leaderboard</loc>')
+    expect(sitemapBody).toContain('<loc>https://preview.djdagentscore.test/privacy</loc>')
+    expect(sitemapBody).toContain('<loc>https://preview.djdagentscore.test/docs</loc>')
+    expect(sitemapBody).toContain('<loc>https://preview.djdagentscore.test/pricing</loc>')
+    expect(sitemapBody).toContain('<loc>https://preview.djdagentscore.test/blog</loc>')
 
     const agentRes = await app.request('/.well-known/agent.json')
     expect(agentRes.status).toBe(200)

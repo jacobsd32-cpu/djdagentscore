@@ -80,8 +80,8 @@ vi.mock('../../src/scoring/calibrationReport.js', () => ({
   generateCalibrationReport: (...args: unknown[]) => state.generateCalibrationReport(...args),
 }))
 
-vi.mock('../../src/scoring/responseBuilders.js', () => ({
-  MODEL_VERSION: '2.0.0',
+vi.mock('../../src/config/modelVersion.js', () => ({
+  MODEL_VERSION: '2.5.0',
 }))
 
 describe('admin middleware', () => {

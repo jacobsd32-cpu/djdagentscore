@@ -9,7 +9,7 @@ const SUPPORT_EMAIL = getSupportEmail()
 export const wrapHtml = (title: string, content: string) =>
   `${renderPublicPage({
     title: `${title} - DJD Agent Score`,
-    description: `${title} for DJD Agent Score, the trust infrastructure platform for the agent economy.`,
+    description: `${title} for DJD Agent Score, the wallet screening platform for payouts, paid routes, and agent workflows.`,
     path: title === 'Terms of Service' ? '/terms' : title === 'Privacy Policy' ? '/privacy' : '/',
     ctaHref: '/pricing',
     ctaLabel: 'View Pricing',
@@ -85,7 +85,7 @@ export const wrapHtml = (title: string, content: string) =>
 .legal-prose tr:nth-child(even) td{background:rgba(7,17,31,0.38)}
 `,
     footerCopy:
-      'DJD Agent Score provides trust infrastructure for the agent economy. Legal pages use the same public brand system as the rest of the product.',
+      'DJD Agent Score provides wallet screening and trust signals for payouts, paid routes, and agent workflows. Legal pages use the same public brand system as the rest of the product.',
     content: `<main class="site-shell legal-shell"><article class="article-shell prose legal-prose legal-article">${content}</article></main>`,
   })}`
 
@@ -350,7 +350,7 @@ export const leaderboardHtml = `<!DOCTYPE html>
     <p class="updated" id="updated"></p>
   </main>
   <footer>
-    DJD Agent Score &middot; Trust infrastructure for the agent economy &middot;
+    DJD Agent Score &middot; Wallet screening for payouts and paid routes &middot;
     <a href="/v1/leaderboard">API</a> &middot; <a href="/terms">Terms</a>
   </footer>
   <script>

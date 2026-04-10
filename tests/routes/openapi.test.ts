@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { afterEach, describe, expect, it } from 'vitest'
+import { getX402DiscoveryView } from '../../src/services/discoveryService.js'
 import openapiRoute from '../../src/routes/openapi.js'
 
 describe('GET /openapi.json', () => {
@@ -31,8 +32,27 @@ describe('GET /openapi.json', () => {
 
     const body = JSON.parse(await res.text()) as { info?: { title?: string; description?: string } }
     expect(body.info?.title).toBe('DJD Agent Score API')
-    expect(body.info?.description).toContain('Trust infrastructure')
-    expect(body.info?.description).toContain('agent marketplaces')
+    expect(body.info?.version).toBe('2.5.0')
+    expect(body.info?.description).toContain('Wallet screening and trust signals')
+    expect(body.info?.description).toContain('payout and escrow flows')
+  })
+
+  it('keeps the basic score example aligned with the current runtime model version', async () => {
+    const app = new Hono()
+    app.route('/openapi.json', openapiRoute)
+
+    const res = await app.request('/openapi.json')
+    const body = JSON.parse(await res.text()) as {
+      paths?: Record<string, { get?: { responses?: Record<string, { content?: Record<string, { example?: Record<string, unknown> }> }> } }>
+    }
+
+    expect(body.paths?.['/v1/score/basic']?.get?.responses?.['200']?.content?.['application/json']?.example).toMatchObject({
+      score: 78,
+      tier: 'Trusted',
+      confidence: 0.85,
+      recommendation: 'proceed',
+      modelVersion: '2.5.0',
+    })
   })
 
   it('injects the canonical public URL and support email at runtime', async () => {
@@ -314,5 +334,21 @@ describe('GET /openapi.json', () => {
     expect(
       body.components?.schemas?.EvaluatorVerdictHistoryResponse?.properties?.items?.items?.properties?.attestation_status,
     ).toBeDefined()
+  })
+
+  it('keeps the x402 discovery view on the same version and example values', () => {
+    const discovery = getX402DiscoveryView('https://djdagentscore.dev')
+
+    expect(discovery.service.version).toBe('2.5.0')
+    expect(discovery.endpoints[0]?.output?.example).toMatchObject({
+      score: 78,
+      tier: 'Trusted',
+      recommendation: 'proceed',
+    })
+    expect(discovery.endpoints[1]?.output?.example?.reputation).toMatchObject({
+      composite_score: 78,
+      tier: 'Trusted',
+      confidence: 0.85,
+    })
   })
 })

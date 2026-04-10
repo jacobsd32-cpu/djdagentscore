@@ -32,6 +32,21 @@ export function validatePublicHealthPayload(payload, expectedReleaseSha = null) 
     throw new Error('Public /health payload did not include numeric uptime')
   }
 
+  const detailedOnlyFields = [
+    'modelVersion',
+    'experimentalStatus',
+    'warnings',
+    'runtime',
+    'integrations',
+    'database',
+    'indexer',
+    'jobs',
+  ]
+  const leakedField = detailedOnlyFields.find((field) => Object.prototype.hasOwnProperty.call(payload, field))
+  if (leakedField) {
+    throw new Error(`Public /health payload leaked detailed field "${leakedField}"`)
+  }
+
   const normalizedExpectedReleaseSha = normalizeReleaseSha(expectedReleaseSha)
   if (!normalizedExpectedReleaseSha) {
     return
@@ -82,6 +97,51 @@ export function validateDetailedHealthPayload(payload, expectedRuntimeMode) {
   }
 }
 
+export function validatePublicMetricsLockdown(status) {
+  if (status !== 401 && status !== 403) {
+    throw new Error(`Public /metrics returned HTTP ${status}; expected 401 or 403`)
+  }
+}
+
+export function validateRobotsTxt(body, publicBaseUrl) {
+  if (typeof body !== 'string' || body.length === 0) {
+    throw new Error('robots.txt did not return a text body')
+  }
+  if (!body.includes(`Sitemap: ${publicBaseUrl}/sitemap.xml`)) {
+    throw new Error('robots.txt did not point at /sitemap.xml')
+  }
+}
+
+export function validateSitemapXml(body, publicBaseUrl) {
+  if (typeof body !== 'string' || body.length === 0) {
+    throw new Error('sitemap.xml did not return an XML body')
+  }
+  if (!body.includes('<urlset')) {
+    throw new Error('sitemap.xml did not contain a urlset root')
+  }
+  if (!body.includes(`<loc>${publicBaseUrl}/</loc>`)) {
+    throw new Error('sitemap.xml did not include the homepage URL')
+  }
+}
+
+export function validateAgentMetadata(payload, publicBaseUrl) {
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('agent.json did not return an object payload')
+  }
+  if (payload.url !== publicBaseUrl) {
+    throw new Error(`agent.json url mismatch: expected ${publicBaseUrl}, got ${payload.url}`)
+  }
+  if (payload.docs !== `${publicBaseUrl}/docs`) {
+    throw new Error('agent.json docs link mismatch')
+  }
+  if (payload.openapi !== `${publicBaseUrl}/openapi.json`) {
+    throw new Error('agent.json openapi link mismatch')
+  }
+  if (payload.payment?.discovery !== `${publicBaseUrl}/.well-known/x402`) {
+    throw new Error('agent.json payment discovery link mismatch')
+  }
+}
+
 function formatHealthWarnings(payload) {
   if (!Array.isArray(payload?.warnings) || payload.warnings.length === 0) {
     return null
@@ -102,6 +162,7 @@ function formatHealthWarnings(payload) {
 
 export async function runPostDeploySmokeCheck(options = {}) {
   const healthUrl = options.healthUrl ?? process.env.DJD_HEALTHCHECK_URL ?? 'https://djdagentscore.dev/health'
+  const publicBaseUrl = new URL('.', healthUrl).toString().replace(/\/$/, '')
   const adminKey = options.adminKey ?? process.env.DJD_ADMIN_KEY ?? ''
   const expectedRuntimeMode = normalizeRuntimeMode(
     options.expectedRuntimeMode ?? process.env.DJD_EXPECT_RUNTIME_MODE ?? 'combined',
@@ -131,6 +192,27 @@ export async function runPostDeploySmokeCheck(options = {}) {
       }
       const publicPayload = await publicResponse.json()
       validatePublicHealthPayload(publicPayload, expectedReleaseSha)
+
+      const metricsResponse = await fetch(`${publicBaseUrl}/metrics`)
+      validatePublicMetricsLockdown(metricsResponse.status)
+
+      const robotsResponse = await fetch(`${publicBaseUrl}/robots.txt`)
+      if (!robotsResponse.ok) {
+        throw new Error(`robots.txt returned HTTP ${robotsResponse.status}`)
+      }
+      validateRobotsTxt(await robotsResponse.text(), publicBaseUrl)
+
+      const sitemapResponse = await fetch(`${publicBaseUrl}/sitemap.xml`)
+      if (!sitemapResponse.ok) {
+        throw new Error(`sitemap.xml returned HTTP ${sitemapResponse.status}`)
+      }
+      validateSitemapXml(await sitemapResponse.text(), publicBaseUrl)
+
+      const agentResponse = await fetch(`${publicBaseUrl}/.well-known/agent.json`)
+      if (!agentResponse.ok) {
+        throw new Error(`agent.json returned HTTP ${agentResponse.status}`)
+      }
+      validateAgentMetadata(await agentResponse.json(), publicBaseUrl)
 
       if (adminKey) {
         const detailedResponse = await fetch(healthUrl, {
