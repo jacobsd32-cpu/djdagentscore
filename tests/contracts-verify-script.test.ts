@@ -3,13 +3,13 @@ import { writeFile } from 'node:fs/promises'
 import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { parseEther, toHex } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { buildEscrowIdHash } from '../src/contracts/djdEvaluatorOracleCallback.js'
-import { getEvaluatorArtifactPackageView } from '../src/services/contractArtifactService.js'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { deployEvaluatorStackFromBundle } from '../scripts/deploy-evaluator-stack.mjs'
 import { verifyEvaluatorStackDeployment } from '../scripts/verify-evaluator-stack.mjs'
+import { buildEscrowIdHash } from '../src/contracts/djdEvaluatorOracleCallback.js'
+import { getEvaluatorArtifactPackageView } from '../src/services/contractArtifactService.js'
 import ganache from './helpers/ganache.js'
 
 const CHAIN_ID = 8453
@@ -32,7 +32,9 @@ function fundedAccount(secretKey: `0x${string}`) {
 describe('verify evaluator stack script', () => {
   const artifactPackage = getEvaluatorArtifactPackageView()
   const verifierArtifact = artifactPackage.contracts.find((entry) => entry.contract === 'DJDEvaluatorVerdictVerifier')
-  const escrowArtifact = artifactPackage.contracts.find((entry) => entry.contract === 'DJDEvaluatorEscrowSettlementExample')
+  const escrowArtifact = artifactPackage.contracts.find(
+    (entry) => entry.contract === 'DJDEvaluatorEscrowSettlementExample',
+  )
   const fixtureDir = mkdtempSync(join(tmpdir(), 'djd-verify-script-'))
 
   let server: Awaited<ReturnType<typeof ganache.server>>
@@ -47,11 +49,7 @@ describe('verify evaluator stack script', () => {
         quiet: true,
       },
       wallet: {
-        accounts: [
-          fundedAccount(DEPLOYER_KEY),
-          fundedAccount(PROVIDER_KEY),
-          fundedAccount(COUNTERPARTY_KEY),
-        ],
+        accounts: [fundedAccount(DEPLOYER_KEY), fundedAccount(PROVIDER_KEY), fundedAccount(COUNTERPARTY_KEY)],
       },
     })
 
@@ -213,8 +211,7 @@ describe('verify evaluator stack script', () => {
         escrow_settlement:
           'https://example.test/v1/score/evaluator/escrow?id=verdict_verify_registry_fixture&network=base',
         artifact_package: 'https://example.test/v1/score/evaluator/artifacts',
-        bundle:
-          'https://example.test/v1/score/evaluator/deploy/bundle?id=verdict_verify_registry_fixture&network=base',
+        bundle: 'https://example.test/v1/score/evaluator/deploy/bundle?id=verdict_verify_registry_fixture&network=base',
       },
       notes: ['fixture'],
     }
@@ -428,7 +425,7 @@ describe('verify evaluator stack script', () => {
       throw new Error(`Unexpected fetch URL: ${url.toString()}`)
     }
 
-    let report
+    let report: Awaited<ReturnType<typeof verifyEvaluatorStackDeployment>>
     try {
       report = await verifyEvaluatorStackDeployment({
         rpcUrl,

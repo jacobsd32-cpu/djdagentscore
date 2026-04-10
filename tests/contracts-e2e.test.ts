@@ -2,10 +2,10 @@ import { readFileSync } from 'node:fs'
 import type { AddressInfo } from 'node:net'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createPublicClient, createWalletClient, http, parseEther, toHex } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { base } from 'viem/chains'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { buildEscrowIdHash } from '../src/contracts/djdEvaluatorOracleCallback.js'
 import { buildEvaluatorVerdictTypedData } from '../src/services/evaluatorAttestationService.js'
 import ganache from './helpers/ganache.js'
@@ -184,39 +184,40 @@ describe('compiled DJD contracts on a local EVM', () => {
     })
     await publicClient.waitForTransactionReceipt({ hash: settleHash })
 
-    const [settled, outcome, releaseAuthorized, lastVerdictDigest, lastPacketHash, verifierAccepted] = await Promise.all([
-      publicClient.readContract({
-        address: escrowAddress,
-        abi: escrowArtifact.abi as any,
-        functionName: 'settled',
-      }),
-      publicClient.readContract({
-        address: escrowAddress,
-        abi: escrowArtifact.abi as any,
-        functionName: 'outcome',
-      }),
-      publicClient.readContract({
-        address: escrowAddress,
-        abi: escrowArtifact.abi as any,
-        functionName: 'releaseAuthorized',
-      }),
-      publicClient.readContract({
-        address: escrowAddress,
-        abi: escrowArtifact.abi as any,
-        functionName: 'lastVerdictDigest',
-      }),
-      publicClient.readContract({
-        address: escrowAddress,
-        abi: escrowArtifact.abi as any,
-        functionName: 'lastPacketHash',
-      }),
-      publicClient.readContract({
-        address: verifierAddress,
-        abi: verifierArtifact.abi as any,
-        functionName: 'verifyVerdict',
-        args: [typed_data.message, signature],
-      }),
-    ])
+    const [settled, outcome, releaseAuthorized, lastVerdictDigest, lastPacketHash, verifierAccepted] =
+      await Promise.all([
+        publicClient.readContract({
+          address: escrowAddress,
+          abi: escrowArtifact.abi as any,
+          functionName: 'settled',
+        }),
+        publicClient.readContract({
+          address: escrowAddress,
+          abi: escrowArtifact.abi as any,
+          functionName: 'outcome',
+        }),
+        publicClient.readContract({
+          address: escrowAddress,
+          abi: escrowArtifact.abi as any,
+          functionName: 'releaseAuthorized',
+        }),
+        publicClient.readContract({
+          address: escrowAddress,
+          abi: escrowArtifact.abi as any,
+          functionName: 'lastVerdictDigest',
+        }),
+        publicClient.readContract({
+          address: escrowAddress,
+          abi: escrowArtifact.abi as any,
+          functionName: 'lastPacketHash',
+        }),
+        publicClient.readContract({
+          address: verifierAddress,
+          abi: verifierArtifact.abi as any,
+          functionName: 'verifyVerdict',
+          args: [typed_data.message, signature],
+        }),
+      ])
 
     expect(settled).toBe(true)
     expect(Number(outcome)).toBe(1)

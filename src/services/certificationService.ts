@@ -25,13 +25,13 @@ import {
 import { makeBadge } from '../utils/badgeGenerator.js'
 import { normalizeWallet } from '../utils/walletUtils.js'
 import {
+  type CertificationTierDefinition,
+  type CertificationTierKey,
   getCertificationApplyPath,
   getCertificationTier,
   getCertificationTierByStoredValue,
   getDefaultCertificationTier,
   listCertificationTiers,
-  type CertificationTierDefinition,
-  type CertificationTierKey,
 } from './certificationTiers.js'
 
 export interface CertificationApplyError {
@@ -315,59 +315,61 @@ function resolveCertificationTier(
   }
 }
 
-const applyForCertificationTxn = db.transaction((wallet: string, tier: CertificationTierDefinition): CertificationApplyResult => {
-  const scoreRow = getScore(wallet)
-  if (!scoreRow || scoreRow.expires_at <= new Date().toISOString()) {
-    return {
-      ok: false,
-      code: 'cert_requirements_not_met',
-      message: 'Score has expired — request a fresh score first',
-      status: 400,
+const applyForCertificationTxn = db.transaction(
+  (wallet: string, tier: CertificationTierDefinition): CertificationApplyResult => {
+    const scoreRow = getScore(wallet)
+    if (!scoreRow || scoreRow.expires_at <= new Date().toISOString()) {
+      return {
+        ok: false,
+        code: 'cert_requirements_not_met',
+        message: 'Score has expired — request a fresh score first',
+        status: 400,
+      }
     }
-  }
 
-  if (scoreRow.composite_score < tier.minimumScore) {
-    return {
-      ok: false,
-      code: 'cert_score_too_low',
-      message: `${tier.label} certification requires a score of at least ${tier.minimumScore}`,
-      status: 400,
-      details: {
-        current_score: scoreRow.composite_score,
-        requested_tier: tier.label,
-        minimum_score: tier.minimumScore,
-      },
+    if (scoreRow.composite_score < tier.minimumScore) {
+      return {
+        ok: false,
+        code: 'cert_score_too_low',
+        message: `${tier.label} certification requires a score of at least ${tier.minimumScore}`,
+        status: 400,
+        details: {
+          current_score: scoreRow.composite_score,
+          requested_tier: tier.label,
+          minimum_score: tier.minimumScore,
+        },
+      }
     }
-  }
 
-  const registration = getRegistration(wallet)
-  if (!registration) {
-    return {
-      ok: false,
-      code: 'cert_not_registered',
-      message: 'Agent must be registered before applying for certification',
-      status: 400,
+    const registration = getRegistration(wallet)
+    if (!registration) {
+      return {
+        ok: false,
+        code: 'cert_not_registered',
+        message: 'Agent must be registered before applying for certification',
+        status: 400,
+      }
     }
-  }
 
-  const existingCert = getActiveCertification(wallet)
-  if (existingCert) {
-    return {
-      ok: false,
-      code: 'cert_already_active',
-      message: 'Wallet already has an active certification',
-      status: 409,
+    const existingCert = getActiveCertification(wallet)
+    if (existingCert) {
+      return {
+        ok: false,
+        code: 'cert_already_active',
+        message: 'Wallet already has an active certification',
+        status: 409,
+      }
     }
-  }
 
-  return {
-    ok: true,
-    status: 201,
-    data: buildCertificationApplyView(
-      insertCertification(wallet, tier.label, scoreRow.composite_score, tier.priceUsd),
-    ),
-  }
-})
+    return {
+      ok: true,
+      status: 201,
+      data: buildCertificationApplyView(
+        insertCertification(wallet, tier.label, scoreRow.composite_score, tier.priceUsd),
+      ),
+    }
+  },
+)
 
 export const CERTIFICATION_DIRECTORY_SORTS = ['score', 'confidence', 'recent', 'name'] as const
 export type CertificationDirectorySort = (typeof CERTIFICATION_DIRECTORY_SORTS)[number]

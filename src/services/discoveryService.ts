@@ -493,7 +493,8 @@ export function getX402DiscoveryView(requestUrl: string, forwardedProto?: string
         path: '/v1/score/evaluator/verdict',
         method: 'GET',
         price: ENDPOINT_PRICING['/v1/score/evaluator/verdict'],
-        description: 'Fetch a previously issued evaluator oracle verdict record by id, including its attestation metadata.',
+        description:
+          'Fetch a previously issued evaluator oracle verdict record by id, including its attestation metadata.',
         input: { query: { id: { type: 'string', required: true } } },
       },
       {

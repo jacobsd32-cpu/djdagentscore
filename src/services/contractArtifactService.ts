@@ -171,6 +171,8 @@ export function getEvaluatorArtifactPackageView(): EvaluatorArtifactPackageView 
   }
 }
 
-export function getEvaluatorArtifactContractEntry(contract: string): EvaluatorArtifactPackageView['contracts'][number] | null {
+export function getEvaluatorArtifactContractEntry(
+  contract: string,
+): EvaluatorArtifactPackageView['contracts'][number] | null {
   return getEvaluatorArtifactPackageView().contracts.find((entry) => entry.contract === contract) ?? null
 }

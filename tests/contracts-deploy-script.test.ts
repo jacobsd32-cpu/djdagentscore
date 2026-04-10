@@ -1,11 +1,11 @@
 import type { AddressInfo } from 'node:net'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createPublicClient, http, parseEther, toHex } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { base } from 'viem/chains'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { buildDeploymentBundleUrl, deployEvaluatorStackFromBundle } from '../scripts/deploy-evaluator-stack.mjs'
 import { buildEscrowIdHash } from '../src/contracts/djdEvaluatorOracleCallback.js'
 import { getEvaluatorArtifactPackageView } from '../src/services/contractArtifactService.js'
-import { buildDeploymentBundleUrl, deployEvaluatorStackFromBundle } from '../scripts/deploy-evaluator-stack.mjs'
 import ganache from './helpers/ganache.js'
 
 const CHAIN_ID = 8453
@@ -40,7 +40,9 @@ function buildLocalBase(url: string) {
 describe('deploy evaluator stack script', () => {
   const artifactPackage = getEvaluatorArtifactPackageView()
   const verifierArtifact = artifactPackage.contracts.find((entry) => entry.contract === 'DJDEvaluatorVerdictVerifier')
-  const escrowArtifact = artifactPackage.contracts.find((entry) => entry.contract === 'DJDEvaluatorEscrowSettlementExample')
+  const escrowArtifact = artifactPackage.contracts.find(
+    (entry) => entry.contract === 'DJDEvaluatorEscrowSettlementExample',
+  )
 
   let server: Awaited<ReturnType<typeof ganache.server>>
   let rpcUrl: string
@@ -56,11 +58,7 @@ describe('deploy evaluator stack script', () => {
         quiet: true,
       },
       wallet: {
-        accounts: [
-          fundedAccount(DEPLOYER_KEY),
-          fundedAccount(PROVIDER_KEY),
-          fundedAccount(COUNTERPARTY_KEY),
-        ],
+        accounts: [fundedAccount(DEPLOYER_KEY), fundedAccount(PROVIDER_KEY), fundedAccount(COUNTERPARTY_KEY)],
       },
     })
 

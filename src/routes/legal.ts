@@ -78,9 +78,7 @@ legal.get('/sitemap.xml', (c) => {
   c.header('Content-Type', 'application/xml; charset=UTF-8')
   c.header('Cache-Control', 'public, max-age=86400')
 
-  const urls = publicSitemapPaths
-    .map((path) => `  <url><loc>${escapeXml(buildPublicUrl(path))}</loc></url>`)
-    .join('\n')
+  const urls = publicSitemapPaths.map((path) => `  <url><loc>${escapeXml(buildPublicUrl(path))}</loc></url>`).join('\n')
 
   return c.body(
     `<?xml version="1.0" encoding="UTF-8"?>\n` +

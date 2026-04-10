@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
+import { buildPublicUrl } from '../config/public.js'
 import {
   buildEscrowIdHash,
   DJD_DECISION_CODES,
@@ -8,24 +9,24 @@ import {
   encodeEvaluatorOracleCallback,
   ZERO_ADDRESS,
 } from '../contracts/djdEvaluatorOracleCallback.js'
-import { buildPublicUrl } from '../config/public.js'
 import {
   countScoreHistory,
   getActiveCertification,
-  getEvaluatorVerdict as getStoredEvaluatorVerdict,
   getRegistration,
+  getEvaluatorVerdict as getStoredEvaluatorVerdict,
   insertEvaluatorVerdict,
   listEvaluatorVerdictsByWallet,
   listFraudReportsByTarget,
 } from '../db.js'
 import { ErrorCodes } from '../errors.js'
+import { normalizeWallet } from '../utils/walletUtils.js'
+import { getCertificationTierByStoredValue, getDefaultCertificationTier } from './certificationTiers.js'
 import {
   buildEvaluatorVerdictAttestation,
   buildEvaluatorVerdictTypedData,
   type EvaluatorVerdictAttestationInput,
   type EvaluatorVerdictAttestationView,
 } from './evaluatorAttestationService.js'
-import { getCertificationTierByStoredValue, getDefaultCertificationTier } from './certificationTiers.js'
 import {
   findEvaluatorNetworkByChainId,
   getDefaultEvaluatorNetwork,
@@ -34,7 +35,6 @@ import {
   resolveEvaluatorNetwork,
 } from './evaluatorNetworkService.js'
 import { getRiskScore, type RiskScoreView } from './riskService.js'
-import { normalizeWallet } from '../utils/walletUtils.js'
 
 type EvaluatorDecision = 'approve' | 'review' | 'reject'
 type EvaluatorCheckStatus = 'pass' | 'review' | 'fail'
@@ -328,10 +328,7 @@ function invalidVerdictIdError(): EvaluatorServiceError {
   }
 }
 
-function invalidNetworkError(
-  rawNetwork: string | undefined,
-  details?: Record<string, unknown>,
-): EvaluatorServiceError {
+function invalidNetworkError(rawNetwork: string | undefined, details?: Record<string, unknown>): EvaluatorServiceError {
   return {
     ok: false,
     code: ErrorCodes.INVALID_NETWORK,
@@ -471,7 +468,9 @@ function buildVerdictAttestationInput(params: {
   }
 }
 
-function resolveRequestedEvaluatorNetwork(rawNetwork: string | undefined): EvaluatorServiceResult<ReturnType<typeof getDefaultEvaluatorNetwork>> {
+function resolveRequestedEvaluatorNetwork(
+  rawNetwork: string | undefined,
+): EvaluatorServiceResult<ReturnType<typeof getDefaultEvaluatorNetwork>> {
   const network = resolveEvaluatorNetwork(rawNetwork)
   if (!network) {
     return invalidNetworkError(rawNetwork)
@@ -983,12 +982,8 @@ export async function getEvaluatorOracleVerdict(params: {
       certification_floor_passed: certificationFloorPassed,
       risk_guardrail_passed: riskGuardrailPassed,
       dispute_guardrail_passed: disputeGuardrailPassed,
-      failed_checks: evidence.evidence.checks
-        .filter((check) => check.status === 'fail')
-        .map((check) => check.key),
-      review_checks: evidence.evidence.checks
-        .filter((check) => check.status === 'review')
-        .map((check) => check.key),
+      failed_checks: evidence.evidence.checks.filter((check) => check.status === 'fail').map((check) => check.key),
+      review_checks: evidence.evidence.checks.filter((check) => check.status === 'review').map((check) => check.key),
     },
     forensic_trace_id: forensicTraceId,
     packet_hash: evidence.packet_hash,

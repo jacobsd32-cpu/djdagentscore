@@ -144,7 +144,9 @@ describe('promote evaluator stack script', () => {
     expect(dotenvOutput).toContain(
       'DJD_DEPLOY_BUNDLE_URL="https://api.example.test/v1/score/evaluator/deploy/bundle?id=verdict_promote_registry_1&network=base-sepolia"',
     )
-    expect(shellOutput).toContain("export DJD_BASE_SEPOLIA_ESCROW_CONTRACT='0x3333333333333333333333333333333333333333'")
+    expect(shellOutput).toContain(
+      "export DJD_BASE_SEPOLIA_ESCROW_CONTRACT='0x3333333333333333333333333333333333333333'",
+    )
     expect(githubOutput).toContain('DJD_ESCROW_ID=escrow-promote-1')
   })
 
@@ -246,7 +248,7 @@ describe('promote evaluator stack script', () => {
       }
     }
 
-    let result
+    let result: Awaited<ReturnType<typeof promoteEvaluatorStackDeployment>>
     try {
       result = await promoteEvaluatorStackDeployment({
         deploymentsUrl,
@@ -263,7 +265,9 @@ describe('promote evaluator stack script', () => {
     expect(result.outputs.variables.DJD_BASE_VERIFIER_PROOF_URL).toBe(
       'https://api.example.test/v1/score/evaluator/proof?id=verdict_promote_api_1&network=base',
     )
-    expect(result.outputs.shell).toContain("export DJD_BASE_ESCROW_CONTRACT='0xcccccccccccccccccccccccccccccccccccccccc'")
+    expect(result.outputs.shell).toContain(
+      "export DJD_BASE_ESCROW_CONTRACT='0xcccccccccccccccccccccccccccccccccccccccc'",
+    )
   })
 
   it('prefers the API promotion bundle when it is available', async () => {
@@ -374,7 +378,7 @@ describe('promote evaluator stack script', () => {
       }
     }
 
-    let result
+    let result: Awaited<ReturnType<typeof promoteEvaluatorStackDeployment>>
     try {
       result = await promoteEvaluatorStackDeployment({
         network: 'base-sepolia',
@@ -504,7 +508,7 @@ describe('promote evaluator stack script', () => {
       }
     }
 
-    let result
+    let result: Awaited<ReturnType<typeof promoteEvaluatorStackDeployment>>
     try {
       result = await promoteEvaluatorStackDeployment({
         network: 'base-sepolia',

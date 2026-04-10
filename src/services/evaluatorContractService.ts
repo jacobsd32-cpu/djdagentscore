@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { buildPublicUrl } from '../config/public.js'
 import {
   DJD_EVALUATOR_ESCROW_SETTLEMENT_EXAMPLE_ABI,
   DJD_EVALUATOR_ESCROW_SETTLEMENT_EXAMPLE_CONTRACT,
@@ -27,16 +28,12 @@ import {
   DJD_EVALUATOR_VERDICT_VERIFIER_SIGNATURES,
   encodeEvaluatorVerdictVerification,
 } from '../contracts/djdEvaluatorVerdictVerifier.js'
-import { buildPublicUrl } from '../config/public.js'
+import { normalizeWallet } from '../utils/walletUtils.js'
 import {
+  type EvaluatorArtifactPackageView,
   getEvaluatorArtifactContractEntry,
   getEvaluatorArtifactPackageView,
-  type EvaluatorArtifactPackageView,
 } from './contractArtifactService.js'
-import {
-  getPublishedEvaluatorDeployment,
-  type PublishedEvaluatorDeployment,
-} from './evaluatorDeploymentRegistryService.js'
 import {
   buildEvaluatorVerdictDomain,
   EVALUATOR_VERDICT_PRIMARY_TYPE,
@@ -44,19 +41,22 @@ import {
   getEvaluatorAttestationSignerStatus,
 } from './evaluatorAttestationService.js'
 import {
+  getPublishedEvaluatorDeployment,
+  type PublishedEvaluatorDeployment,
+} from './evaluatorDeploymentRegistryService.js'
+import {
+  type EvaluatorNetworkConfig,
   findEvaluatorNetworkByChainId,
   getDefaultEvaluatorNetwork,
   getEvaluatorVerdictChainId,
   listEvaluatorNetworks,
   resolveEvaluatorNetwork,
-  type EvaluatorNetworkConfig,
 } from './evaluatorNetworkService.js'
 import {
-  getEvaluatorVerdictRecord,
   type EvaluatorServiceResult,
   type EvaluatorStoredVerdictView,
+  getEvaluatorVerdictRecord,
 } from './evaluatorService.js'
-import { normalizeWallet } from '../utils/walletUtils.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const CONTRACTS_DIR = join(__dirname, '..', '..', 'contracts')

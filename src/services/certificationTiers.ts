@@ -80,7 +80,9 @@ export function getCertificationTier(rawTier: string | null | undefined): Certif
   return CERTIFICATION_TIER_ALIAS_MAP.get(normalized) ?? null
 }
 
-export function getCertificationTierByStoredValue(rawTier: string | null | undefined): CertificationTierDefinition | null {
+export function getCertificationTierByStoredValue(
+  rawTier: string | null | undefined,
+): CertificationTierDefinition | null {
   return getCertificationTier(rawTier)
 }
 

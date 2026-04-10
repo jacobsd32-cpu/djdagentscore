@@ -82,7 +82,9 @@ export function resolveEvaluatorNetwork(rawNetwork: string | undefined): Evaluat
     return getDefaultEvaluatorNetwork()
   }
 
-  return NETWORK_ALIASES[rawNetwork.trim().toLowerCase()] ? EVALUATOR_NETWORKS[NETWORK_ALIASES[rawNetwork.trim().toLowerCase()]] : null
+  return NETWORK_ALIASES[rawNetwork.trim().toLowerCase()]
+    ? EVALUATOR_NETWORKS[NETWORK_ALIASES[rawNetwork.trim().toLowerCase()]]
+    : null
 }
 
 export function getEvaluatorVerdictChainId(attestation: {

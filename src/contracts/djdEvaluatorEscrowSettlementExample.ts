@@ -1,13 +1,9 @@
 import { encodeFunctionData, parseAbi, toFunctionSelector } from 'viem'
-import {
-  EVALUATOR_VERDICT_TUPLE_SIGNATURE,
-  type EvaluatorVerdictVerifierInput,
-} from './djdEvaluatorVerdictVerifier.js'
+import { EVALUATOR_VERDICT_TUPLE_SIGNATURE, type EvaluatorVerdictVerifierInput } from './djdEvaluatorVerdictVerifier.js'
 
 export const DJD_EVALUATOR_ESCROW_SETTLEMENT_EXAMPLE_CONTRACT = 'DJDEvaluatorEscrowSettlementExample'
 export const DJD_EVALUATOR_ESCROW_SETTLEMENT_EXAMPLE_FUNCTION = 'settleWithDJDVerdict'
-export const DJD_EVALUATOR_ESCROW_SETTLEMENT_EXAMPLE_SIGNATURE =
-  `settleWithDJDVerdict(${EVALUATOR_VERDICT_TUPLE_SIGNATURE},bytes)`
+export const DJD_EVALUATOR_ESCROW_SETTLEMENT_EXAMPLE_SIGNATURE = `settleWithDJDVerdict(${EVALUATOR_VERDICT_TUPLE_SIGNATURE},bytes)`
 export const DJD_EVALUATOR_ESCROW_SETTLEMENT_EXAMPLE_SELECTOR = toFunctionSelector(
   DJD_EVALUATOR_ESCROW_SETTLEMENT_EXAMPLE_SIGNATURE,
 )

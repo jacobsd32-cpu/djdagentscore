@@ -3,11 +3,11 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildPublicUrl } from '../config/public.js'
 import {
+  type EvaluatorNetworkConfig,
   findEvaluatorNetworkByChainId,
   getDefaultEvaluatorNetwork,
   listEvaluatorNetworks,
   resolveEvaluatorNetwork,
-  type EvaluatorNetworkConfig,
 } from './evaluatorNetworkService.js'
 import type { EvaluatorServiceResult } from './evaluatorService.js'
 
@@ -151,7 +151,7 @@ export interface EvaluatorDeploymentRegistryView {
     }
     rpc_env_var: string
     deployed: boolean
-      deployment: null | PublishedEvaluatorDeployment
+    deployment: null | PublishedEvaluatorDeployment
   }>
 }
 
@@ -233,7 +233,7 @@ function escapeDotenvValue(value: string): string {
 }
 
 function escapeShellValue(value: string): string {
-  return `'${value.replace(/'/g, `'\"'\"'`)}'`
+  return `'${value.replace(/'/g, `'"'"'`)}'`
 }
 
 function formatKeyValueLines(
@@ -289,20 +289,12 @@ function buildPromotionOutputs(
   setVariable(networkScoped, `DJD_${networkSegment}_NETWORK`, network.key)
   setVariable(networkScoped, `DJD_${networkSegment}_CHAIN_ID`, network.chainId)
   setVariable(networkScoped, `DJD_${networkSegment}_VERDICT_ID`, deployment.verdict_id)
-  setVariable(
-    networkScoped,
-    `DJD_${networkSegment}_VERIFIER_CONTRACT`,
-    deployment.contracts.verifier.address,
-  )
+  setVariable(networkScoped, `DJD_${networkSegment}_VERIFIER_CONTRACT`, deployment.contracts.verifier.address)
   setVariable(networkScoped, `DJD_${networkSegment}_ESCROW_CONTRACT`, deployment.contracts.escrow.address)
   setVariable(networkScoped, `DJD_${networkSegment}_ORACLE_SIGNER`, deployment.verification.oracle_signer)
   setVariable(networkScoped, `DJD_${networkSegment}_VERIFIER_PACKAGE_URL`, deployment.links.verifier_package)
   setVariable(networkScoped, `DJD_${networkSegment}_VERIFIER_PROOF_URL`, deployment.links.verifier_proof)
-  setVariable(
-    networkScoped,
-    `DJD_${networkSegment}_ESCROW_SETTLEMENT_URL`,
-    deployment.links.escrow_settlement,
-  )
+  setVariable(networkScoped, `DJD_${networkSegment}_ESCROW_SETTLEMENT_URL`, deployment.links.escrow_settlement)
   setVariable(networkScoped, `DJD_${networkSegment}_DEPLOY_BUNDLE_URL`, deployment.links.deploy_bundle)
   setVariable(networkScoped, `DJD_${networkSegment}_DEPLOYMENTS_URL`, deployment.links.deployment_registry)
   setVariable(
@@ -449,9 +441,7 @@ function toDeploymentView(
   }
 }
 
-export function getPublishedEvaluatorDeployment(
-  network: EvaluatorNetworkConfig,
-): {
+export function getPublishedEvaluatorDeployment(network: EvaluatorNetworkConfig): {
   registry: {
     available: boolean
     updated_at: string | null
@@ -522,7 +512,9 @@ export function getEvaluatorDeploymentPromotionBundleView(
   rawNetwork?: string | undefined,
 ): EvaluatorServiceResult<EvaluatorDeploymentPromotionBundleView> {
   const network =
-    rawNetwork === undefined || rawNetwork.trim() === '' ? getDefaultEvaluatorNetwork() : resolveEvaluatorNetwork(rawNetwork)
+    rawNetwork === undefined || rawNetwork.trim() === ''
+      ? getDefaultEvaluatorNetwork()
+      : resolveEvaluatorNetwork(rawNetwork)
   if (!network) {
     return invalidNetworkResult(rawNetwork)
   }

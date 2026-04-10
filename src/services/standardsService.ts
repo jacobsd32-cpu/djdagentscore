@@ -1,9 +1,9 @@
+import { getERC8004RegistryStatus } from '../blockchain.js'
 import { REPUTATION_PUBLISHER_CONFIG } from '../config/constants.js'
 import { buildPublicUrl } from '../config/public.js'
 import { getActiveCertification, getRegistration, getReputationPublication } from '../db.js'
 import { ErrorCodes } from '../errors.js'
 import { getOrCalculateScore } from '../scoring/engine.js'
-import { getERC8004RegistryStatus } from '../blockchain.js'
 import type { Address, Tier } from '../types.js'
 import { normalizeWallet } from '../utils/walletUtils.js'
 

@@ -3,9 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 describe('compiled contract artifacts', () => {
   it('ships a manifest with verifier and escrow artifacts', () => {
-    const manifest = JSON.parse(
-      readFileSync('/Users/drewjacobs/Desktop/djd-agent-score-runtime-phase2-integration/artifacts/contracts/manifest.json', 'utf8'),
-    ) as {
+    const manifest = JSON.parse(readFileSync(new URL('../artifacts/contracts/manifest.json', import.meta.url), 'utf8')) as {
       compiler?: { name?: string; version?: string; via_ir?: boolean }
       contracts?: Array<{ contract?: string; artifact_kind?: string }>
     }

@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { afterEach, describe, expect, it } from 'vitest'
-import { getX402DiscoveryView } from '../../src/services/discoveryService.js'
 import openapiRoute from '../../src/routes/openapi.js'
+import { getX402DiscoveryView } from '../../src/services/discoveryService.js'
 
 describe('GET /openapi.json', () => {
   const originalPublicBaseUrl = process.env.PUBLIC_BASE_URL
@@ -43,10 +43,15 @@ describe('GET /openapi.json', () => {
 
     const res = await app.request('/openapi.json')
     const body = JSON.parse(await res.text()) as {
-      paths?: Record<string, { get?: { responses?: Record<string, { content?: Record<string, { example?: Record<string, unknown> }> }> } }>
+      paths?: Record<
+        string,
+        { get?: { responses?: Record<string, { content?: Record<string, { example?: Record<string, unknown> }> }> } }
+      >
     }
 
-    expect(body.paths?.['/v1/score/basic']?.get?.responses?.['200']?.content?.['application/json']?.example).toMatchObject({
+    expect(
+      body.paths?.['/v1/score/basic']?.get?.responses?.['200']?.content?.['application/json']?.example,
+    ).toMatchObject({
       score: 78,
       tier: 'Trusted',
       confidence: 0.85,
@@ -332,7 +337,8 @@ describe('GET /openapi.json', () => {
     expect(body.components?.schemas?.EvaluatorVerdictRecordResponse?.properties?.recorded_at).toBeDefined()
     expect(body.components?.schemas?.EvaluatorVerdictHistoryResponse?.properties?.summary).toBeDefined()
     expect(
-      body.components?.schemas?.EvaluatorVerdictHistoryResponse?.properties?.items?.items?.properties?.attestation_status,
+      body.components?.schemas?.EvaluatorVerdictHistoryResponse?.properties?.items?.items?.properties
+        ?.attestation_status,
     ).toBeDefined()
   })
 

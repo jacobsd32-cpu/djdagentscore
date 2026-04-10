@@ -228,7 +228,7 @@ describe('admin middleware', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.flushed).toBe(12)
-    expect(body.modelVersion).toBe('2.0.0')
+    expect(body.modelVersion).toBe('2.5.0')
   })
 
   it('returns clamped revenue summary data', async () => {

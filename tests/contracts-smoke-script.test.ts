@@ -1,15 +1,15 @@
 import type { AddressInfo } from 'node:net'
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { createPublicClient, http, parseEther, toHex } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { base } from 'viem/chains'
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { deployEvaluatorStackFromBundle } from '../scripts/deploy-evaluator-stack.mjs'
+import { runEvaluatorStackSmoke } from '../scripts/smoke-evaluator-stack.mjs'
 import { encodeEvaluatorEscrowSettlement } from '../src/contracts/djdEvaluatorEscrowSettlementExample.js'
 import { buildEscrowIdHash } from '../src/contracts/djdEvaluatorOracleCallback.js'
 import { encodeEvaluatorVerdictVerification } from '../src/contracts/djdEvaluatorVerdictVerifier.js'
-import { buildEvaluatorVerdictAttestation } from '../src/services/evaluatorAttestationService.js'
 import { getEvaluatorArtifactPackageView } from '../src/services/contractArtifactService.js'
-import { deployEvaluatorStackFromBundle } from '../scripts/deploy-evaluator-stack.mjs'
-import { runEvaluatorStackSmoke } from '../scripts/smoke-evaluator-stack.mjs'
+import { buildEvaluatorVerdictAttestation } from '../src/services/evaluatorAttestationService.js'
 import ganache from './helpers/ganache.js'
 
 const CHAIN_ID = 8453
@@ -45,7 +45,9 @@ function buildLocalBase(url: string) {
 describe('evaluator stack smoke script', () => {
   const artifactPackage = getEvaluatorArtifactPackageView()
   const verifierArtifact = artifactPackage.contracts.find((entry) => entry.contract === 'DJDEvaluatorVerdictVerifier')
-  const escrowArtifact = artifactPackage.contracts.find((entry) => entry.contract === 'DJDEvaluatorEscrowSettlementExample')
+  const escrowArtifact = artifactPackage.contracts.find(
+    (entry) => entry.contract === 'DJDEvaluatorEscrowSettlementExample',
+  )
 
   let server: Awaited<ReturnType<typeof ganache.server>>
   let rpcUrl: string
@@ -60,11 +62,7 @@ describe('evaluator stack smoke script', () => {
         quiet: true,
       },
       wallet: {
-        accounts: [
-          fundedAccount(DEPLOYER_KEY),
-          fundedAccount(PROVIDER_KEY),
-          fundedAccount(COUNTERPARTY_KEY),
-        ],
+        accounts: [fundedAccount(DEPLOYER_KEY), fundedAccount(PROVIDER_KEY), fundedAccount(COUNTERPARTY_KEY)],
       },
     })
 
@@ -298,7 +296,7 @@ describe('evaluator stack smoke script', () => {
       throw new Error(`Unexpected fetch URL: ${url.toString()}`)
     }
 
-    let report
+    let report: Awaited<ReturnType<typeof runEvaluatorStackSmoke>>
     try {
       report = await runEvaluatorStackSmoke({
         rpcUrl,
@@ -376,7 +374,8 @@ describe('evaluator stack smoke script', () => {
         verifier_proof: 'https://api.example.test/v1/score/evaluator/proof',
         escrow_settlement: 'https://api.example.test/v1/score/evaluator/escrow',
         artifact_package: 'https://api.example.test/v1/score/evaluator/artifacts',
-        bundle: 'https://api.example.test/v1/score/evaluator/deploy/bundle?id=verdict_smoke_registry_fixture&network=base',
+        bundle:
+          'https://api.example.test/v1/score/evaluator/deploy/bundle?id=verdict_smoke_registry_fixture&network=base',
       },
       notes: ['fixture'],
     }
@@ -591,7 +590,7 @@ describe('evaluator stack smoke script', () => {
       throw new Error(`Unexpected fetch URL: ${url.toString()}`)
     }
 
-    let report
+    let report: Awaited<ReturnType<typeof runEvaluatorStackSmoke>>
     try {
       report = await runEvaluatorStackSmoke({
         rpcUrl,

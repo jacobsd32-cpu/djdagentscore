@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   runPostDeploySmokeCheck,
   validateDetailedHealthPayload,
-  validatePublicMetricsLockdown,
   validatePublicHealthPayload,
+  validatePublicMetricsLockdown,
 } from '../scripts/post-deploy-smoke.mjs'
 
 describe('post-deploy smoke helpers', () => {

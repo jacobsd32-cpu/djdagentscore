@@ -1,10 +1,10 @@
 import type { AddressInfo } from 'node:net'
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { parseEther, toHex } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { runEvaluatorStackPreflight } from '../scripts/preflight-evaluator-stack.mjs'
 import { buildEscrowIdHash } from '../src/contracts/djdEvaluatorOracleCallback.js'
 import { getEvaluatorArtifactPackageView } from '../src/services/contractArtifactService.js'
-import { runEvaluatorStackPreflight } from '../scripts/preflight-evaluator-stack.mjs'
 import ganache from './helpers/ganache.js'
 
 const CHAIN_ID = 84532
@@ -30,7 +30,9 @@ function fundedAccount(secretKey: `0x${string}`) {
 describe('preflight evaluator stack script', () => {
   const artifactPackage = getEvaluatorArtifactPackageView()
   const verifierArtifact = artifactPackage.contracts.find((entry) => entry.contract === 'DJDEvaluatorVerdictVerifier')
-  const escrowArtifact = artifactPackage.contracts.find((entry) => entry.contract === 'DJDEvaluatorEscrowSettlementExample')
+  const escrowArtifact = artifactPackage.contracts.find(
+    (entry) => entry.contract === 'DJDEvaluatorEscrowSettlementExample',
+  )
 
   let server: Awaited<ReturnType<typeof ganache.server>>
   let rpcUrl: string
@@ -44,11 +46,7 @@ describe('preflight evaluator stack script', () => {
         quiet: true,
       },
       wallet: {
-        accounts: [
-          fundedAccount(DEPLOYER_KEY),
-          fundedAccount(PROVIDER_KEY),
-          fundedAccount(COUNTERPARTY_KEY),
-        ],
+        accounts: [fundedAccount(DEPLOYER_KEY), fundedAccount(PROVIDER_KEY), fundedAccount(COUNTERPARTY_KEY)],
       },
     })
 
@@ -145,7 +143,8 @@ describe('preflight evaluator stack script', () => {
           verifier_proof: 'https://api.example.test/v1/score/evaluator/proof',
           escrow_settlement: 'https://api.example.test/v1/score/evaluator/escrow',
           artifact_package: 'https://api.example.test/v1/score/evaluator/artifacts',
-          bundle: 'https://api.example.test/v1/score/evaluator/deploy/bundle?id=verdict_preflight_fixture&network=base-sepolia',
+          bundle:
+            'https://api.example.test/v1/score/evaluator/deploy/bundle?id=verdict_preflight_fixture&network=base-sepolia',
         },
         notes: ['fixture'],
       },

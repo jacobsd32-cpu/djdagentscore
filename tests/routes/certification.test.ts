@@ -86,12 +86,7 @@ vi.mock('../../src/db.js', () => ({
        LIMIT 1`,
       )
       .get(wallet),
-  insertCertification: (
-    wallet: string,
-    tier: string,
-    scoreAtCertification: number,
-    pricePaidUsd = 99,
-  ) => {
+  insertCertification: (wallet: string, tier: string, scoreAtCertification: number, pricePaidUsd = 99) => {
     const result = testDb
       .prepare(
         `INSERT INTO certifications (wallet, tier, score_at_certification, price_paid_usdc, expires_at)
@@ -439,12 +434,7 @@ function seedCertification(
     INSERT INTO certifications (wallet, tier, score_at_certification, price_paid_usdc, expires_at)
     VALUES (?, ?, ?, ?, datetime('now', '+1 year'))
   `)
-    .run(
-      wallet,
-      overrides.tier ?? 'Trusted',
-      overrides.scoreAtCertification ?? 82,
-      overrides.pricePaidUsdc ?? 99,
-    )
+    .run(wallet, overrides.tier ?? 'Trusted', overrides.scoreAtCertification ?? 82, overrides.pricePaidUsdc ?? 99)
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────────

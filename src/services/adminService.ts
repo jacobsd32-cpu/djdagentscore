@@ -1,3 +1,4 @@
+import { MODEL_VERSION } from '../config/modelVersion.js'
 import {
   adjustScoreByStakeBoost,
   countFraudDisputes,
@@ -13,7 +14,6 @@ import {
   restoreSlashedCreatorStakesForAgent,
   sumFraudPenaltyByTarget,
 } from '../db.js'
-import { MODEL_VERSION } from '../config/modelVersion.js'
 import { ErrorCodes } from '../errors.js'
 import { queueWebhookEvent } from '../jobs/webhookDelivery.js'
 import { generateCalibrationReport } from '../scoring/calibrationReport.js'

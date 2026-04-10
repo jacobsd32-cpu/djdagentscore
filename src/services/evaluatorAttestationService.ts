@@ -136,7 +136,10 @@ export function buildEvaluatorVerdictTypedData(
   }
 }
 
-function resolveSignerConfig(): { source: Exclude<AttestationSource, 'unconfigured' | 'invalid_key'>; key: `0x${string}` } | null {
+function resolveSignerConfig(): {
+  source: Exclude<AttestationSource, 'unconfigured' | 'invalid_key'>
+  key: `0x${string}`
+} | null {
   const oracleKey = process.env.ORACLE_SIGNER_PRIVATE_KEY
   if (/^0x[a-fA-F0-9]{64}$/.test(oracleKey ?? '')) {
     return { source: 'oracle_signer', key: oracleKey!.toLowerCase() as `0x${string}` }

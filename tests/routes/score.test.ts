@@ -420,8 +420,7 @@ describe('score routes', () => {
   })
 
   it('returns an ERC-8183 evaluator oracle verdict and persists the record', async () => {
-    process.env.ORACLE_SIGNER_PRIVATE_KEY =
-      '0x59c6995e998f97a5a0044966f094538c5f43e8e66b5b4bafee8a8b3eabeed4e4'
+    process.env.ORACLE_SIGNER_PRIVATE_KEY = '0x59c6995e998f97a5a0044966f094538c5f43e8e66b5b4bafee8a8b3eabeed4e4'
     state.getRegistration.mockReturnValueOnce({
       wallet: VALID_WALLET,
       name: 'DJD Agent',
@@ -712,9 +711,7 @@ describe('score routes', () => {
     const app = new Hono()
     app.route('/v1/score', scoreRoute)
 
-    const res = await app.request(
-      `/v1/score/evaluator/callback?id=verdict_123&target_contract=${SECOND_WALLET}`,
-    )
+    const res = await app.request(`/v1/score/evaluator/callback?id=verdict_123&target_contract=${SECOND_WALLET}`)
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.standard).toBe('djd-evaluator-oracle-callback-v1')
@@ -826,15 +823,19 @@ describe('score routes', () => {
     expect(body.contracts.verifier.methods.verify_verdict.selector).toMatch(/^0x[a-f0-9]{8}$/)
     expect(body.contracts.settlement_example.contract).toBe('DJDEvaluatorEscrowSettlementExample')
     expect(body.contracts.settlement_example.selector).toMatch(/^0x[a-f0-9]{8}$/)
-    expect(body.contracts.sources.some((source: { path: string }) => source.path === 'contracts/IDJDEvaluatorOracleCallback.sol')).toBe(true)
+    expect(
+      body.contracts.sources.some(
+        (source: { path: string }) => source.path === 'contracts/IDJDEvaluatorOracleCallback.sol',
+      ),
+    ).toBe(true)
     expect(
       body.contracts.sources.some(
         (source: { path: string }) => source.path === 'contracts/DJDEvaluatorEscrowSettlementExample.sol',
       ),
     ).toBe(true)
     expect(
-      body.contracts.sources.some(
-        (source: { source: string }) => source.source.includes('contract DJDEvaluatorVerdictVerifier'),
+      body.contracts.sources.some((source: { source: string }) =>
+        source.source.includes('contract DJDEvaluatorVerdictVerifier'),
       ),
     ).toBe(true)
     expect(body.endpoints.callback_calldata).toContain('/v1/score/evaluator/callback?id=verdict_')
@@ -936,7 +937,8 @@ describe('score routes', () => {
               },
               links: {
                 verifier_package: 'https://example.test/v1/score/evaluator/verifier?network=base-sepolia',
-                verifier_proof: 'https://example.test/v1/score/evaluator/proof?id=verdict_live_stage_1&network=base-sepolia',
+                verifier_proof:
+                  'https://example.test/v1/score/evaluator/proof?id=verdict_live_stage_1&network=base-sepolia',
                 escrow_settlement:
                   'https://example.test/v1/score/evaluator/escrow?id=verdict_live_stage_1&network=base-sepolia',
                 artifact_package: 'https://example.test/v1/score/evaluator/artifacts',
@@ -1141,8 +1143,10 @@ describe('score routes', () => {
       body.contracts.some((entry: { contract: string }) => entry.contract === 'DJDEvaluatorEscrowSettlementExample'),
     ).toBe(true)
     expect(
-      body.contracts.some((entry: { contract: string; artifact_kind: string }) =>
-        entry.contract === 'IDJDEvaluatorOracleCallback' && entry.artifact_kind === 'interface'),
+      body.contracts.some(
+        (entry: { contract: string; artifact_kind: string }) =>
+          entry.contract === 'IDJDEvaluatorOracleCallback' && entry.artifact_kind === 'interface',
+      ),
     ).toBe(true)
     const verifierArtifact = body.contracts.find(
       (entry: { contract: string }) => entry.contract === 'DJDEvaluatorVerdictVerifier',
@@ -1210,9 +1214,7 @@ describe('score routes', () => {
     const app = new Hono()
     app.route('/v1/score', scoreRoute)
 
-    const res = await app.request(
-      `/v1/score/evaluator/proof?id=verdict_789&target_contract=${SECOND_WALLET}`,
-    )
+    const res = await app.request(`/v1/score/evaluator/proof?id=verdict_789&target_contract=${SECOND_WALLET}`)
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.standard).toBe('djd-evaluator-verifier-proof-v1')
@@ -1354,7 +1356,8 @@ describe('score routes', () => {
               links: {
                 verifier_package: 'https://example.test/v1/score/evaluator/verifier?network=base',
                 verifier_proof: 'https://example.test/v1/score/evaluator/proof?id=verdict_live_proof_1&network=base',
-                escrow_settlement: 'https://example.test/v1/score/evaluator/escrow?id=verdict_live_proof_1&network=base',
+                escrow_settlement:
+                  'https://example.test/v1/score/evaluator/escrow?id=verdict_live_proof_1&network=base',
                 bundle: 'https://example.test/v1/score/evaluator/deploy/bundle?id=verdict_live_proof_1&network=base',
               },
               checks: {
@@ -1495,9 +1498,7 @@ describe('score routes', () => {
     const app = new Hono()
     app.route('/v1/score', scoreRoute)
 
-    const res = await app.request(
-      `/v1/score/evaluator/escrow?id=verdict_791&escrow_contract=${SECOND_WALLET}`,
-    )
+    const res = await app.request(`/v1/score/evaluator/escrow?id=verdict_791&escrow_contract=${SECOND_WALLET}`)
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.standard).toBe('djd-evaluator-escrow-settlement-v1')
@@ -1639,7 +1640,8 @@ describe('score routes', () => {
               links: {
                 verifier_package: 'https://example.test/v1/score/evaluator/verifier?network=base',
                 verifier_proof: 'https://example.test/v1/score/evaluator/proof?id=verdict_live_escrow_1&network=base',
-                escrow_settlement: 'https://example.test/v1/score/evaluator/escrow?id=verdict_live_escrow_1&network=base',
+                escrow_settlement:
+                  'https://example.test/v1/score/evaluator/escrow?id=verdict_live_escrow_1&network=base',
                 bundle: 'https://example.test/v1/score/evaluator/deploy/bundle?id=verdict_live_escrow_1&network=base',
               },
               checks: {
@@ -1779,9 +1781,7 @@ describe('score routes', () => {
     const app = new Hono()
     app.route('/v1/score', scoreRoute)
 
-    const res = await app.request(
-      `/v1/score/evaluator/deploy?id=verdict_793&verifier_contract=${SECOND_WALLET}`,
-    )
+    const res = await app.request(`/v1/score/evaluator/deploy?id=verdict_793&verifier_contract=${SECOND_WALLET}`)
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.standard).toBe('djd-evaluator-deploy-plan-v1')
@@ -2143,7 +2143,9 @@ describe('score routes', () => {
         attestation_signer: '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
         attestation_reason: null,
         attested_at: '2026-03-12T02:00:00.000Z',
-        payload_json: JSON.stringify({ packet_hash: '0xabc123abc123abc123abc123abc123abc123abc123abc123abc123abc123abcd' }),
+        payload_json: JSON.stringify({
+          packet_hash: '0xabc123abc123abc123abc123abc123abc123abc123abc123abc123abc123abcd',
+        }),
         created_at: '2026-03-12T02:00:00.000Z',
       },
       {
@@ -2173,7 +2175,9 @@ describe('score routes', () => {
         attestation_signer: null,
         attestation_reason: 'No oracle signing key configured',
         attested_at: '2026-03-12T03:00:00.000Z',
-        payload_json: JSON.stringify({ packet_hash: '0xdef123abc123abc123abc123abc123abc123abc123abc123abc123abc123abcd' }),
+        payload_json: JSON.stringify({
+          packet_hash: '0xdef123abc123abc123abc123abc123abc123abc123abc123abc123abc123abcd',
+        }),
         created_at: '2026-03-12T03:00:00.000Z',
       },
     ])

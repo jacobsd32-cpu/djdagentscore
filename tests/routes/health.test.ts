@@ -253,8 +253,7 @@ describe('GET /health', () => {
 
   it('reports authenticated GitHub verification and active publisher when configured', async () => {
     process.env.GITHUB_TOKEN = 'github-token'
-    process.env.PUBLISHER_PRIVATE_KEY =
-      '0x59c6995e998f97a5a0044966f094538c5f43e8e66b5b4bafee8a8b3eabeed4e4'
+    process.env.PUBLISHER_PRIVATE_KEY = '0x59c6995e998f97a5a0044966f094538c5f43e8e66b5b4bafee8a8b3eabeed4e4'
 
     const { Hono } = await import('hono')
     const { default: healthRoute } = await import('../../src/routes/health.js')

@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const state = vi.hoisted(() => ({
-  getPrometheusMetricsPayload: vi.fn().mockReturnValue(
-    '# HELP djd_http_requests_total Total HTTP requests\n' +
-      'djd_http_requests_total{method="GET",path="/health",status="200"} 4',
-  ),
+  getPrometheusMetricsPayload: vi
+    .fn()
+    .mockReturnValue(
+      '# HELP djd_http_requests_total Total HTTP requests\n' +
+        'djd_http_requests_total{method="GET",path="/health",status="200"} 4',
+    ),
   getHealthPayload: vi.fn().mockImplementation((detailed: boolean) => {
     if (detailed) {
       return {

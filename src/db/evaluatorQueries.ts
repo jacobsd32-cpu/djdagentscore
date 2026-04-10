@@ -108,7 +108,9 @@ const stmtListEvaluatorVerdictsByWallet = db.prepare<[string, number], Evaluator
   LIMIT ?
 `)
 
-export function insertEvaluatorVerdict(verdict: Omit<EvaluatorVerdictRow, 'created_at'> & { created_at?: string }): void {
+export function insertEvaluatorVerdict(
+  verdict: Omit<EvaluatorVerdictRow, 'created_at'> & { created_at?: string },
+): void {
   stmtInsertEvaluatorVerdict.run({
     ...verdict,
     created_at: verdict.created_at ?? new Date().toISOString(),
